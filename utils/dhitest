@@ -1,0 +1,239 @@
+#!/usr/bin/python3
+#
+# display DHI scb on terminal
+#
+# Imports
+import queue
+import threading
+import time
+import socketserver
+import socket
+import os
+import sys
+import math
+import unicodedata
+
+# Display properties
+DEFPORT = 2004 - 58		# DHI port "58 years before the fall"
+
+# UNT4 message wrapper (based on metarace unt4 lib)
+class unt4(object):
+    # UNT4 mode 1 constants
+    SOH = b'\x01'
+    STX = b'\x02'
+    EOT = b'\x04'
+    ERL = b'\x0b'
+    ERP = b'\x0c'
+    DLE = b'\x10'
+    DC2 = b'\x12'
+    DC3 = b'\x13'
+    DC4 = b'\x14'
+    tmap = str.maketrans({SOH[0]:0x20,STX[0]:0x20,
+                          EOT[0]:0x20,ERL[0]:0x20,
+                          ERP[0]:0x20,DLE[0]:0x20,
+                          DC2[0]:0x20,DC3[0]:0x20,DC4[0]:0x20, })
+    """UNT4 Packet Class."""
+    def __init__(self, unt4str=None, 
+                   prefix=None, header='', 
+                   erp=False, erl=False, 
+                   xx=None, yy=None, text=''):
+        self.prefix = prefix    # <DC2>, <DC3>, etc
+        self.header = header    # ident text string eg 'R_F$'
+        self.erp = erp          # true for general clearing <ERP>
+        self.erl = erl          # true for <ERL>
+        self.xx = xx            # input column 0-99
+        self.yy = yy            # input row 0-99
+        self.text = text.translate(self.tmap) # strip UNT4 controls from text
+        if unt4str is not None:
+            self.unpack(unt4str)
+
+    def unpack(self, unt4str=''):
+        """Unpack the UNT4 data into this object."""
+        if len(unt4str) > 2 and ord(unt4str[0]) == self.SOH[0] \
+                            and ord(unt4str[-1]) == self.EOT[0]:
+            self.prefix = None
+            newhead = u''
+            newtext = u''
+            self.erl = False
+            self.erp = False
+            head = True		# All text before STX is considered header
+            stx = False
+            dle = False
+            dlebuf = u''
+            i = 1
+            packlen = len(unt4str) - 1
+            while i < packlen:
+                och = ord(unt4str[i])
+                if och == self.STX[0]:
+                    stx = True
+                    head = False
+                elif och == self.DLE[0] and stx:
+                    dle = True
+                elif dle:
+                    dlebuf += unt4str[i]
+                    if len(dlebuf) == 4:
+                        dle = False
+                elif head:
+                    if och in (self.DC2[0], self.DC3[0], self.DC4[0]):
+                        self.prefix = och   # assume pfx before head text
+                    else:
+                        newhead += unt4str[i]
+                elif stx:
+                    if och == self.ERL[0]:
+                        self.erl = True
+                    elif och == self.ERP[0]:
+                        self.erp = True
+                    else:
+                        newtext += unt4str[i]
+                i += 1
+            if len(dlebuf) == 4 and dlebuf.isdigit():
+                self.xx = int(dlebuf[:2])
+                self.yy = int(dlebuf[2:])
+            self.header = newhead
+            self.text = unicodedata.normalize('NFC', newtext)
+
+# TCP/IP message receiver and socket server
+socketserver.TCPServer.allow_reuse_address = True
+socketserver.TCPServer.request_queue_size = 4
+class recvhandler(socketserver.BaseRequestHandler):
+    def handle(self):
+        """Receive message from TCP"""
+        data = b''
+        while True:
+            nd = self.request.recv(64)
+            if len(nd) == 0:
+                break
+            data += nd
+            while unt4.SOH[0] in data:
+                (buf, sep, data) = data.partition(unt4.SOH)
+                data = sep + data
+                if unt4.EOT[0] in data:
+                    (buf, sep, data) = data.partition(unt4.EOT)
+                    mstr = (buf+unt4.EOT).decode('utf-8','ignore')
+                    m = unt4(unt4str=mstr)
+                    if self.server.tbh is not None and m is not None:
+                        self.server.tbh.update(m)
+                else:
+                    break
+
+            # check if there's too much garbage in the stream
+            if len(data) > 200:
+                data = b''
+
+class receiver(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    def set_tableau(self, th=None):
+        self.tbh = th
+
+# Graphic renderer
+class tableau(threading.Thread):
+    def __init__(self, x, y):
+        threading.Thread.__init__(self)
+        self.running = False
+        self.__q = queue.Queue(maxsize=128)
+        self.__cols = x
+        self.__rows = y
+        self.t = []
+        for j in range(0,y):
+            nr = []
+            for i in range(0,x):
+                nr.append('X')
+            self.t.append(nr)
+
+    def update(self, msg=None):
+        """Queue a tableau update."""
+        try:
+            self.__q.put_nowait(msg)
+        except queue.Full:
+            print('caprica: Message queue full, discarded message')
+            return None
+
+    def __erase_page(self):
+        for j in range(0,self.__rows):
+            for i in range(0, self.__cols):
+                self.t[j][i] = ' '
+
+    def __place_char(self, c=' ', xx=0, yy=0):
+        if xx < self.__cols and yy < self.__rows:
+            self.t[yy][xx] = c
+        else:
+            pass
+            #print('error: invalid offsets')
+
+    def __show_text(self, msg=None):
+        """Update text frame and send to display."""
+        ret = False
+        if isinstance(msg, unt4):
+            dirty = False
+            if msg.erp:
+                # General clearing
+                ret = True
+                dirty = True
+                self.__erase_page()
+            elif msg.yy is not None:
+                # Positioned text
+                ret = True
+                vo = msg.yy
+                ho = msg.xx
+                if msg.yy > 1:	# all non-headers are upper-cased
+                    msg.text = msg.text.upper() # THIS MAY NOT BE THE SAME LEN
+                for c in msg.text:
+                    self.__place_char(c, ho, vo)
+                    ho += 1
+                    dirty = True
+                if msg.erl:
+                    while ho < self.__cols:
+                        self.__place_char(' ', ho, vo)
+                        ho += 1
+                    dirty = True
+            if dirty:
+                print(' ')
+                print(' +------------------------+')
+                for j in self.t:
+                    print(' |' + ''.join(j) + '|')
+                print(' +------------------------+')
+        return ret
+        
+    def run(self):
+        self.running = True
+        while self.running:
+            try:
+                m = self.__q.get(timeout=2.0)
+                self.__q.task_done()
+                if m is None:
+                    pass
+                    # Process a clock tick notification
+                    #self.__lu += 1
+                    #if self.__lu > TIMEOUT:
+                        #self.__show_clock()
+                else:
+                    # Process a text update
+                    if self.__show_text(m):
+                        self.__lu = 0	# reset counter
+            except queue.Empty:
+                pass
+            except Exception as e:
+                print('caprica: Tableau exception: ' + repr(e))
+                running = False
+
+def main():
+    # Create tableau helper thread
+    tbl = tableau(24,7)
+    tbl.start()
+
+    # Create dhi socket server helper thread
+    dhi = receiver(('0.0.0.0', DEFPORT), recvhandler)
+    dhi.set_tableau(tbl)
+    dhi_thread = threading.Thread(target=dhi.serve_forever)
+    dhi_thread.daemon = True
+    dhi_thread.start()
+
+    try:
+        while True:
+            time.sleep(10)
+    finally:
+        tbl.running = False
+        dhi.shutdown()
+
+if __name__ == '__main__':
+    main()
+

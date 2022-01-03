@@ -1,0 +1,37 @@
+{
+  "export":{
+    "command": "echo",
+    "arguments":[
+      "{srcdir}",
+      "{dstdir}"
+    ]
+  },
+  "sender":{
+    "portspec": "/dev/ttyUSB0",
+    "serialbaud": 115200,
+    "encoding": "utf-8",
+    "pagelen": 8,
+    "linelen": 32,
+    "protocol": "dhi"
+  },
+  "telegraph":{
+    "host": null,
+    "usetls": false,
+    "debug": false,
+    "username": null,
+    "password": null,
+    "deftopic": null,
+    "qos": 0
+  },
+  "txt_announce": {
+    "topic": "metarace/trackmeet/text",
+    "motd": null,
+    "fontsize": 20,
+    "fullscreen": false
+  },
+  "timy":{
+    "baudrate":38400,
+    "ctsrts":false,
+    "chandelay":{}
+  }
+}

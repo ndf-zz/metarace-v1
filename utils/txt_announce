@@ -1,0 +1,218 @@
+
+"""Text-only DHI announcer terminal app for trackmeet (v1)"""
+
+from __future__ import division
+
+import pygtk
+pygtk.require("2.0")
+
+import gtk
+import glib
+import gobject
+import pango
+import logging
+from os import path
+
+import metarace
+from metarace import unt4
+from metarace import tod
+from metarace import strops
+from metarace import telegraph
+from metarace import jsonconfig
+
+SCB_W = 80
+SCB_H = 24
+FONT=u'Noto Mono Bold'
+MOTD=u'Metarace Trackmeet Text Announce'         # Message of the day
+TOPIC=u'metarace/trackmeet/text'	# Telegraph DHI topic
+CONFIGFILE=u'txt_announce.json'
+LOG = logging.getLogger(u'txt_announce')
+LOG.setLevel(logging.DEBUG)
+
+class txt_announce(object):
+    def loadconfig(self):
+        """Load config from disk."""
+        cr = jsonconfig.config({u'txt_announce':{
+                                    u'topic':TOPIC,
+                                    u'fullscreen':False,
+                                    u'motd':MOTD}})
+        cr.add_section(u'txt_announce')
+        cwfilename = metarace.default_file(CONFIGFILE)
+        cr.merge(metarace.sysconf, u'txt_announce')
+        if path.exists(cwfilename):
+            try:
+                with open(cwfilename, 'rb') as f:
+                    cr.read(f)
+                LOG.debug(u'Read config from %r', cwfilename)
+            except Exception as e:
+                LOG.error(u'Unable to read config: %s', e)
+
+        self.motd = cr.get(u'txt_announce', u'motd')
+        self.fullscreen = strops.confopt_bool(
+                              cr.get(u'txt_announce', u'fullscreen'))
+        topic = cr.get(u'txt_announce', u'topic')
+        if topic:
+            LOG.debug(u'Subscribing to %r', topic)
+            self.io.subscribe(topic)
+
+    def intro(self):
+        m = unt4.unt4()
+        m.yy=SCB_H-1
+        m.text='metarace text announce ' + metarace.VERSION
+        m.xx=SCB_W-len(m.text)
+        self.__receive(m)
+        
+    def show(self):
+        self.window.show()
+
+    def hide(self):
+        self.window.show()
+
+    def start(self):
+        """Start io thread."""
+        if not self.started:
+            self.io.start()
+            self.started = True
+
+    def shutdown(self):
+        """Cleanly shutdown."""
+        LOG.debug(u'Shutdown')
+        self.io.exit()
+        self.io.join()
+        self.started = False
+
+    def destroy_cb(self, window):
+        """Handle destroy signal."""
+        LOG.debug(u'Destroy')
+        if self.started:
+            self.shutdown()
+        self.running = False
+        gtk.main_quit()
+    
+    def clear(self):
+        """Re-set all lines."""
+        ntxt = u''
+        for i in range(0,SCB_H-1):
+            ntxt += u''.ljust(SCB_W) + u'\n'
+        ntxt += u''.ljust(SCB_W)
+        self.buffer.set_text(ntxt)
+
+    def showmotd(self):
+        """Draw 'welcome'."""
+        if self.motd:
+            LOG.debug(u'Showing MOTD: %r', self.motd)
+            m = unt4.unt4(yy=0, xx=0, text=self.motd, erl=True)
+            self.__receive(m)
+
+    def delayed_cursor(self):
+        """Remove the mouse cursor from the text area."""
+        pixmap = gtk.gdk.Pixmap(None, 1, 1, 1)
+        color = gtk.gdk.Color()
+        cursor = gtk.gdk.Cursor(pixmap, pixmap, color, color, 0, 0)
+        self.view.get_window(gtk.TEXT_WINDOW_TEXT).set_cursor(cursor)
+        LOG.debug(u'Remove cursor')
+        self.clear()
+        self.showmotd()
+        if self.fullscreen:
+            LOG.debug(u'Setting fullscreen')
+            # Try to re-position on twinview
+            self.window.set_gravity(gtk.gdk.GRAVITY_NORTH_EAST)
+            width, height = self.window.get_size()
+            self.window.move(gtk.gdk.screen_width() - width,0)
+            self.window.stick()
+            self.window.maximize()
+        return False
+
+    def msg_cb(self, topic, msg=None):
+        """Telegraph receive callback"""
+        if msg and msg[0] == unichr(unt4.SOH):
+            try:
+                m = unt4.unt4(msg)
+                glib.idle_add(self.__receive, m)
+            except Exception as e:
+                LOG.debug(u'Invalid message %r: %s %s',
+                           msg, e.__class__.__name__, e)
+
+    def __receive(self, m=None):
+        """Process unt4 message packet in main thread."""
+        if m.erp:
+            #LOG.debug(u'Clear Page')
+            self.clear()
+        if m.xx is not None and m.yy is not None and m.xx < SCB_W:
+            #LOG.debug(u'Positioned text %r,%r : %r', m.yy,m.xx,m.text)
+            rem = SCB_W - (m.xx + len(m.text))
+            if rem <= 0:
+                m.text = m.text[0:(SCB_W-m.xx)]
+            elif m.erl:
+                #LOG.debug(u'ERL')
+                m.text += u' '* rem
+            j = self.buffer.get_iter_at_line_offset(m.yy, m.xx)
+            k = self.buffer.get_iter_at_line_offset(m.yy,
+                                                    m.xx + len(m.text))
+            self.buffer.delete(j, k)
+            self.buffer.insert(j, m.text)
+        return False
+
+    def view_size_allocate_cb(self, widget, alloc, data=None):
+        """Respond to window resize."""
+        cw = alloc.width / SCB_W
+        ch = alloc.height / SCB_H
+        lh = ch
+        if cw * 2 < ch:
+            lh = cw * 2
+        fh = 0.80 * lh
+        LOG.debug(u'View size allocate: %rx%r, lh=%r, fh=%r', cw, ch, lh, fh)
+        if abs(fh - self.fh) > 0.001:
+            widget.modify_font(
+                    pango.FontDescription('{0} {1}px'.format(FONT, fh)))
+            self.fh = fh
+        return True
+        
+    def __init__(self):
+        self.io = telegraph.telegraph()
+        self.io.setcb(self.msg_cb)
+        self.started = False
+        self.running = True
+        self.rscount = 0
+        self.fh = 0
+        self.motd = u''
+        self.fullscreen = False	# maximise window?
+        self.window = gtk.Window()
+        self.window.set_decorated(False)
+        self.window.set_default_size(400,300)
+        self.window.connect(u'destroy', self.destroy_cb)
+        self.buffer = gtk.TextBuffer()
+        self.view = gtk.TextView()
+        self.view.set_property(u'visible', True)
+        self.view.set_property(u'border_width', 10)
+        self.view.set_property(u'editable', False)
+        self.view.set_property(u'cursor_visible', False)
+        self.view.set_property(u'buffer', self.buffer)
+        self.view.connect(u'size_allocate', self.view_size_allocate_cb)
+        self.window.add(self.view)
+        self.clear() # compulsory clear -> fills all lines
+        self.intro()
+        glib.timeout_add_seconds(5,self.delayed_cursor)
+
+def main():
+    """Run the announce application."""
+    metarace.init(withgtk=True)
+    app = txt_announce()
+    app.loadconfig()
+    app.show()
+    app.start()
+    try:
+        metarace.mainloop()
+    except:
+        app.shutdown()
+        raise
+
+if __name__ == '__main__':
+    # attach a console log handler to the root logger
+    ch = logging.StreamHandler()
+    ch.setLevel(metarace.LOGLEVEL)
+    fh = logging.Formatter(metarace.LOGFORMAT)
+    ch.setFormatter(fh)
+    logging.getLogger().addHandler(ch)
+    main()
+

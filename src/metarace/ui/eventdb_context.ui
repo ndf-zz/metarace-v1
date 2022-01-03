@@ -1,0 +1,98 @@
+<?xml version="1.0"?>
+<interface>
+  <requires lib="gtk+" version="2.16"/>
+  <!-- interface-naming-policy project-wide -->
+  <object class="GtkMenu" id="eventdb_context">
+    <property name="visible">True</property>
+    <child>
+      <object class="GtkImageMenuItem" id="edit">
+        <property name="label">Edit...</property>
+        <property name="visible">True</property>
+        <property name="tooltip_text" translatable="yes">Edit extended event properties.</property>
+        <property name="image">image1</property>
+        <property name="use_stock">False</property>
+        <signal name="activate" handler="popup_edit_cb"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkImageMenuItem" id="insert">
+        <property name="label">Add new...</property>
+        <property name="visible">True</property>
+        <property name="tooltip_text" translatable="yes">Add new event.</property>
+        <property name="image">image2</property>
+        <property name="use_stock">False</property>
+        <signal name="activate" handler="popup_insert_cb"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sapa">
+        <property name="visible">True</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkImageMenuItem" id="program">
+        <property name="label" translatable="yes">Program</property>
+        <property name="visible">True</property>
+        <property name="tooltip_text" translatable="yes">Print selected events as an event program.</property>
+        <property name="image">image3</property>
+        <property name="use_stock">False</property>
+        <signal name="activate" handler="popup_program_cb"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkImageMenuItem" id="startlist">
+        <property name="label" translatable="yes">Startlist</property>
+        <property name="visible">True</property>
+        <property name="tooltip_text" translatable="yes">Print startlists for selected events.</property>
+        <property name="image">image4</property>
+        <property name="use_stock">False</property>
+        <signal name="activate" handler="popup_startlist_cb"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkImageMenuItem" id="result">
+        <property name="label" translatable="yes">Result</property>
+        <property name="visible">True</property>
+        <property name="tooltip_text" translatable="yes">Print results for selected events.</property>
+        <property name="image">image5</property>
+        <property name="use_stock">False</property>
+        <signal name="activate" handler="popup_result_cb"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkSeparatorMenuItem" id="sep">
+        <property name="visible">True</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkImageMenuItem" id="delete">
+        <property name="label">gtk-delete</property>
+        <property name="visible">True</property>
+        <property name="tooltip_text" translatable="yes">Delete event from the program.</property>
+        <property name="use_underline">True</property>
+        <property name="use_stock">True</property>
+        <signal name="activate" handler="popup_delete_cb"/>
+      </object>
+    </child>
+  </object>
+  <object class="GtkImage" id="image1">
+    <property name="visible">True</property>
+    <property name="stock">gtk-edit</property>
+  </object>
+  <object class="GtkImage" id="image2">
+    <property name="visible">True</property>
+    <property name="stock">gtk-new</property>
+  </object>
+  <object class="GtkImage" id="image3">
+    <property name="visible">True</property>
+    <property name="stock">gtk-select-all</property>
+  </object>
+  <object class="GtkImage" id="image4">
+    <property name="visible">True</property>
+    <property name="stock">gtk-index</property>
+  </object>
+  <object class="GtkImage" id="image5">
+    <property name="visible">True</property>
+    <property name="stock">gtk-file</property>
+  </object>
+</interface>

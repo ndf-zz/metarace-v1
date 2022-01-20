@@ -11,20 +11,8 @@
     </columns>
     <data>
       <row>
-        <col id="0" translatable="yes">Did not Finish</col>
-        <col id="1" translatable="yes">dnf</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">Add Starters</col>
-        <col id="1" translatable="yes">add</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">Del Starters</col>
-        <col id="1" translatable="yes">del</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">Running Lap</col>
-        <col id="1" translatable="yes">lap</col>
+        <col id="0" translatable="yes">Send Message</col>
+        <col id="1" translatable="yes">msg</col>
       </row>
     </data>
   </object>
@@ -304,7 +292,7 @@
                         <property name="xalign">0.5</property>
                         <property name="xpad">4</property>
                         <property name="ypad">1</property>
-                        <property name="width_chars">13</property>
+                        <property name="width_chars">10</property>
                         <property name="single_line_mode">True</property>
                         <property name="track_visited_links">False</property>
                       </object>

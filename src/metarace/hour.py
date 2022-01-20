@@ -4,11 +4,8 @@
 import gtk
 import glib
 import gobject
-import pango
-import os
 import logging
-import csv
-import ConfigParser
+import os
 
 import metarace
 from metarace import timy
@@ -16,12 +13,12 @@ from metarace import scbwin
 from metarace import tod
 from metarace import unt4
 from metarace import uiutil
-from metarace import eventdb
 from metarace import jsonconfig
-from metarace import riderdb
 from metarace import strops
-from metarace import timerpane
 from metarace import report
+
+LOG = logging.getLogger(u'metarace.race')
+LOG.setLevel(logging.DEBUG)
 
 # config version string
 EVENT_ID = 'hourrec'
@@ -77,78 +74,91 @@ class hourrec(object):
         if self.finish is None and self.elapsed == u'' and self.start is not None and len(self.splitlist) > 0:
             self.elapsed = (self.splitlist[-1] - self.start).rawtime(0)
         if self.finish is not None:
-            # self.d = 0              # dist in m     (trunc to m)
             self.TC = self.lapcount - 1
             self.TTC = None
             if len(self.splitlist) > 1:
-                lasttime = self.finish	# same as self.splitlist[-1]
+                #lasttime = self.finish	# same as self.splitlist[-1]
                 belltime = self.splitlist[-2]
+                laststart = self.splitlist[-3]
                 # time of the last complete lap
-                self.TTC = lasttime - belltime
+                self.TTC = belltime - laststart
                 # time remaining to ride at the beginning of the last lap
                 self.TRC = self.reclen - (belltime - self.start)
                 # additional distance
-                self.DiC = int(float(self.TRC.timeval)/float(self.TTC.timeval) * float(self.LPi))
+                self.DiC = self.LPi * float(self.TRC.timeval)/float(self.TTC.timeval)
                 # distance covered in the hour
-                self.D = self.DiC + self.TC * self.LPi
-                self.compute = u'Compute: D={0}m, LPi={1}m, TC={2}, DiC={3}, TTC={4}, TRC={5}'.format(self.D, self.LPi, self.TC, self.DiC, self.TTC.rawtime(3), self.TRC.rawtime(3))
-                self.log.info(self.compute)
+                self.D = int(self.DiC + self.TC * self.LPi)
+                self.compute = u'D={0}m, LPi\u00d7TC={1:0.1f}m, LPi={2:0.1f}m, TC={3}, DiC={4:0.1f}m, TTC={5}, TRC={6}'.format(self.D, self.LPi*self.TC, self.LPi, self.TC, self.DiC, self.TTC.rawtime(3), self.TRC.rawtime(3))
+                LOG.info(self.compute)
             self.projection = None
         else:
-            # update projection
+            # update projection (use 4 lap average speed)
             if len(self.splitlist) > 4:
                 et = self.splitlist[-1] - self.start
                 rt = self.reclen - et
-                di = self.LPi * self.lapcount                
+                di = int(self.LPi * self.lapcount)
                 pi = self.splitlist[-5]
                 pd = self.splitlist[-1]
-                pr = 1000.0/(float(pd.timeval) - float(pi.timeval))
+                pr = (self.LPi * 4)/(float(pd.timeval) - float(pi.timeval))
                 de = di + int(float(rt.timeval) * pr)
-                self.log.info(u'Projected final dist: ' + repr(de))
+                LOG.info(u'Projected final dist: %r', de)
                 if de < self.maxproj and de > self.minproj:
                     self.projection = de
                 else:
                     self.projection = None
 
+    def update_expander_lbl_cb(self):
+        """Update race info expander label."""
+        self.info_expand.set_label(self.meet.infoline(self.event))
+
     def loadconfig(self):
         """Load race config from disk."""
-        cr = jsonconfig.config({u'event':{u'riderstr':u'',
-                                          u'rideruci':u'',
+        self.model.clear()
+        cr = jsonconfig.config({u'event':{u'id':EVENT_ID,
+                                          u'comments':[],
+                                          u'riderstr':u'',
                                           u'recordname':u'Hour Record',
                                           u'wallstart': None,
                                           u'start': None,
+                                          u'showinfo':True,
                                           u'finish': None,
                                           u'lstart': None,
-                                          u'target': 0,
+                                          u'target': None,
                                           u'reclen': '1h00:00',
                                           u'minlap': '14.0',
                                           u'record': None,
                                           u'projlap': 12, 
-                                          u'lpi': 250, 
+                                          u'lpi': None, 
                                           u'minproj': 30000,
                                           u'maxproj': 60000,
                                           u'lapcount': 0,
                                           u'splitlist': []}})
-                                          
         cr.add_section(u'event')
-        # check for config file
-        try:
-            with open(self.configpath, 'rb') as f:
-                cr.read(f)
-        except Exception as e:
-            self.log.error(u'Reading event config: ' + unicode(e))
+        if os.path.exists(self.configfile):
+            try:
+                with open(self.configfile, 'rb') as f:
+                    cr.read(f)
+            except Exception as e:
+                LOG.error(u'Unable to read config: %s', e)
+        else:
+            LOG.info(u'%r not found, loading defaults', self.configfile)
+
+        # race infos
+        self.comments = cr.get(u'event', u'comments')
+        self.update_expander_lbl_cb()
+        self.info_expand.set_expanded(strops.confopt_bool(
+                                       cr.get(u'event', u'showinfo')))
 
         self.riderstr = cr.get(u'event',u'riderstr')
-        self.rideruci = cr.get(u'event',u'rideruci')
         self.recordname = cr.get(u'event',u'recordname')
 
         self.reclen = tod.mktod(cr.get(u'event', u'reclen'))
         if self.reclen is None:
-            self.log.error(u'Invalid record length: Reset to 1h00:00')
+            LOG.error(u'Invalid record length: Reset to 1h00:00')
             self.reclen = tod.tod(u'1h00:00')
         self.minlap = tod.mktod(cr.get(u'event', u'minlap'))
         if self.minlap is None:
-            self.log.error(u'Invalid min lap time: Reset to 14.0s')
+            LOG.error(u'Invalid min lap time: Reset to 14.0s')
             self.minlap = tod.tod(u'14.0')
         self.start = tod.mktod(cr.get(u'event', u'start'))
         self.finish = tod.mktod(cr.get(u'event', u'finish'))
@@ -157,19 +167,26 @@ class hourrec(object):
 
         self.target = strops.confopt_posint(cr.get(u'event', u'target'))
         self.record = strops.confopt_posint(cr.get(u'event', u'record'))
-        self.LPi = strops.confopt_posint(cr.get(u'event', u'lpi'),250)
+        chklap = float(self.meet.tracklen_n)/float(self.meet.tracklen_d)
+        self.LPi = strops.confopt_float(cr.get(u'event', u'lpi'),chklap)
         self.projlap = strops.confopt_posint(cr.get(u'event', u'projlap'),12)
         self.minproj = strops.confopt_posint(cr.get(u'event', u'minproj'),30000)
         self.maxproj = strops.confopt_posint(cr.get(u'event', u'maxproj'),60000)
         self.lapcount = strops.confopt_posint(cr.get(u'event', u'lapcount'))
         self.splitlist = []
+        lc = 0
+        pt = self.start
         for lt in cr.get(u'event', u'splitlist'):
             nlt = tod.mktod(lt)
             if nlt is not None:
+                lc += 1
                 self.splitlist.append(nlt)
+                if self.start is not None:
+                    self.addlapline(nlt, pt, lc, False)
+                pt = nlt
         # check count of laps agains splits
         if len(self.splitlist) != self.lapcount:
-            self.log.error(u'SPLIT LIST != LAPCOUNT')
+            LOG.error(u'SPLIT LIST != LAPCOUNT')
 
         # arm the front straight
         if self.winopen:
@@ -182,18 +199,36 @@ class hourrec(object):
         # recalc
         self.recalc()
 
+        # then set UI
+        if self.start is None:
+            self.toidle()
+        else:
+            if self.D is not None and self.D > 0:
+                LOG.debug(u'D is now %r', self.D)
+                self.tofinish()
+            else:
+                self.torunning()
+
+    def addlapline(self, split, lastsplit, count, scroll=True):
+        """Insert a lap line on the ui view."""
+        ctxt = unicode(count)
+        dtxt = u'{0:0.2f} km'.format(count * self.LPi / 1000.0)
+        stxt = (split-self.start).rawtime(1)
+        ltxt = (split-lastsplit).rawtime(2)
+        self.model.insert(0, [ctxt, dtxt, stxt, ltxt])
+        if scroll:
+            self.view.scroll_to_cell(0)
+
     def saveconfig(self):
         """Save race to disk."""
         if self.readonly:
-            self.log.error('Attempt to save readonly ob.')
+            LOG.error('Attempt to save readonly ob.')
             return
-        self.log.info(u'saveconfig')
-
         cw = jsonconfig.config()
         cw.add_section(u'event')
 
+        cw.set(u'event', u'showinfo', self.info_expand.get_expanded())
         cw.set(u'event', u'riderstr', self.riderstr)
-        cw.set(u'event', u'rideruci', self.rideruci)
         cw.set(u'event', u'recordname', self.recordname)
         cw.set(u'event', u'reclen', self.reclen.rawtime())
         cw.set(u'event', u'minlap', self.minlap.rawtime())
@@ -213,14 +248,16 @@ class hourrec(object):
         cw.set(u'event', u'minproj', self.minproj)
         cw.set(u'event', u'maxproj', self.maxproj)
         cw.set(u'event', u'lapcount', self.lapcount)
+        cw.set(u'event', u'comments', self.comments)
          
         slout = []
         for lt in self.splitlist:
             slout.append(lt.rawtime())
         cw.set(u'event', u'splitlist', slout)
 
-        self.log.debug(u'Saving config to: ' + repr(self.configpath))
-        with open(self.configpath, 'wb') as f:
+        cw.set(u'event', u'id', EVENT_ID)
+        LOG.debug(u'Saving event config %r', self.configfile)
+        with metarace.savefile(self.configfile) as f:
             cw.write(f)
 
     def startlist_report(self, program=False):
@@ -237,7 +274,7 @@ class hourrec(object):
         if self.event[u'reco']:
             sec.footer = self.event[u'reco'] 
         # the rider
-        sec.lines.append([u'',self.riderstr + u' ' + self.rideruci])
+        sec.lines.append([u'',self.riderstr])
         if self.record is not None:
             tstr = u'{0:0.3f} km'.format(self.record/1000.0)
             sec.lines.append([u'', u'Record: ' + tstr])
@@ -259,20 +296,67 @@ class hourrec(object):
     def delayed_announce(self):
         """Initialise the announcer's screen after a delay."""
         if self.winopen:
-            self.log.info(u'delayed_announce')
+            LOG.debug(u'TODO delayed_announce')
 
     def shutdown(self, win=None, msg=u'Exiting'):
         """Terminate race object."""
-        if self.winopen:
-            self.meet.main_timer.armlock(False)
+        rstr = u''
+        if self.readonly:
+            rstr = u'readonly '
+        LOG.debug(u'Shutdown %sevent %s: %s', rstr, self.evno, msg)
         if not self.readonly:
             self.saveconfig()
-        self.log.debug(u'Race Shutdown: ' + msg)
         self.winopen = False
 
     def do_properties(self):
         """Run race properties dialog."""
-        self.log.debug(u'Race Properties')
+        prfile = os.path.join(metarace.UI_PATH, u'hour_properties.ui')
+        LOG.debug(u'Building event properties from %r', prfile)
+        b = gtk.Builder()
+        b.add_from_file(prfile)
+        dlg = b.get_object(u'properties')
+        dlg.set_transient_for(self.meet.window)
+        rn = b.get_object(u'recordname_entry')
+        rn.set_text(self.recordname)
+        rl = b.get_object(u'recordlen_entry')
+        rl.set_text(self.reclen.rawtime(0))
+        ri = b.get_object(u'ridername_entry')
+        ri.set_text(self.riderstr)
+        st = b.get_object(u'start_entry')
+        if self.wallstart is not None:
+            st.set_text(self.wallstart.rawtime(0))
+        rc = b.get_object(u'record_entry')
+        if self.record is not None:
+            rc.set_text(unicode(self.record))
+        tg = b.get_object(u'target_entry')
+        if self.target is not None:
+            tg.set_text(unicode(self.target))
+        response = dlg.run()
+        if response == 1:       # id 1 set in glade for "Apply"
+            LOG.debug(u'Updating event properties')
+            # update setting
+            self.recordname = rn.get_text().decode(u'utf-8')
+            self.riderstr = ri.get_text().decode(u'utf-8')
+            checklen = tod.mktod(rl.get_text().decode(u'utf-8'))
+            if checklen is not None:
+                self.reclen = checklen
+            else:
+                LOG.error(u'Invalid record len %r, using default: 1h00:00',
+                          rl.get_text().decode(u'utf-8'))
+                self.reclen = tod.mktod(u'1h00:00')
+            self.wallstart = tod.mktod(st.get_text().decode(u'utf-8'))
+            self.target = strops.confopt_posint(tg.get_text().decode(u'utf-8'),
+                                                None)
+            self.record = strops.confopt_posint(rc.get_text().decode(u'utf-8'),
+                                                None)
+            glib.idle_add(self.delayed_announce)
+        else:
+            LOG.debug(u'Edit event properties cancelled')
+
+        # if prefix is empty, grab input focus
+        if not self.prefix_ent.get_text():
+            self.prefix_ent.grab_focus()
+        dlg.destroy()
 
     def result_gen(self):
         """Generator function to export a final result."""
@@ -292,7 +376,7 @@ class hourrec(object):
         #if self.wallstart is not None:
             #sec.subheading = u'Start: ' + self.wallstart.meridian()
 
-        sec.lines.append([u'',self.riderstr + u' ' + self.rideruci])
+        sec.lines.append([u'',self.riderstr])
         # Distance measure
         if self.finish is not None:
             if self.D is not None and self.D > 0:
@@ -305,8 +389,9 @@ class hourrec(object):
                         tstr = u'{0:0.3f} km'.format(self.record/1000.0)
                         sec.lines.append([u'', u'{} metre{} short of existing record: '.format(self.record-self.D, strops.plural(self.record-self.D)) + tstr])
             sec.lines.append([u'', u'Complete laps: ' + unicode(self.lapcount-1)])
+            #sec.lines.append([u'', u'LPi \u00d7 TC: {0:0.1f} m'.format((self.lapcount-1)*self.LPi)])
             if self.compute:
-                sec.lines.append([u'', u'Additional distance: {} m'.format(self.DiC)])
+                sec.lines.append([u'', u'Additional distance: {0:0.1f} m'.format(self.DiC)])
                 sec.lines.append([u'', self.compute])
         else:
             if self.record is not None:
@@ -342,6 +427,12 @@ class hourrec(object):
                 lt = st
                 count += 1
             ret.append(sec)
+        if len(self.comments) > 0:
+            sec = report.bullet_text()
+            sec.subheading = u'Decisions of the commisaires panel'
+            for c in self.comments:
+                sec.lines.append([None, c])
+            ret.append(sec)
         return ret
 
     def addrider(self, bib='', info=None):
@@ -350,15 +441,10 @@ class hourrec(object):
     def editent_cb(self, entry, col):
         """Shared event entry update callback."""
         if col == u'pref':
-            self.event[u'pref'] = entry.get_text().decode('utf-8', 'replace')
+            self.event[u'pref'] = entry.get_text().decode(u'utf-8')
         elif col == u'info':
-            self.event[u'info'] = entry.get_text().decode('utf-8', 'replace')
+            self.event[u'info'] = entry.get_text().decode(u'utf-8')
         self.update_expander_lbl_cb()
-
-    def update_expander_lbl_cb(self):
-        """Update race info expander label."""
-        self.info_expand.set_label('Race Info : '
-                    + self.meet.racenamecat(self.event, 64))
 
     def split_trig(self, t):
         """Register lap trigger."""
@@ -375,11 +461,13 @@ class hourrec(object):
                     if elap <= self.reclen:
                         self.lapcount += 1
                         self.splitlist.append(t)
+                        self.addlapline(t, lastlap, self.lapcount)
                         self.recalc()
                         self.curlap = laptime
                         glib.idle_add(self.scblap)
-                        self.log.info(u'Lap ' + repr(self.lapcount) + ': ' + laptime.rawtime(2) + u' @ ' + t.rawtime(2))
-                        if laptime < tod.tod(u'60'):
+                        LOG.info(u'Lap %r: %s @ %s', self.lapcount,
+                                 laptime.rawtime(2), t.rawtime(2))
+                        if laptime < 60:
                             self.lastlapstr = laptime.rawtime(2)
                         else:
                             self.lastlapstr = laptime.rawtime(0)
@@ -387,60 +475,63 @@ class hourrec(object):
                         if self.finish is None:
                             self.lapcount += 1
                             self.splitlist.append(t)
+                            self.addlapline(t, lastlap, self.lapcount)
                             self.finish = t
                             self.curlap = laptime
                             self.recalc()
-                            self.log.info(u'Final Lap Completed.')
+                            self.tofinish()
+                            LOG.info(u'Final Lap Completed.')
                         else:
-                            self.log.info(u'Duplicate finish pass.')
+                            LOG.info(u'Duplicate finish pass.')
                     # and ask meet for an export
                     self.meet.delayed_export()
                 else:
-                    self.log.info(u'Ignored short lap.')
+                    LOG.info(u'Ignored short lap.')
             else:
-                self.log.info(u'Invalid trigger.')
+                LOG.info(u'Invalid trigger.')
         else:
-            self.log.info(u'Ignored trig without start.')
+            LOG.info(u'Ignored trig without start.')
 
 
     def scblap(self):
         # output to main scoreboard
-        self.meet.scbwin.setline1(
-          strops.truncpad(u'Elapsed: ',self.meet.scb.linelen-12, align='r')+
-          strops.truncpad(self.elapsed,12)
-        )
+        if type(self.meet.scbwin) is scbwin.scbtimer:
+            self.meet.scbwin.setline1(
+              strops.truncpad(u'Elapsed: ',self.meet.scb.linelen-12, align='r')+
+              strops.truncpad(self.elapsed,12)
+            )
         
-        if self.lapcount > 0:
-            ## display kilometre updates elsewhere?
-            if self.lapcount > 3:
-                pass
-                #kilo = self.lapcount // 4
-                #self.meet.scbwin.setr1(u'Lap {0}, {1}km:'.format(
+            if self.lapcount > 0:
+                ## display kilometre updates elsewhere?
+                if self.lapcount > 3:
+                    pass
+                    #kilo = self.lapcount // 4
+                    #self.meet.scbwin.setr1(u'Lap {0}, {1}km:'.format(
                     #self.lapcount,kilo))
-            #else:
-            self.meet.scbwin.setr1(u'Lap {0}:'.format(self.lapcount))
-            self.meet.scbwin.sett1(self.lastlapstr)
-        else:
-            self.meet.scbwin.setline2(u'')
-            self.meet.scbwin.setr1(u'')
-            self.meet.scbwin.sett1(u'')
-        if self.record:
-            self.meet.scbwin.setline2(
-             strops.truncpad(u'Record: ',self.meet.scb.linelen-12, align='r')+
-             strops.truncpad(u'{0:0.3f}km'.format(self.record/1000.0),12)
+                #else:
+                self.meet.scbwin.setr1(u'Lap {0}:'.format(self.lapcount))
+                self.meet.scbwin.sett1(self.lastlapstr)
+            else:
+                self.meet.scbwin.setline2(u'')
+                self.meet.scbwin.setr1(u'')
+                self.meet.scbwin.sett1(u'')
+            if self.record is not None:
+                self.meet.scbwin.setline2(
+                 strops.truncpad(u'Record: ',self.meet.scb.linelen-12, align='r')+
+                 strops.truncpad(u'{0:0.3f}km'.format(self.record/1000.0),12)
             )
-        elif self.target:
-            self.meet.scbwin.setline2(
-             strops.truncpad(u'Target: ',self.meet.scb.linelen-12, align='r')+
-             strops.truncpad(u'{0:0.3f}km'.format(self.target/1000.0),12)
-            )
-        if self.lapcount > self.projlap and self.projection is not None:
-            self.meet.scbwin.setr2(u'Projection:')
-            self.meet.scbwin.sett2(u'{0:0.1f}  km'.format(self.projection/1000.0))
-        else:
-            self.meet.scbwin.setr2(u'')
-            self.meet.scbwin.sett2(u'')
-        self.meet.scbwin.update()
+            elif self.target is not None:
+                self.meet.scbwin.setline2(
+                 strops.truncpad(u'Target: ',self.meet.scb.linelen-12, align='r')+
+                 strops.truncpad(u'{0:0.3f}km'.format(self.target/1000.0),12)
+                )
+            if self.lapcount > self.projlap and self.projection is not None:
+                self.meet.scbwin.setr2(u'Projection:')
+                self.meet.scbwin.sett2(u'{0:0.1f}  km'.format(self.projection/1000.0))
+            else:
+                self.meet.scbwin.setr2(u'')
+                self.meet.scbwin.sett2(u'')
+            self.meet.scbwin.update()
 
         # telegraph outputs
         self.meet.cmd_announce(u'projection',unicode(self.projection))
@@ -470,13 +561,14 @@ class hourrec(object):
             if self.start is None:
                 self.lstart = tod.now()
                 self.start = e
-                self.log.info(u'Set Start: ' + e.rawtime())
+                self.torunning()
+                LOG.info(u'Set Start: %s', e.rawtime())
             else:
-                self.log.info(u'Spurious start trig: ' + e.rawtime())
+                LOG.info(u'Spurious start trig: %s', e.rawtime())
         elif chan == timy.CHAN_PA:
             self.split_trig(e)
         else:
-            self.log.info(u'Trigger: ' + repr(chan) + u' : ' + e.rawtime())
+            LOG.info(u'Trigger: %r @ %s', chan, e.rawtime())
         return False
 
     def timeout(self):
@@ -510,41 +602,50 @@ class hourrec(object):
         if nelap != self.elapsed or dofinishtxt:
             self.elapsed = nelap
             if dofinishtxt:
-                self.meet.scbwin.setline1(u'')
-                self.meet.scbwin.setr1(u'Result:')
-                #self.meet.scbwin.setr1(u'Final Distance:')
-                if self.D is not None and self.D > 0: 
-                    self.meet.scbwin.sett1(u'{0:0.3f}km'.format(self.D/1000.0))
-                if self.record is not None:
-                    if self.D > self.record:
-                        self.meet.scbwin.setline2(u'NEW RECORD'.center(self.meet.scb.linelen))
+                if type(self.meet.scbwin) is scbwin.scbtimer:
+                    self.meet.scbwin.setline1(u'')
+                    self.meet.scbwin.setr1(u'Result:')
+                    #self.meet.scbwin.setr1(u'Final Distance:')
+                    if self.D is not None and self.D > 0: 
+                        self.meet.scbwin.sett1(u'{0:0.3f}km'.format(self.D/1000.0))
+                    if self.record is not None:
+                        if self.D > self.record:
+                            self.meet.scbwin.setline2(u'NEW RECORD'.center(self.meet.scb.linelen))
+                        else:
+                            self.meet.scbwin.setline2(u'')
                     else:
                         self.meet.scbwin.setline2(u'')
-                else:
-                    self.meet.scbwin.setline2(u'')
-                self.meet.scbwin.setr2(u'')
-                self.meet.scbwin.sett2(u'')
-            elif dostarttxt:
-                if self.record:
-                    self.meet.scbwin.setr1(u'Record:')
-                    self.meet.scbwin.sett1(u'{0:0.3f}km'.format(self.record/1000.0))
-                elif self.target:
-                    self.meet.scbwin.setr1(u'Target:')
-                    self.meet.scbwin.sett1(u'{0:0.3f}km'.format(self.target/1000.0))
-                if self.wallstart is not None:
-                    line1 = strops.truncpad(u'Start Time: ',self.meet.scb.linelen-12,align='r')+strops.truncpad(self.wallstart.meridian(),12,align='l')
-                    self.meet.scbwin.setline2(line1)
-
-                if nelap != u'0':
-                    self.meet.scbwin.setr2(u'Countdown:')
-                    self.meet.scbwin.sett2(nelap)
-                else:
                     self.meet.scbwin.setr2(u'')
                     self.meet.scbwin.sett2(u'')
-                self.meet.scbwin.update()
+                    self.meet.scbwin.update()
+            elif dostarttxt:
+                if type(self.meet.scbwin) is scbwin.scbtimer:
+                    if self.record is not None:
+                        self.meet.scbwin.setr1(u'Record:')
+                        self.meet.scbwin.sett1(u'{0:0.3f}km'.format(self.record/1000.0))
+                    elif self.target is not None:
+                        self.meet.scbwin.setr1(u'Target:')
+                        self.meet.scbwin.sett1(u'{0:0.3f}km'.format(self.target/1000.0))
+                    if self.wallstart is not None:
+                        line1 = strops.truncpad(u'Start Time: ',self.meet.scb.linelen-12,align='r')+strops.truncpad(self.wallstart.meridian(),12,align='l')
+                        self.meet.scbwin.setline2(line1)
+
+                    if nelap != u'0':
+                        self.meet.scbwin.setr2(u'Countdown:')
+                        self.meet.scbwin.sett2(nelap)
+                    else:
+                        self.meet.scbwin.setr2(u'')
+                        self.meet.scbwin.sett2(u'')
+                    self.meet.scbwin.update()
             else:
                 self.scblap()
             
+        # update elapsed button
+        if not dostarttxt:
+            self.time_lbl.set_text(self.elapsed)
+        else:
+            self.time_lbl.set_text(u'-' + self.elapsed)
+
         ## updates and running lap
 	# hl board, 
         return True
@@ -552,36 +653,53 @@ class hourrec(object):
     def armstart(self):
         """Arm timer for start trigger."""
         if self.start is None:
-            self.log.info(u'Arm Start.')
+            LOG.info(u'Arm Start.')
+            self.stat_but.buttonchg(uiutil.bg_armint, u'Arm Start')
             self.meet.main_timer.arm(timy.CHAN_START)
         else:
-            self.log.info(u'Event already started.')
+            LOG.info(u'Event already started.')
 
     def armsplit(self, sp, cid=timy.CHAN_200):
         """Arm timer for a 50m/200m split."""
-        self.DiC = 0            # additional distance
-        self.log.info(u'armsplit')
+        self.DiC = 0.0           # additional distance
+        LOG.info(u'armsplit')
 
     def abortrider(self):
         """Abort the attempt."""
-        self.log.info(u'abortrider')
+        LOG.debug(u'Ignored abort rider in hour event')
 
     def falsestart(self):
         """Register false start."""
-        self.log.info(u'Falsestart')
+        LOG.debug(u'Ignored false start in hour event')
 
     def armfinish(self):
         """Arm timer for finish trigger."""
-        self.log.info(u'armfinish')
+        LOG.debug(u'Ignored arm finish in hour event')
         
     def showtimerwin(self):
         """Show timer window on scoreboard."""
-        self.log.info(u'showtimerwin')
+        LOG.info(u'showtimerwin')
         self.meet.scbwin = scbwin.scbtt(scb=self.meet.scb,
                                         header=self.riderstr,
                                         subheader=self.recordname.upper())
         self.meet.scbwin.reset()
         self.recalc()
+
+    def torunning(self):
+        """Set timer running."""
+        self.stat_but.buttonchg(uiutil.bg_armstart, u'Running')
+
+    def tofinish(self):
+        """Set timer finished."""
+        self.stat_but.buttonchg(uiutil.bg_none, u'Finished')
+
+    def tobell(self):
+        """Set timer bell lap."""
+        self.stat_but.buttonchg(uiutil.bg_armint, u'Bell')
+
+    def tofinal(self):
+        """Set timer final lap."""
+        self.stat_but.buttonchg(uiutil.bg_armfin, u'Final Lap')
 
     def toidle(self):
         """Set timer to idle state."""
@@ -593,9 +711,11 @@ class hourrec(object):
         #self.elaptod = tod.tod(u'0')
         self.lastlapstr = u'     '      # last lap as string
         self.splitlist = []
+        self.stat_but.buttonchg(uiutil.bg_none, u'Idle')
+        self.model.clear()
 
         # set lapcount
-        self.log.info(u'Reset event state to idle')
+        LOG.info(u'Reset event state to idle')
 
     def destroy(self):
         """Signal race shutdown."""
@@ -611,31 +731,32 @@ class hourrec(object):
 
     def __init__(self, meet, event, ui=True):
         """Constructor."""
-        self.readonly = not ui
-        self.winopen = ui
         self.meet = meet
         self.event = event      # Note: now a treerowref
         self.evno = event[u'evid']
         self.evtype = event[u'type']
         self.series = event[u'seri']
-        self.configpath = meet.event_configfile(self.evno)
+        self.configfile = meet.event_configfile(self.evno)
         self.autospec = ''
 
-        self.log = logging.getLogger('hourrec')
-        self.log.setLevel(logging.DEBUG)
-        self.log.debug('Creating new hour rec event: ' + str(self.evno))
+        self.readonly = not ui
+        rstr = u''
+        if self.readonly:
+            rstr = u'readonly '
+        self.winopen = ui
+        LOG.debug(u'Init %shour event %s', rstr, self.evno)
+        self.comments = []
 
         # model
         self.reclen = tod.tod(u'1h00:00')	# record duration
         self.minlap = tod.tod(u'14.0')	# min lap time
-        self.compute =u''
+        self.compute = u''
         self.riderstr = u''	# rider name string
-	self.rideruci = u''	# rider info string -> uci code
         self.wallstart = None	# advertised start time
         self.finish = None	# timer finish tod
         self.start = None	# timer start tod
         self.lstart = None	# local start tod
-        self.target = 0		# current target in m
+        self.target = None	# current target in m
         self.record = None	# current record in m
         self.projlap = 12	# start showing projection after this many laps
         self.minproj = 30000	# minimum possible projection
@@ -644,23 +765,70 @@ class hourrec(object):
         self.avglap = None	# current lap avg
         self.lapcount = 0	# current lap counter
         self.elapsed = u''	# current elapsed time str
-        #self.elaptod = tod.tod(u'0')
         self.onestart = True	#
         self.lastlapstr = u'     '	# last lap as string
         self.splitlist = []
                 
         # computes
         self.D = 0		# dist in m	(trunc to m)
-	self.LPi = 250		# len of track	(should be int)
+	self.LPi = 250.0	# len of track	(should be int)
 	self.TC = 0		# number of complete laps before last lap
-	self.DiC = 0		# additional distance
+	self.DiC = 0.0		# additional distance
 	self.TTC = None		# time of last complete lap
 	self.TRC = None		# time remaining to ride at beginning of
 				# last lap
 
-        # UI
-        self.frame = gtk.VBox(False, 5)
-        self.frame.connect('destroy', self.shutdown)
+	# lap view model
+	self.model = gtk.ListStore(gobject.TYPE_STRING,
+                                   gobject.TYPE_STRING,
+                                   gobject.TYPE_STRING,
+                                   gobject.TYPE_STRING)
+
+        uifile = os.path.join(metarace.UI_PATH, u'hour.ui')
+        LOG.debug(u'Building event interface from %r', uifile)
+        b = gtk.Builder()
+        b.add_from_file(uifile)
+
+        self.frame = b.get_object(u'race_vbox')
+        self.frame.connect(u'destroy', self.shutdown)
+
+        # info pane
+        self.info_expand = b.get_object(u'info_expand')
+        b.get_object(u'race_info_evno').set_text(self.evno)
+        self.showev = b.get_object(u'race_info_evno_show')
+        self.prefix_ent = b.get_object(u'race_info_prefix')
+        self.prefix_ent.connect(u'changed', self.editent_cb,u'pref')
+        self.prefix_ent.set_text(self.event[u'pref'])
+        self.info_ent = b.get_object(u'race_info_title')
+        self.info_ent.connect(u'changed', self.editent_cb,u'info')
+        self.info_ent.set_text(self.event[u'info'])
+
+        self.time_lbl = b.get_object(u'race_info_time')
+        self.time_lbl.modify_font(uiutil.DIGITFONT)
+
+        # ctrl pane
+        self.stat_but = uiutil.statbut(b.get_object(u'race_ctrl_stat_but'))
+        self.stat_but.set_sensitive(True)
+        self.ctrl_places = b.get_object(u'race_ctrl_places')
+        self.ctrl_action_combo = b.get_object(u'race_ctrl_action_combo')
+        self.ctrl_action = b.get_object(u'race_ctrl_action')
+        self.action_model = b.get_object(u'race_action_model')
+
+        # start timer and show window
         if ui:
-            # interactive elements
-            pass
+            LOG.debug(u'Connecting event ui handlers')
+            # riders pane
+            t = gtk.TreeView(self.model)
+            self.view = t
+            t.set_reorderable(False)
+            t.set_enable_search(False)
+            t.set_rules_hint(True)
+
+            # riders columns
+            uiutil.mkviewcoltxt(t, u'Cnt', 0, calign=0.0)
+            uiutil.mkviewcoltxt(t, u'Dist', 1, calign=0.0)
+            uiutil.mkviewcoltxt(t, u'Split', 2, expand=True, calign=1.0)
+            uiutil.mkviewcoltxt(t, u'Lap', 3, calign=1.0)
+            t.show()
+            b.get_object(u'race_result_win').add(t)
+            b.connect_signals(self)

@@ -16,7 +16,7 @@
         <child>
           <object class="GtkTable" id="race_table">
             <property name="visible">True</property>
-            <property name="n_rows">7</property>
+            <property name="n_rows">10</property>
             <property name="n_columns">3</property>
             <property name="column_spacing">2</property>
             <property name="row_spacing">2</property>
@@ -32,6 +32,17 @@
               </packing>
             </child>
             <child>
+              <object class="GtkHSeparator" id="hseparator2">
+                <property name="visible">True</property>
+              </object>
+              <packing>
+                <property name="right_attach">3</property>
+                <property name="top_attach">5</property>
+                <property name="bottom_attach">6</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
               <object class="GtkLabel" id="properties_title">
                 <property name="visible">True</property>
                 <property name="yalign">1</property>
@@ -42,10 +53,10 @@
               </packing>
             </child>
             <child>
-              <object class="GtkLabel" id="race_timing_label">
+              <object class="GtkLabel" id="recordname_label">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">Time Type:</property>
+                <property name="label" translatable="yes">Event:</property>
                 <property name="single_line_mode">True</property>
               </object>
               <packing>
@@ -58,17 +69,13 @@
               </packing>
             </child>
             <child>
-              <object class="GtkComboBox" id="race_score_type">
+              <object class="GtkEntry" id="recordname_entry">
                 <property name="visible">True</property>
-                <property name="tooltip_text" translatable="yes">Timing method, start to finish or final 200m.</property>
-                <property name="model">scoring_model</property>
-                <property name="active">0</property>
-                <child>
-                  <object class="GtkCellRendererText" id="cellrenderertext1"/>
-                  <attributes>
-                    <attribute name="text">0</attribute>
-                  </attributes>
-                </child>
+                <property name="can_focus">True</property>
+                <property name="has_focus">True</property>
+                <property name="tooltip_text" translatable="yes">Record name text (required)</property>
+                <property name="invisible_char">&#x25CF;</property>
+                <property name="activates_default">True</property>
               </object>
               <packing>
                 <property name="left_attach">1</property>
@@ -81,10 +88,10 @@
               </packing>
             </child>
             <child>
-              <object class="GtkLabel" id="race_dist_label">
+              <object class="GtkLabel" id="recordlen_label">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">Distance:</property>
+                <property name="label" translatable="yes">Duration:</property>
                 <property name="single_line_mode">True</property>
               </object>
               <packing>
@@ -97,11 +104,11 @@
               </packing>
             </child>
             <child>
-              <object class="GtkEntry" id="race_dist_entry">
+              <object class="GtkEntry" id="recordlen_entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="has_focus">True</property>
-                <property name="tooltip_text" translatable="yes">Distance</property>
+                <property name="tooltip_text" translatable="yes">Record duration (required)</property>
                 <property name="invisible_char">&#x25CF;</property>
                 <property name="activates_default">True</property>
               </object>
@@ -116,38 +123,122 @@
               </packing>
             </child>
             <child>
-              <object class="GtkComboBox" id="race_dist_type">
+              <object class="GtkLabel" id="ridername_label">
                 <property name="visible">True</property>
-                <property name="tooltip_text" translatable="yes">Units for race distance</property>
-                <property name="model">dist_type_model</property>
-                <property name="active">1</property>
-                <child>
-                  <object class="GtkCellRendererText" id="cellrenderertext2"/>
-                  <attributes>
-                    <attribute name="text">0</attribute>
-                  </attributes>
-                </child>
+                <property name="xalign">0</property>
+                <property name="label" translatable="yes">Rider:</property>
+                <property name="single_line_mode">True</property>
+              </object>
+              <packing>
+                <property name="top_attach">4</property>
+                <property name="bottom_attach">5</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options">GTK_FILL</property>
+                <property name="x_padding">2</property>
+                <property name="y_padding">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkEntry" id="ridername_entry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="has_focus">True</property>
+                <property name="tooltip_text" translatable="yes">Rider name and UCI ID text</property>
+                <property name="invisible_char">&#x25CF;</property>
+                <property name="activates_default">True</property>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">3</property>
+                <property name="top_attach">4</property>
+                <property name="bottom_attach">5</property>
+                <property name="y_options"></property>
+                <property name="x_padding">2</property>
+                <property name="y_padding">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="start_label">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="label" translatable="yes">Start:</property>
+                <property name="single_line_mode">True</property>
+              </object>
+              <packing>
+                <property name="top_attach">8</property>
+                <property name="bottom_attach">9</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options">GTK_FILL</property>
+                <property name="x_padding">2</property>
+                <property name="y_padding">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkEntry" id="start_entry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="has_focus">True</property>
+                <property name="tooltip_text" translatable="yes">Optional start time for attempt</property>
+                <property name="invisible_char">&#x25CF;</property>
+                <property name="activates_default">True</property>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">8</property>
+                <property name="bottom_attach">9</property>
+                <property name="y_options"></property>
+                <property name="x_padding">2</property>
+                <property name="y_padding">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="target_label">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="label" translatable="yes">Target:</property>
+                <property name="single_line_mode">True</property>
+              </object>
+              <packing>
+                <property name="top_attach">7</property>
+                <property name="bottom_attach">8</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options">GTK_FILL</property>
+                <property name="x_padding">2</property>
+                <property name="y_padding">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkEntry" id="target_entry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="has_focus">True</property>
+                <property name="tooltip_text" translatable="yes">Optional target distance</property>
+                <property name="invisible_char">&#x25CF;</property>
+                <property name="activates_default">True</property>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+                <property name="top_attach">7</property>
+                <property name="bottom_attach">8</property>
+                <property name="y_options"></property>
+                <property name="x_padding">2</property>
+                <property name="y_padding">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="target_units">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="label" translatable="yes">metres </property>
+                <property name="single_line_mode">True</property>
               </object>
               <packing>
                 <property name="left_attach">2</property>
                 <property name="right_attach">3</property>
-                <property name="top_attach">3</property>
-                <property name="bottom_attach">4</property>
-                <property name="y_options"></property>
-                <property name="x_padding">2</property>
-                <property name="y_padding">2</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel" id="race_series_label">
-                <property name="visible">True</property>
-                <property name="xalign">0</property>
-                <property name="label" translatable="yes">Series:</property>
-                <property name="single_line_mode">True</property>
-              </object>
-              <packing>
-                <property name="top_attach">4</property>
-                <property name="bottom_attach">5</property>
+                <property name="top_attach">7</property>
+                <property name="bottom_attach">8</property>
                 <property name="x_options">GTK_FILL</property>
                 <property name="y_options">GTK_FILL</property>
                 <property name="x_padding">2</property>
@@ -155,70 +246,10 @@
               </packing>
             </child>
             <child>
-              <object class="GtkLabel" id="race_starters_label">
+              <object class="GtkLabel" id="record_label">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">Add Starters:</property>
-                <property name="single_line_mode">True</property>
-              </object>
-              <packing>
-                <property name="top_attach">5</property>
-                <property name="bottom_attach">6</property>
-                <property name="x_options">GTK_FILL</property>
-                <property name="y_options">GTK_FILL</property>
-                <property name="x_padding">2</property>
-                <property name="y_padding">2</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkEntry" id="race_starters_entry">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="tooltip_text" translatable="yes">Add listed bibs to race startlist.</property>
-                <property name="invisible_char">&#x25CF;</property>
-                <property name="activates_default">True</property>
-              </object>
-              <packing>
-                <property name="left_attach">1</property>
-                <property name="right_attach">3</property>
-                <property name="top_attach">5</property>
-                <property name="bottom_attach">6</property>
-                <property name="y_options"></property>
-                <property name="x_padding">2</property>
-                <property name="y_padding">2</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkAlignment" id="alignment1">
-                <property name="visible">True</property>
-                <property name="xalign">0</property>
-                <property name="xscale">0</property>
-                <child>
-                  <object class="GtkEntry" id="race_series_entry">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="tooltip_text" translatable="yes">Optionally set bib series id.</property>
-                    <property name="invisible_char">&#x25CF;</property>
-                    <property name="activates_default">True</property>
-                    <property name="width_chars">4</property>
-                  </object>
-                </child>
-              </object>
-              <packing>
-                <property name="left_attach">1</property>
-                <property name="right_attach">3</property>
-                <property name="top_attach">4</property>
-                <property name="bottom_attach">5</property>
-                <property name="y_options">GTK_FILL</property>
-                <property name="x_padding">2</property>
-                <property name="y_padding">2</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkLabel" id="auto_starters_label">
-                <property name="visible">True</property>
-                <property name="xalign">0</property>
-                <property name="label" translatable="yes">Auto Starters:</property>
+                <property name="label" translatable="yes">Record:</property>
                 <property name="single_line_mode">True</property>
               </object>
               <packing>
@@ -231,19 +262,38 @@
               </packing>
             </child>
             <child>
-              <object class="GtkEntry" id="auto_starters_entry">
+              <object class="GtkEntry" id="record_entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="tooltip_text" translatable="yes">Enter an automatic startlist specification.</property>
+                <property name="has_focus">True</property>
+                <property name="tooltip_text" translatable="yes">Existing record distance</property>
                 <property name="invisible_char">&#x25CF;</property>
                 <property name="activates_default">True</property>
               </object>
               <packing>
                 <property name="left_attach">1</property>
-                <property name="right_attach">3</property>
+                <property name="right_attach">2</property>
                 <property name="top_attach">6</property>
                 <property name="bottom_attach">7</property>
                 <property name="y_options"></property>
+                <property name="x_padding">2</property>
+                <property name="y_padding">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="record_units">
+                <property name="visible">True</property>
+                <property name="xalign">0</property>
+                <property name="label" translatable="yes">metres </property>
+                <property name="single_line_mode">True</property>
+              </object>
+              <packing>
+                <property name="left_attach">2</property>
+                <property name="right_attach">3</property>
+                <property name="top_attach">6</property>
+                <property name="bottom_attach">7</property>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options">GTK_FILL</property>
                 <property name="x_padding">2</property>
                 <property name="y_padding">2</property>
               </packing>

@@ -173,8 +173,8 @@ class hourrec(object):
 
         # arm the front straight
         if self.winopen:
-            self.meet.timer.arm(timy.CHAN_PA)
-            self.meet.timer.armlock(True)
+            self.meet.main_timer.arm(timy.CHAN_PA)
+            self.meet.main_timer.armlock(True)
             self.meet.scbwin = scbwin.scbtt(scb=self.meet.scb,
                                             header=self.riderstr,
                                             subheader=self.recordname.upper())
@@ -264,7 +264,7 @@ class hourrec(object):
     def shutdown(self, win=None, msg=u'Exiting'):
         """Terminate race object."""
         if self.winopen:
-            self.meet.timer.armlock(False)
+            self.meet.main_timer.armlock(False)
         if not self.readonly:
             self.saveconfig()
         self.log.debug(u'Race Shutdown: ' + msg)
@@ -443,10 +443,10 @@ class hourrec(object):
         self.meet.scbwin.update()
 
         # telegraph outputs
-        self.meet.announce.publish_cmd(u'projection',unicode(self.projection))
-        self.meet.announce.publish_cmd(u'lapcount',unicode(self.lapcount))
-        self.meet.announce.publish_cmd(u'laptime',self.lastlapstr)
-        self.meet.announce.publish_cmd(u'elapsed',self.elapsed)
+        self.meet.cmd_announce(u'projection',unicode(self.projection))
+        self.meet.cmd_announce(u'lapcount',unicode(self.lapcount))
+        self.meet.cmd_announce(u'laptime',self.lastlapstr)
+        self.meet.cmd_announce(u'elapsed',self.elapsed)
 
         # on the gemini - use B/T dual timer mode
         #self.meet.gemini.set_bib(str(self.lapcount),0)
@@ -553,7 +553,7 @@ class hourrec(object):
         """Arm timer for start trigger."""
         if self.start is None:
             self.log.info(u'Arm Start.')
-            self.meet.timer.arm(timy.CHAN_START)
+            self.meet.main_timer.arm(timy.CHAN_START)
         else:
             self.log.info(u'Event already started.')
 

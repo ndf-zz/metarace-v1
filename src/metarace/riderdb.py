@@ -334,6 +334,7 @@ class riderdb(object):
                 rmap[u'note']=note
                 rmap[u'namestr']=strops.resname(first, last, club)
                 rmap[u'name']=strops.resname(first, last)
+                rmap[u'shortname']=strops.fitname(first, last, 4, trunc=False)
                 ret[key]=rmap
         return ret
         

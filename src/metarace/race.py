@@ -165,13 +165,14 @@ class race(object):
             incnt -= 1
             self.riders.swap(self.riders.get_iter(incnt), i)
 
-        # overwrite eliminations form placed riders - but warn on overlap
+        # overwrite eliminations from placed riders - but warn on overlap
         place = 1
         count = 0
+        clubmode = self.meet.get_clubmode()
         for placegroup in placestr.split():
             for bib in placegroup.split(u'-'):
                 if bib not in placeset:
-                    if count >= incnt:
+                    if count >= incnt and not clubmode:
                         LOG.error(u'Error: More places than available')
                         break
                     placeset.add(bib)

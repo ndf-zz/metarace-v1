@@ -14,6 +14,7 @@ from metarace import tod
 from metarace import eventdb
 from metarace import riderdb
 from metarace import strops
+from metarace import countback
 from metarace import uiutil
 from metarace import report
 from metarace import jsonconfig
@@ -240,7 +241,7 @@ class rms(object):
                     places = strops.reformat_placelist(
                                  cr.get(crkey, u'places'))
                 if i not in self.intermeds:
-                    LOG.debug(u'Adding inter %r:%s:$r', i, descr, places)
+                    LOG.debug(u'Adding inter %r: %r %r', i, descr, places)
                     self.intermeds.append(i)
                     self.intermap[i] = {u'descr':descr,
                                         u'places':places,
@@ -481,20 +482,22 @@ class rms(object):
 
     def checkpoint_model(self):
         """Write the current rider model to an undo buffer."""
-        self.undomod.clear()
-        self.placeundo = self.places
-        for r in self.riders:
-            self.undomod.append(r)
-        self.canundo = True
+        LOG.debug(u'checkpoint - disabled')
+        #self.undomod.clear()
+        #self.placeundo = self.places
+        #for r in self.riders:
+            #self.undomod.append(r)
+        #self.canundo = True
 
     def undo_riders(self):
         """Roll back rider model to last checkpoint."""
-        if self.canundo:
-            self.riders.clear()
-            for r in self.undomod:
-                self.riders.append(r)
-            self.places = self.placeundo
-            self.canundo = False
+        LOG.debug(u'undo - disabled')
+        #if self.canundo:
+            #self.riders.clear()
+            #for r in self.undomod:
+                #self.riders.append(r)
+            #self.places = self.placeundo
+            #self.canundo = False
           
     def get_catlist(self):
         """Return the ordered list of categories."""
@@ -669,15 +672,15 @@ class rms(object):
                 aux.append([self.points[tally][bib], strops.riderno_key(bib),
                            [None, r[COL_BIB], r[COL_NAMESTR],
                            strops.truncpad(str(self.pointscb[tally][bib]), 10,
-                                                   elipsis=False),
+                                                   ellipsis=False),
                              None, str(self.points[tally][bib])],
                            self.pointscb[tally][bib]
                         ])
             aux.sort(sort_tally)
             for r in aux:
                 sec.lines.append(r[2])
-            sec.lines.append([None, None, None])
-            sec.lines.append([None, None, u'Total Points: '+unicode(tallytot)])
+            #sec.lines.append([None, None, None])
+            #sec.lines.append([None, None, u'Total Points: '+unicode(tallytot)])
             ret.append(sec)
         
         if len(self.bonuses) > 0:
@@ -1525,14 +1528,14 @@ class rms(object):
                               + unicode(dnfcount)])
             residual = totcount - (fincount + dnfcount + dnscount + hdcount)
             if residual > 0:
-                LOG.info(u'Unaccounted for: ' + unicode(residual))
+                LOG.info(u'%r unaccounted for', residual)
             ret.append(sec)
             
             # Intermediates
             # show all intermediates here
             for imed in self.intermeds:
                 im = self.intermap[imed]
-                LOG.info(u'intermed : ' + repr(imed))
+                LOG.info(u'intermed : %r', imed)
                 if im[u'places'] and im['show']:
                     ret.extend(self.int_report(imed))
 
@@ -2044,9 +2047,9 @@ class rms(object):
                 elif key == key_clearplace: # clear selected rider from places
                     self.clear_selected_place()
                     return True	
-                elif key.upper() == key_undo:	# Undo model change if possible
-                    self.undo_riders()
-                    return True
+                #elif key.upper() == key_undo:	# Undo model change if possible
+                    #self.undo_riders()
+                    #return True
             if key[0] == 'F':
                 if key == key_announce:
                     if self.places:
@@ -2700,6 +2703,8 @@ class rms(object):
                     placeset.add(bib)
                     r = self.getrider(bib)
                     if r is not None:
+                        cs = r[COL_CAT].decode(u'utf-8')
+                        rcat = self.ridercat(riderdb.primary_cat(cs))
                         xtra = None
                         if dotime:
                             bt = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
@@ -2710,7 +2715,7 @@ class rms(object):
                                 xtra = bt.rawtime(0)
                         lines.append([unicode(curplace)+u'.',
                                   bib,r[COL_NAMESTR].decode(u'utf-8'),
-                                  r[COL_CAT].decode(u'utf-8'), None, xtra])
+                                  rcat, None, xtra])
                     idx += 1
                 else:
                     LOG.warning(u'Duplicate no. %r in places', bib)
@@ -3336,7 +3341,7 @@ class rms(object):
                                 self.points[tally][bib] += allpts
                             else:
                                 self.points[tally][bib] = allpts
-                                self.pointscb[tally][bib] = strops.countback()
+                                self.pointscb[tally][bib] = countback.countback()
                             # No countback for all_source entries
                     else:	# points/bonus as per config
                         if len(bonuses) >= curplace:	# bonus is vector
@@ -3351,7 +3356,7 @@ class rms(object):
                                 else:
                                     self.points[tally][bib] = points[curplace-1]
                             if bib not in self.pointscb[tally]:
-                                self.pointscb[tally][bib] = strops.countback()
+                                self.pointscb[tally][bib] = countback.countback()
                             if countbackwinner:	# stage finish
                                 if curplace == 1:	# winner only at finish
                                     self.pointscb[tally][bib][0] += 1
@@ -3511,7 +3516,7 @@ class rms(object):
             if ft is not None and self.timelimit is not None:
                 limit = self.decode_limit(self.timelimit, ft)
                 if limit is not None:
-                    LOG.info(u'Time limit: %s = %s, +%s',
+                    LOG.info(u'Time limit: %r = %s, +%s',
                              self.timelimit, limit.rawtime(0),
                              (limit-ft).rawtime(0))
                     # and export to announce
@@ -3821,7 +3826,7 @@ class rms(object):
         rstr = u''
         if self.readonly:
             rstr = u'readonly '
-        LOG.debug(u'Init %sevent %s', rstr, self.evno)
+        LOG.debug(u'Init %r event %r', rstr, self.evno)
 
         self.recalclock = threading.Lock()
         self.__dorecalc = False

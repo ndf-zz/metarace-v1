@@ -6,6 +6,7 @@ pygtk.require("2.0")
 
 import gtk
 import glib
+import gobject
 
 import os
 import sys
@@ -175,7 +176,13 @@ class fakemeet(object):
         self.rdb = rdb
         self.timer = decoder.decoder()
         self.alttimer = timy.timy()
-        self.stat_but = gtk.Button()
+        self.stat_but = uiutil.statbut(gtk.Button())
+        self.action_model = gtk.ListStore(gobject.TYPE_STRING, gobject.TYPE_STRING,)
+        self.action_model.append(['a','a'])
+        self.action_combo = gtk.ComboBox()
+        self.action_combo.set_model(self.action_model)
+        self.action_combo.set_active(0)
+        
         self.announce = telegraph.telegraph()
         self.title_str = ''
         self.date_str = ''
@@ -208,7 +215,7 @@ class fakemeet(object):
             rep.strings[u'diststr'] = strops.promptstr(u'Distance:',
                                            unicode(self.distance) + u' km')
         else:
-            rep.strings[u'diststr'] = u''
+            rep.strings[u'diststr'] = self.diststr
 
     def loadconfig(self):
         """Load meet config from disk."""
@@ -220,7 +227,8 @@ class fakemeet(object):
                u'date':u'',
                u'organiser':u'',
                u'commissaire':u'',
-               u'distance':u'',
+               u'distance':None,
+               u'diststr':u'',
                u'docindex':u'0',
                u'resultnos':u'Yes',
                u'competitioncode': u'',
@@ -247,6 +255,7 @@ class fakemeet(object):
         self.commissaire_str = cr.get(u'roadmeet', u'commissaire')
         self.linkbase = cr.get(u'roadmeet', u'linkbase')
         self.distance = strops.confopt_float(cr.get(u'roadmeet', u'distance'))
+        self.diststr = cr.get(u'roadmeet', u'diststr')
         self.docindex = strops.confopt_posint(cr.get(u'roadmeet', u'docindex'), 0)
         self.competitioncode = cr.get(u'roadmeet', u'competitioncode')
         self.eventcode = cr.get(u'roadmeet', u'eventcode')
@@ -439,7 +448,7 @@ class roadmeet(object):
             rep.strings[u'diststr'] = strops.promptstr(u'Distance:',
                                            unicode(self.distance) + u' km')
         else:
-            rep.strings[u'diststr'] = u''
+            rep.strings[u'diststr'] = self.diststr
 
         for sec in sections:
             rep.add_section(sec)
@@ -790,7 +799,7 @@ class roadmeet(object):
             rep.strings[u'diststr'] = strops.promptstr(u'Distance:',
                                              unicode(self.distance) + u' km')
         else:
-            rep.strings[u'diststr'] = u''
+            rep.strings[u'diststr'] = self.diststr
 
  
         # 3: set provisional status	# TODO: other tests for prov flag?
@@ -1118,6 +1127,7 @@ class roadmeet(object):
         cw.set(u'roadmeet', u'resultnos', self.bibs_in_results)
         cw.set(u'roadmeet', u'lifexport', self.lifexport)
         cw.set(u'roadmeet', u'distance', self.distance)
+        cw.set(u'roadmeet', u'diststr', self.diststr)
         cw.set(u'roadmeet', u'docindex', self.docindex)
         cw.set(u'roadmeet', u'mirrorpath', self.mirrorpath)
         cw.set(u'roadmeet', u'mirrorcmd', self.mirrorcmd)
@@ -1153,7 +1163,8 @@ class roadmeet(object):
 		u'date':u'',
 		u'organiser':u'',
 		u'commissaire':u'',
-		u'distance':u'',
+		u'distance':None,
+		u'diststr':u'',
 		u'docindex':u'0',
 		u'timer':u'',
 		u'alttimer':u'',
@@ -1227,6 +1238,7 @@ class roadmeet(object):
         self.organiser_str = cr.get(u'roadmeet', u'organiser')
         self.commissaire_str = cr.get(u'roadmeet', u'commissaire')
         self.distance = strops.confopt_float(cr.get(u'roadmeet', u'distance'))
+        self.diststr = cr.get(u'roadmeet', u'diststr')
         self.docindex = strops.confopt_posint(cr.get(u'roadmeet',
                                                      u'docindex'), 0)
         self.linkbase = cr.get(u'roadmeet', u'linkbase')
@@ -1390,6 +1402,7 @@ class roadmeet(object):
         self.organiser_str = u''
         self.commissaire_str = u''
         self.distance = None
+        self.diststr = u''
         self.docindex = 0
         self.linkbase = u'.'
 

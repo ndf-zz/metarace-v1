@@ -676,7 +676,7 @@ class race(object):
         self.placexfer(u'')
         self.meet.main_timer.dearm(self.startchan)
         self.meet.main_timer.dearm(self.finchan)
-        uiutil.buttonchg(self.stat_but, uiutil.bg_none, u'Idle')
+        self.stat_but.buttonchg(uiutil.bg_none, u'Idle')
         self.stat_but.set_sensitive(True)
         self.set_elapsed()
         LOG.info(u'Event reset - all places cleared.')
@@ -684,12 +684,12 @@ class race(object):
     def setrunning(self):
         """Set timer state to 'running'."""
         self.timerstat = u'running'
-        uiutil.buttonchg(self.stat_but, uiutil.bg_none, u'Running')
+        self.stat_but.buttonchg(uiutil.bg_none, u'Running')
 
     def setfinished(self):
         """Set timer state to 'finished'."""
         self.timerstat = u'finished'
-        uiutil.buttonchg(self.stat_but, uiutil.bg_none, u'Finished')
+        self.stat_but.buttonchg(uiutil.bg_none, u'Finished')
         self.stat_but.set_sensitive(False)
         self.ctrl_places.grab_focus()
 
@@ -697,7 +697,7 @@ class race(object):
         """Toggle timer arm start state."""
         if self.timerstat == u'idle':
             self.timerstat = u'armstart'
-            uiutil.buttonchg(self.stat_but, uiutil.bg_armstart, u'Arm Start')
+            self.stat_but.buttonchg(uiutil.bg_armstart, u'Arm Start')
             self.meet.main_timer.arm(self.startchan)
             if self.timetype == u'200m':
                 # also accept C0 on sprint types
@@ -705,7 +705,7 @@ class race(object):
         elif self.timerstat == u'armstart':
             self.timerstat = u'idle'
             self.time_lbl.set_text(u'')
-            uiutil.buttonchg(self.stat_but, uiutil.bg_none, u'Idle')
+            self.stat_but.buttonchg(uiutil.bg_none, u'Idle')
             self.meet.main_timer.dearm(self.startchan)
             if self.timetype == u'200m':
                 # also accept C0 on sprint types
@@ -715,11 +715,11 @@ class race(object):
         """Toggle timer arm finish state."""
         if self.timerstat == u'running':
             self.timerstat = u'armfinish'
-            uiutil.buttonchg(self.stat_but, uiutil.bg_armfin, u'Arm Finish')
+            self.stat_but.buttonchg(uiutil.bg_armfin, u'Arm Finish')
             self.meet.main_timer.arm(self.finchan)
         elif self.timerstat == u'armfinish':
             self.timerstat = u'running'
-            uiutil.buttonchg(self.stat_but, uiutil.bg_none, u'Running')
+            self.stat_but.buttonchg(uiutil.bg_none, u'Running')
             self.meet.main_timer.dearm(self.finchan)
         return False	# for use in delayed callback
 
@@ -1330,8 +1330,7 @@ class race(object):
         self.time_lbl.modify_font(pango.FontDescription(u'monospace bold'))
 
         # ctrl pane
-        self.stat_but = b.get_object(u'race_ctrl_stat_but')
-        uiutil.buttonchg(self.stat_but, uiutil.bg_none, u'Idle')
+        self.stat_but = uiutil.statbut(b.get_object(u'race_ctrl_stat_but'))
         self.ctrl_places = b.get_object(u'race_ctrl_places')
         self.ctrl_action_combo = b.get_object(u'race_ctrl_action_combo')
         self.ctrl_action = b.get_object(u'race_ctrl_action')

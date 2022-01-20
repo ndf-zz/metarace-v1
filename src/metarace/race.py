@@ -4,7 +4,6 @@
 import gtk
 import glib
 import gobject
-import pango
 import logging
 import os
 
@@ -1328,7 +1327,7 @@ class race(object):
         self.info_ent.set_text(self.event[u'info'])
 
         self.time_lbl = b.get_object(u'race_info_time')
-        self.time_lbl.modify_font(pango.FontDescription(u'monospace bold'))
+        self.time_lbl.modify_font(uiutil.MONOFONT)
 
         # ctrl pane
         self.stat_but = uiutil.statbut(b.get_object(u'race_ctrl_stat_but'))

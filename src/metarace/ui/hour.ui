@@ -2,20 +2,6 @@
 <interface>
   <requires lib="gtk+" version="2.16"/>
   <!-- interface-naming-policy project-wide -->
-  <object class="GtkListStore" id="race_action_model">
-    <columns>
-      <!-- column-name action -->
-      <column type="gchararray"/>
-      <!-- column-name code -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0" translatable="yes">Send Message</col>
-        <col id="1" translatable="yes">msg</col>
-      </row>
-    </data>
-  </object>
   <object class="GtkVBox" id="race_vbox">
     <property name="visible">True</property>
     <property name="orientation">vertical</property>
@@ -172,7 +158,7 @@
                 <property name="visible">True</property>
                 <property name="border_width">5</property>
                 <property name="n_rows">2</property>
-                <property name="n_columns">4</property>
+                <property name="n_columns">2</property>
                 <child>
                     <object class="GtkButton" id="race_ctrl_stat_but">
                     <property name="width_request">160</property>
@@ -189,42 +175,26 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkEntry" id="race_ctrl_places">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="invisible_char">&#x25CF;</property>
-                    <signal name="activate" handler="race_ctrl_places_activate_cb"/>
-                  </object>
-                  <packing>
-                    <property name="left_attach">2</property>
-                    <property name="right_attach">4</property>
-                    <property name="y_options">GTK_FILL</property>
-                    <property name="x_padding">2</property>
-                    <property name="y_padding">2</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkLabel" id="race_ctrl_places_lbl">
-                    <property name="width_request">80</property>
+                  <object class="GtkLabel" id="race_ctrl_info">
                     <property name="visible">True</property>
                     <property name="xalign">1</property>
-                    <property name="label" translatable="yes">Places:</property>
+                    <property name="label" translatable="yes">[info]</property>
                     <property name="track_visited_links">False</property>
                   </object>
                   <packing>
                     <property name="left_attach">1</property>
                     <property name="right_attach">2</property>
-                    <property name="x_options">GTK_FILL</property>
+                    <property name="x_options">GTK_EXPAND GTK_FILL</property>
                     <property name="y_options">GTK_FILL</property>
                     <property name="x_padding">2</property>
                     <property name="y_padding">2</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkLabel" id="race_ctrl_action_lbl">
+                  <object class="GtkLabel" id="race_ctrl_status">
                     <property name="visible">True</property>
                     <property name="xalign">1</property>
-                    <property name="label" translatable="yes">Action:</property>
+                    <property name="label" translatable="yes">[status]</property>
                     <property name="track_visited_links">False</property>
                   </object>
                   <packing>
@@ -234,47 +204,6 @@
                     <property name="bottom_attach">2</property>
                     <property name="x_options">GTK_FILL</property>
                     <property name="y_options">GTK_FILL</property>
-                    <property name="x_padding">2</property>
-                    <property name="y_padding">2</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkEntry" id="race_ctrl_action">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="invisible_char">&#x25CF;</property>
-                    <property name="width_chars">6</property>
-                    <signal name="activate" handler="race_ctrl_action_activate_cb"/>
-                  </object>
-                  <packing>
-                    <property name="left_attach">3</property>
-                    <property name="right_attach">4</property>
-                    <property name="top_attach">1</property>
-                    <property name="bottom_attach">2</property>
-                    <property name="y_options">GTK_FILL</property>
-                    <property name="x_padding">2</property>
-                    <property name="y_padding">2</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkComboBox" id="race_ctrl_action_combo">
-                    <property name="visible">True</property>
-                    <property name="model">race_action_model</property>
-                    <property name="active">0</property>
-                    <child>
-                      <object class="GtkCellRendererText" id="cellrenderertext1"/>
-                      <attributes>
-                        <attribute name="text">0</attribute>
-                      </attributes>
-                    </child>
-                  </object>
-                  <packing>
-                    <property name="left_attach">2</property>
-                    <property name="right_attach">3</property>
-                    <property name="top_attach">1</property>
-                    <property name="bottom_attach">2</property>
-                    <property name="x_options">GTK_FILL</property>
-                    <property name="y_options"></property>
                     <property name="x_padding">2</property>
                     <property name="y_padding">2</property>
                   </packing>

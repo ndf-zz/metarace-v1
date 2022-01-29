@@ -133,7 +133,7 @@ class hourrec(object):
                     self.curspeed = 3.6*pr
                     de = di + int(float(rt.timeval) * pr)
                     LOG.debug(u'Projected final dist: %r', de)
-                    self.infoline.set_text(u'Speed: {0:0.1f} km/h, Est: {1:0.1f} km'.format(self.curspeed, de/1000.0))
+                    self.infoline.set_text(u'Speed: {0:0.1f} km/h, Est: {1:0.2f} km'.format(self.curspeed, de/1000.0))
                     if de < self.maxproj and de > self.minproj:
                         self.projection = de
                     else:
@@ -499,50 +499,46 @@ class hourrec(object):
                 lastlap = self.start
             if len(self.splitlist) > 2:
                 lasttwo = t - self.splitlist[-2]
-            if t > lastlap:
-                laptime = t - lastlap
-                if laptime > self.minlap:
-                    self.laptimedirty = True
-                    elap = t - self.start
-                    if elap <= self.reclen:
+            laptime = t - lastlap
+            if laptime > self.minlap:
+                self.laptimedirty = True
+                elap = t - self.start
+                if elap <= self.reclen:
+                    self.lapcount += 1
+                    self.splitlist.append(t)
+                    self.addlapline(t, lastlap, self.lapcount)
+                    self.recalc()
+                    self.curlap = laptime
+                    glib.idle_add(self.scblap)
+                    LOG.info(u'Lap %r: %s @ %s', self.lapcount,
+                             laptime.rawtime(2), t.rawtime(2))
+                    if laptime < 60:
+                        self.lastlapstr = laptime.rawtime(2)
+                    else:
+                        self.lastlapstr = laptime.rawtime(0)
+                    if (elap+laptime) > self.reclen:
+                        self.tofinal()
+                    elif lasttwo is not None:
+                        if (elap+lasttwo) > self.reclen:
+                            self.tobell()
+                else:
+                    if self.finish is None:
                         self.lapcount += 1
                         self.splitlist.append(t)
                         self.addlapline(t, lastlap, self.lapcount)
-                        self.recalc()
+                        self.finish = t
                         self.curlap = laptime
-                        glib.idle_add(self.scblap)
-                        LOG.info(u'Lap %r: %s @ %s', self.lapcount,
-                                 laptime.rawtime(2), t.rawtime(2))
-                        if laptime < 60:
-                            self.lastlapstr = laptime.rawtime(2)
-                        else:
-                            self.lastlapstr = laptime.rawtime(0)
-                        if (elap+laptime) > self.reclen:
-                            self.tofinal()
-                        elif lasttwo is not None:
-                            if (elap+lasttwo) > self.reclen:
-                                self.tobell()
+                        self.recalc()
+                        self.tofinish()
+                        LOG.info(u'Final Lap Completed.')
                     else:
-                        if self.finish is None:
-                            self.lapcount += 1
-                            self.splitlist.append(t)
-                            self.addlapline(t, lastlap, self.lapcount)
-                            self.finish = t
-                            self.curlap = laptime
-                            self.recalc()
-                            self.tofinish()
-                            LOG.info(u'Final Lap Completed.')
-                        else:
-                            LOG.info(u'Duplicate finish pass.')
-                    # and ask meet for an export
-                    self.meet.delayed_export()
-                else:
-                    LOG.info(u'Ignored short lap.')
+                        LOG.info(u'Duplicate finish pass.')
+                # and ask meet for an export
+                self.meet.delayed_export()
             else:
-                LOG.info(u'Invalid trigger.')
+                LOG.info(u'Ignored short lap.')
         else:
             LOG.info(u'Ignored trig without start.')
-
 
     def scblap(self):
         # output to main scoreboard
@@ -578,7 +574,7 @@ class hourrec(object):
                 )
             if self.lapcount > self.projlap and self.projection is not None:
                 self.meet.scbwin.setr2(u'Projection:')
-                self.meet.scbwin.sett2(u'{0:0.1f}  km'.format(self.projection/1000.0))
+                self.meet.scbwin.sett2(u'{0:0.2f} km'.format(self.projection/1000.0))
             else:
                 self.meet.scbwin.setr2(u'')
                 self.meet.scbwin.sett2(u'')
@@ -833,7 +829,7 @@ class hourrec(object):
         self.elapsed = u''	# current elapsed time str
         self.onestart = True	#
         self.lastlapstr = u'     '	# last lap as string
-        self.laptimedirty = False
+        self.laptimedirty = True
         self.splitlist = []
                 
         # computes

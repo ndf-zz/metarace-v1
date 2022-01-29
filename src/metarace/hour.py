@@ -75,6 +75,7 @@ class hourrec(object):
     def recalc(self):
         """Recalc runtime from current state."""
         self.statusline.set_text(u'')
+        self.curspeed = None
         elap = None
         if self.finish is None and self.elapsed == u'' and self.start is not None and len(self.splitlist) > 0:
             # elapsed time at last completed lap
@@ -121,21 +122,35 @@ class hourrec(object):
                     LOG.debug(self.compute)
                 self.projection = None
             else:
-                # update projection (use 4 lap average speed)
-                if len(self.splitlist) > 4:
+                # update projection (use 3 lap average speed)
+                if len(self.splitlist) > 3:
                     et = self.splitlist[-1] - self.start
                     rt = self.reclen - et
                     di = int(self.LPi * self.lapcount)
-                    pi = self.splitlist[-5]
+                    pi = self.splitlist[-4]
                     pd = self.splitlist[-1]
-                    pr = (self.LPi * 4)/(float(pd.timeval) - float(pi.timeval))
+                    pr = (self.LPi * 3)/(float(pd.timeval) - float(pi.timeval))
+                    self.curspeed = 3.6*pr
                     de = di + int(float(rt.timeval) * pr)
                     LOG.debug(u'Projected final dist: %r', de)
-                    self.infoline.set_text(u'Speed: {0:0.1f} km/h, Est: {1:0.1f} km'.format(3.6*pr, de/1000.0))
+                    self.infoline.set_text(u'Speed: {0:0.1f} km/h, Est: {1:0.1f} km'.format(self.curspeed, de/1000.0))
                     if de < self.maxproj and de > self.minproj:
                         self.projection = de
                     else:
                         self.projection = None
+        # update telegraph outputs
+        if self.D is not None and self.D > 0:
+            self.meet.cmd_announce(u'distance',str(self.D))
+        else:
+            self.meet.cmd_announce(u'distance',None)
+        if self.projection is not None:
+            self.meet.cmd_announce(u'projection',unicode(self.projection))
+        else:
+            self.meet.cmd_announce(u'projection',None)
+        if self.curspeed is not None:
+            self.meet.cmd_announce(u'curspeed','{0:0.1f}'.format(self.curspeed))
+        else:
+            self.meet.cmd_announce(u'curspeed',None)
 
     def update_expander_lbl_cb(self):
         """Update race info expander label."""
@@ -415,8 +430,7 @@ class hourrec(object):
                 else:
                     tstr = u'{0:0.3f} km'.format(self.record/1000.0)
                     sec.lines.append([u'', u'{} metre{} short of existing record: '.format(self.record-self.D, strops.plural(self.record-self.D)) + tstr])
-            sec.lines.append([u'', u'Complete laps: ' + unicode(self.lapcount-1)])
-            #sec.lines.append([u'', u'LPi \u00d7 TC: {0:0.1f} m'.format((self.lapcount-1)*self.LPi)])
+            sec.lines.append([u'', u'Complete laps: ' + unicode(self.TC)])
             if self.compute:
                 sec.lines.append([u'', u'Additional distance: {0:0.1f} m'.format(self.DiC)])
                 sec.lines.append([u'', self.compute])
@@ -432,10 +446,11 @@ class hourrec(object):
             if self.projection is not None:
                 tstr = u'{0:0.3f} km'.format(self.projection/1000.0)
                 sec.lines.append([u'', u'Projection: ' + tstr])
-            sec.lines.append([u'', u'Elapsed: ' + self.elapsed])
-            sec.lines.append([u'', u'Laps: ' + unicode(self.lapcount)])
+            if self.lapcount > 0:
+                sec.lines.append([u'', u'Elapsed: ' + self.elapsed])
+                sec.lines.append([u'', u'Laps: ' + unicode(self.lapcount)])
         ret.append(sec)
-        if self.start is not None:
+        if self.start is not None and self.lapcount > 0:
             sec = report.threecol_section()
             sec.subheading = u'Lap Times'
             sec.lines = []
@@ -487,6 +502,7 @@ class hourrec(object):
             if t > lastlap:
                 laptime = t - lastlap
                 if laptime > self.minlap:
+                    self.laptimedirty = True
                     elap = t - self.start
                     if elap <= self.reclen:
                         self.lapcount += 1
@@ -569,16 +585,17 @@ class hourrec(object):
             self.meet.scbwin.update()
 
         # telegraph outputs
-        self.meet.cmd_announce(u'projection',unicode(self.projection))
         self.meet.cmd_announce(u'lapcount',unicode(self.lapcount))
-        self.meet.cmd_announce(u'laptime',self.lastlapstr)
+        if self.laptimedirty:
+            self.meet.cmd_announce(u'laptime',self.lastlapstr)
+            self.laptimedirty = False
         self.meet.cmd_announce(u'elapsed',self.elapsed)
 
         # on the gemini - use B/T dual timer mode
-        #self.meet.gemini.set_bib(str(self.lapcount),0)
-        #self.meet.gemini.set_time(self.lastlapstr,0)
-        #self.meet.gemini.set_time(self.elapsed,1)
-        #self.meet.gemini.show_dual()
+        self.meet.gemini.set_bib(str(self.lapcount),0)
+        self.meet.gemini.set_time(self.lastlapstr,0)
+        self.meet.gemini.set_time(self.elapsed,1)
+        self.meet.gemini.show_dual()
 
         return False
 
@@ -753,6 +770,7 @@ class hourrec(object):
         self.elapsed = u''      # current elapsed time str
         #self.elaptod = tod.tod(u'0')
         self.lastlapstr = u'     '      # last lap as string
+        self.laptimedirty = False
         self.splitlist = []
         self.stat_but.buttonchg(uiutil.bg_none, u'Idle')
         self.model.clear()
@@ -815,6 +833,7 @@ class hourrec(object):
         self.elapsed = u''	# current elapsed time str
         self.onestart = True	#
         self.lastlapstr = u'     '	# last lap as string
+        self.laptimedirty = False
         self.splitlist = []
                 
         # computes

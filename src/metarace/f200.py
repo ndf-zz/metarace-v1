@@ -750,7 +750,7 @@ class f200(object):
             intstr = u' at 100m'
             if self.evtype == u'flying lap':
                 intstr = u' at 200 start'
-            lapstr = strops.num2ord(unicode(rank + 1)) + intstr
+            lapstr = strops.rank2ord(unicode(rank + 1)) + intstr
             self.meet.scbwin.setr1(u'(' + unicode(rank + 1) + u')')
             glib.timeout_add_seconds(2, self.clear_rank,
                                         self.meet.scbwin.setr1)

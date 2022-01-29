@@ -1655,7 +1655,7 @@ class rms(object):
                 bs = bt.timestr(0)
             ps = r[COL_COMMENT].decode(u'utf-8')
             if r[COL_PLACE] != '':
-                ps = strops.num2ord(r[COL_PLACE])
+                ps = strops.rank2ord(r[COL_PLACE])
             LOG.info(u'%s %s %s %s', bib, ns, bs, ps)
             lt = None
             if len(r[COL_RFSEEN]) > 0:

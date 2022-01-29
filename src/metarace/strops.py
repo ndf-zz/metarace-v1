@@ -218,7 +218,7 @@ def drawno_encirc(drawstr=u''):
             pass
     return ret
 
-def num2ord(place):
+def rank2ord(place):
     """Return ordinal for the given place."""
     omap = { u'1' : u'st',
              u'2' : u'nd',
@@ -226,15 +226,16 @@ def num2ord(place):
              u'11' : u'th',
              u'12' : u'th',
              u'13' : u'th' }
-    if place in omap:
-        return place + omap[place]
-    elif place.isdigit():
-        if len(place) > 1 and place[-1] in omap: # last digit 1,2,3
-            return place + omap[place[-1]]
+    ret = place
+    if place.isdigit():
+        if len(place) > 1 and place[-2:] in omap:
+            ret = place + omap[place[-2:]]
         else:
-            return place + u'th'
-    else:
-        return place
+            if len(place) > 1 and place[-1] in omap: # last digit 1,2,3
+                ret = place + omap[place[-1]]
+            else:
+                ret = place + u'th'
+    return ret
 
 def rank2int(rank):
     """Convert a rank/placing string into an integer."""
@@ -535,10 +536,9 @@ def confopt_pair(confstr, value, default=None):
 def confopt_list(confstr, list=[], default=None):
     """Return an element from list or default."""
     ret = default
-    for elem in list:
-        if confstr.lower() == elem.lower():
-            ret = elem
-            break
+    look = confstr.lower()
+    if look in list:
+        ret = look
     return ret
 
 def bibstr2bibser(bibstr=u''):

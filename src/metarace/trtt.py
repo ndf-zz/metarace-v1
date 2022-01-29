@@ -1555,7 +1555,7 @@ class trtt(object):
                 bs = bt.timestr(1)
             ps = r[COL_COMMENT]
             if r[COL_PLACE] != '':
-                ps = strops.num2ord(r[COL_PLACE])
+                ps = strops.rank2ord(r[COL_PLACE])
             self.log.info(' '.join([bib, ns, bs, ps]))
             lt = None
             if len(r[COL_RFSEEN]) > 0:

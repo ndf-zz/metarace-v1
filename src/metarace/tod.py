@@ -248,7 +248,7 @@ class tod(object):
     def meridian(self, mstr=None, secs=True):
         """Return a 12hour time of day string with meridian."""
         ret = None
-        med = u'am'
+        med = u'\u2006am'
         # unwrap timeval into a single 24hr period
         tv = self.timeval
         if tv >= 86400:
@@ -258,7 +258,7 @@ class tod(object):
 
         # determine meridian and adjust for display
         if tv >= 43200:
-            med = u'pm'
+            med = u'\u2006pm'
         if mstr is not None:
             med = mstr
         tv = tv % 43200

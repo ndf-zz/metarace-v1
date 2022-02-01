@@ -134,6 +134,9 @@ def mkport(port=None):
     
     if port == u'DEBUG': # force use of the hardcoded UDP endpoint
         LOG.debug(u'Using debug port: UDP:localhost:5060')
+        nprot = socket.SOCK_DGRAM
+        naddr = u'localhost'
+        nport = 5060
     else:
         vels = [u'TCP', u'localhost', u'1946']
         aels = port.translate(strops.PRINT_UTRANS).strip().split(u':')

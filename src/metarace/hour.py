@@ -17,7 +17,7 @@ from metarace import jsonconfig
 from metarace import strops
 from metarace import report
 
-LOG = logging.getLogger(u'metarace.race')
+LOG = logging.getLogger(u'metarace.hour')
 LOG.setLevel(logging.DEBUG)
 
 # config version string
@@ -327,7 +327,7 @@ class hourrec(object):
             tstr = u'{0:0.3f} km'.format(self.target/1000.0)
             sec.lines.append([u'', u'Target: ' + tstr])
         if self.wallstart is not None:
-            sec.lines.append([u'', u'Start Time: ' + self.wallstart.meridian()])
+            sec.lines.append([u'', u'Start Time: ' + self.wallstart.meridian(secs=False)])
         ret.append(sec)
         return ret
 
@@ -415,8 +415,6 @@ class hourrec(object):
             sec.subheading = substr
         if self.event[u'reco']:
             sec.footer = self.event[u'reco']
-        #if self.wallstart is not None:
-            #sec.subheading = u'Start: ' + self.wallstart.meridian()
 
         sec.lines.append([u'',self.riderstr])
         # Distance measure - result if D available
@@ -442,7 +440,7 @@ class hourrec(object):
                 tstr = u'{0:0.3f} km'.format(self.target/1000.0)
                 sec.lines.append([u'', u'Target: ' + tstr])
             if self.wallstart is not None:
-                sec.lines.append([u'', u'Start Time: ' + self.wallstart.meridian()])
+                sec.lines.append([u'', u'Start Time: ' + self.wallstart.meridian(secs=False)])
             if self.projection is not None:
                 tstr = u'{0:0.3f} km'.format(self.projection/1000.0)
                 sec.lines.append([u'', u'Projection: ' + tstr])
@@ -684,7 +682,7 @@ class hourrec(object):
                         self.meet.scbwin.setr1(u'Target:')
                         self.meet.scbwin.sett1(u'{0:0.3f}km'.format(self.target/1000.0))
                     if self.wallstart is not None:
-                        line1 = strops.truncpad(u'Start Time: ',self.meet.scb.linelen-12,align='r')+strops.truncpad(self.wallstart.meridian(),12,align='l')
+                        line1 = strops.truncpad(u'Start Time: ',self.meet.scb.linelen-12,align='r')+strops.truncpad(self.wallstart.meridian(secs=False),12,align='l')
                         self.meet.scbwin.setline2(line1)
 
                     if nelap != u'0':
@@ -775,8 +773,6 @@ class hourrec(object):
             sline = u'Record: {0:0.3f} km - Ready'.format(self.record/1000.0)
         self.infoline.set_text(sline)
         self.statusline.set_text(u'')
-
-        # set lapcount
         LOG.info(u'Reset event state to idle')
 
     def destroy(self):

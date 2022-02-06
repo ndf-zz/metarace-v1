@@ -511,7 +511,7 @@ class hourrec(object):
                     LOG.info(u'Lap %r: %s @ %s', self.lapcount,
                              laptime.rawtime(2), t.rawtime(2))
                     if laptime < 60:
-                        self.lastlapstr = laptime.rawtime(2)
+                        self.lastlapstr = laptime.rawtime(1)
                     else:
                         self.lastlapstr = laptime.rawtime(0)
                     if (elap+laptime) > self.reclen:

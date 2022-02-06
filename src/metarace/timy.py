@@ -87,15 +87,18 @@ def timy_checksum(msg):
     ret = 0
     for ch in msg:
         ret = ret + ord(ch)
+    LOG.debug(u'checksum calc = %r', ret)
     return ret & 0xff
 
 def timy_getsum(chkstr):
     """Convert Timy checksum string to an integer."""
     ret = -1
     try:
-        ret = int(chkstr, 16)
-    except Exception:
-        pass
+        ms = (ord(chkstr[0])-0x30)&0xf
+        ls = (ord(chkstr[1])-0x30)&0xf
+        ret = ms<<4 | ls
+    except Exception as e:
+        LOG.debug('error collecting timy checksum: %s', e)
     return ret
 
 def chan2id(chanstr=u'0'):
@@ -303,6 +306,7 @@ class timy(threading.Thread):
 
     def __parse_message(self, msg):
         """Return tod object from timing msg or None."""
+        LOG.debug('TIMY raw msg: %r', msg)
         ret = None
         msg = msg.rstrip()	# remove cr/lf if present
         tsum = 0

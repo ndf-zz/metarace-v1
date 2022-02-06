@@ -787,7 +787,7 @@ class trtt(object):
                 tcodestr = rteam.upper()
                 if rteam.isdigit():
                     tcodestr = None
-                sec.lines.append([rstart.meridian(),
+                sec.lines.append([rstart.meridiem(),
                                   tcodestr,tname,ustr,u'____',cstr])
                 lteam = rteam
             sec.lines.append([None,rno,rname,None,None,None,None])

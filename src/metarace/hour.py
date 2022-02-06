@@ -327,7 +327,7 @@ class hourrec(object):
             tstr = u'{0:0.3f}\u2006km'.format(self.target/1000.0)
             sec.lines.append([u'', u'Target: ' + tstr])
         if self.wallstart is not None:
-            sec.lines.append([u'', u'Start Time: ' + self.wallstart.meridian(secs=False)])
+            sec.lines.append([u'', u'Start Time: ' + self.wallstart.meridiem(secs=False)])
         ret.append(sec)
         return ret
 
@@ -440,7 +440,7 @@ class hourrec(object):
                 tstr = u'{0:0.3f}\u2006km'.format(self.target/1000.0)
                 sec.lines.append([u'', u'Target: ' + tstr])
             if self.wallstart is not None:
-                sec.lines.append([u'', u'Start Time: ' + self.wallstart.meridian(secs=False)])
+                sec.lines.append([u'', u'Start Time: ' + self.wallstart.meridiem(secs=False)])
             if self.projection is not None:
                 tstr = u'{0:0.3f}\u2006km'.format(self.projection/1000.0)
                 sec.lines.append([u'', u'Projection: ' + tstr])
@@ -682,7 +682,7 @@ class hourrec(object):
                         self.meet.scbwin.setr1(u'Target:')
                         self.meet.scbwin.sett1(u'{0:0.3f}\u2006km'.format(self.target/1000.0))
                     if self.wallstart is not None:
-                        line1 = strops.truncpad(u'Start Time: ',self.meet.scb.linelen-12,align='r')+strops.truncpad(self.wallstart.meridian(secs=False),12,align='l')
+                        line1 = strops.truncpad(u'Start Time: ',self.meet.scb.linelen-12,align='r')+strops.truncpad(self.wallstart.meridiem(secs=False),12,align='l')
                         self.meet.scbwin.setline2(line1)
 
                     if nelap != u'0':

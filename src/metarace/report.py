@@ -3689,7 +3689,7 @@ class report(object):
         # override timestamp
         self.strings[u'timestamp'] = (
                      unicode(datetime.date.today().strftime(u'%A, %B %d %Y '))
-                     + tod.now().meridian() )
+                     + tod.now().meridiem() )
 
         # Status and context values
         self.provisional = False

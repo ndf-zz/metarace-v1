@@ -292,7 +292,7 @@ class timy(threading.Thread):
         for msg in [u'TIMYINIT', u'NSF', u'PROG?', u'KL0', u'CHK1', u'PRE4',
                     u'RR0', u'BE1', u'DTS02.00', u'DTF02.00', u'EMU0',
                     u'PRINTER0', u'PRIIGN1',
-                    u'DTPMetarace ' + tod.now().meridian(), u'PRILF']:
+                    u'DTPMetarace ' + tod.now().meridiem(), u'PRILF']:
             self.write(msg)
 
     def trig(self, impulse):

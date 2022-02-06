@@ -40,7 +40,7 @@ DATE_FMT=('%a %d/%m/%y')
 
 def get_dateline(width=32):
     dpart = time.strftime(DATE_FMT) 
-    tpart = tod.now().meridian()
+    tpart = tod.now().meridiem()
     ret = tpart 
     totlen = len(tpart)+len(dpart)
     if totlen >= width: # with a space

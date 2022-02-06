@@ -1046,7 +1046,7 @@ class irtt(object):
                 bstr = r[COL_BIB].decode('utf-8').upper()
                 stxt = ''
                 if r[COL_WALLSTART] is not None:
-                    stxt = r[COL_WALLSTART].meridian()
+                    stxt = r[COL_WALLSTART].meridiem()
                     stxt = stxt.replace(u'am', u'\u2009am')
                     stxt = stxt.replace(u'pm', u'\u2009pm')
                     if lt is not None: 
@@ -1878,7 +1878,6 @@ class irtt(object):
 
             # after manips, then re-set start time
             self.sl.set_time(nowoft.timestr(0))
-            #self.meet.scb.set_time(nowoft.meridian())
 
             # if finish lane loaded, set the elapsed time
             if self.fl.getstatus() in ['load', 'running', 'armfin']:

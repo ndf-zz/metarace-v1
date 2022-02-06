@@ -1105,7 +1105,7 @@ class trackmeet(object):
             return False
         else:
             tt = tod.now()
-            self.clock_label.set_text(tt.meridian())
+            self.clock_label.set_text(tt.meridiem())
 
             # check for completion in the export workers
             if self.mirror is not None:

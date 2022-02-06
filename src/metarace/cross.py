@@ -921,7 +921,7 @@ class cross(object):
                             rbltt = laptim
                         if rbl < tod.tod(u'23h59:59.999'):
                             bs = rbl.rawtime(1)
-                            es = u'@' + rblt.meridian()
+                            es = u'@' + rblt.meridiem()
 
                     else:
                         if r[COL_COMMENT].strip() != '':
@@ -957,7 +957,7 @@ class cross(object):
 
             ret.append(sec)
             sec = report.bullet_text('analysisstat')
-            sec.lines.append([None, u'Fastest lap: ' + blr + u' ' + bl.rawtime(1) + u' @' + blt.meridian()])
+            sec.lines.append([None, u'Fastest lap: ' + blr + u' ' + bl.rawtime(1) + u' @' + blt.meridiem()])
             #sec.lines.append([None,'Total riders: ' + str(totcount)])
             #sec.lines.append([None,'Did not start: ' + str(dnscount)])
             #sec.lines.append([None,'Did not finish: ' + str(dnfcount)])

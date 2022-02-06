@@ -245,8 +245,8 @@ class tod(object):
                                              hoursep, minsep),
             QUANT_TWID[places], QUANT_OPAD[places])
 
-    def meridian(self, mstr=None, secs=True):
-        """Return a 12hour time of day string with meridian."""
+    def meridiem(self, mstr=None, secs=True):
+        """Return a 12hour time of day string with meridiem."""
         ret = None
         med = u'\u2006am'
         # unwrap timeval into a single 24hr period
@@ -256,7 +256,7 @@ class tod(object):
         elif tv < 0:
             tv = 86400 - (tv.copy_abs() % 86400)
 
-        # determine meridian and adjust for display
+        # determine meridiem and adjust for display
         if tv >= 43200:
             med = u'\u2006pm'
         if mstr is not None:

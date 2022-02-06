@@ -1007,7 +1007,7 @@ class roadmeet(object):
         """Update status buttons and time of day clock button."""
         if self.running:
             # update pc ToD label
-            self.clock_label.set_text(tod.now().meridian())
+            self.clock_label.set_text(tod.now().meridiem())
 
             # call into race timeout handler
             if self.curevent is not None:

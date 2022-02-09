@@ -2619,7 +2619,10 @@ class teampage(object):
         self.footer = None
         self.lines = []
         self.teammap = {}
+        self.expand = 0.0	# extra space between teams
+        self.scale = 1.0	# scale line height localy if required
         self.lcount = 0
+        self.height = None	# override height on page
         self.h = None
 
     def serialize(self, rep, sectionid=None):
@@ -2639,11 +2642,18 @@ class teampage(object):
         ret[u'count'] = self.lcount
         return ret
 
+    def set_height(self, newh=None):
+        """Override height to a set value string."""
+        if newh is not None:
+            self.height = str2len(newh)
+
     def get_h(self, report):
         """Return total height on page of section on report."""
         if self.h is None or len(self.lines) != self.lcount:
             self.lcount = len(self.lines)
-            self.h = report.body_len # section always fills page
+            if self.height is None:
+                self.height = report.body_len	# default to whole page
+            self.h = self.height
         return self.h
 
     def truncate(self, remainder, report):
@@ -2661,6 +2671,7 @@ class teampage(object):
         """Output a one-page teams list."""
         report.c.save()
         glen = self.h
+        rcount = 0
         if self.heading:
             report.text_cent(report.midpagew, report.h, self.heading,
                            report.fonts[u'section'])
@@ -2674,7 +2685,7 @@ class teampage(object):
         if self.footer:
             glen -= report.line_height
 
-        localline = 0.92 * report.line_height
+        localline = self.scale * report.line_height
         if self.lcount > 0:
             col = 0
             pageoft = report.h
@@ -2701,7 +2712,7 @@ class teampage(object):
                         break;
 
                 tnh = max(tnh, fnh)
-                th = 0.9 * tnh
+                th = self.scale * tnh
                 ds = None
                 dat = None
                 if t[1] in self.teammap:
@@ -2725,25 +2736,40 @@ class teampage(object):
                     #if tnh > localline:
                         #tco += 0.5 * (tnh - localline)
                     #report.text_right(left + tcw - mm2pt(1.0), tco, tcode, report.fonts[u'section'])
-                pageoft += 0.9 * tnh
+                pageoft += self.scale * tnh
+                #pageoft += 0.9 * tnh
                 
                 # optionally draw ds
                 if ds is not None:
                     report.text_cent(left + tcw + 0.5*tnw, pageoft, u'DS: ' + ds, report.fonts[u'body'])
                     pageoft += localline
                 # draw riders
+                rnw = tnw-tcw-mm2pt(1.0)
                 for r in dat[u'riders']:
+                    strike = False
                     report.text_right(left + tcw - mm2pt(1.0), pageoft, r[1], report.fonts[u'body'])
-                    report.text_left(left + tcw, pageoft, r[2], report.fonts[u'body'])
+                    report.fit_text(left + tcw, pageoft, r[2], rnw, font=report.fonts[u'body'])
                     report.text_left(left + tnw, pageoft, r[3], report.fonts[u'body'])
+                    if r[0]:
+                        report.drawline(left+mm2pt(0.5),
+                                      pageoft+(0.5*localline),
+                                      left+report.col3_width-mm2pt(0.5),
+                                      pageoft+(0.5*localline))
+                    rcount += 1
                     pageoft += localline
-                pageoft += report.line_height
+                pageoft += report.line_height + self.expand
             # place each team in the order delivered.
         
         # advance report.h to end of page
         report.h += glen
-        if self.footer:
-            report.text_cent(report.midpagew, report.h, self.footer,
+        if self.footer or rcount > 0:
+            mv = []
+            if rcount > 0:
+                mv.append(u'{} starters.'.format(rcount))
+            if self.footer:
+                mv.append(self.footer)
+            msg = u'\t'.join(mv)
+            report.text_cent(report.midpagew, report.h, msg,
                               report.fonts[u'subhead'])
             report.h += report.line_height
         report.c.restore()
@@ -2801,7 +2827,9 @@ class teampage(object):
         if self.subheading:
             f.write(htlib.p(htlib.escapetext(self.subheading.strip()), 
                             {u'class':u'lead'}) + u'\n')
-
+        if self.footer:
+            f.write(htlib.p(htlib.small(htlib.escapetext(self.footer.strip()))))
+        rcount = 0
         if len(self.lines) > 0:
             for t in self.lines:
                 f.write(htlib.h3([htlib.span(htlib.escapetext(t[1]),
@@ -2818,6 +2846,7 @@ class teampage(object):
                         nv = r[0:6]
                         if len(nv) == 2:
                             nv = [nv[0], None, nv[1]]
+                        rcount += 1
                         rows.append(nv)
                     trows = []
                     for l in rows:
@@ -2825,8 +2854,8 @@ class teampage(object):
                     f.write(htlib.table([htlib.tbody(trows)],
                           {u'class':report.tablestyle}))
                     f.write(u'\n')
-        if self.footer:
-            f.write(self.footer.strip() + u'\n')
+        if rcount > 0:
+            f.write(htlib.p(htlib.small(htlib.escapetext(u'{} starters.'.format(rcount)))))
         return None
 
 class gamut(object):
@@ -4162,15 +4191,18 @@ class report(object):
                        {u'href':self.prevlink+u'.html',
                         u'class':u'nav-link'})
         if self.indexlink:
+            hrf = self.indexlink+u'.html'
+            if hrf == u'index.html':
+                hrf = u'./'
             navbar += htlib.a(
                        htlib.escapetext(u'\u2191 Index'),
-                       {u'href':self.indexlink+u'.html',
+                       {u'href':hrf,
                         u'class':u'nav-link'})
         if self.provisional:	# add refresh button
             navbar += htlib.a(
                         htlib.escapetext(u'Reload \u21bb'),
-                       {u'href':u'#', u'class':u'nav-link',
-                        u'onclick':u'window.location.replace(window.location.href);'})
+                       {u'href':u'#',u'class':u'nav-link',
+                        u'onclick':u'return rl();'})
         if self.nextlink:
             navbar += htlib.a(
                        htlib.escapetext(u'Next \u2192'),

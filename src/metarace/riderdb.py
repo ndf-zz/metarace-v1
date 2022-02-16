@@ -28,7 +28,7 @@ with a rider are unicode strings.
 		Rider's License no or namebank key
 	rfid	"RFID No"
 		Rider's RFID, or Transponder no (if relevant)
-	nati	"Nation/DoB"
+	dob	"Nation/DoB"
 		Rider's DoB (old UCI Code)
 
 Reserved number series:
@@ -81,10 +81,10 @@ RIDER_COLUMNS = {
 	u'firs':	u"First Name",
 	u'last':	u"Last Name",
 	u'club':	u"Club/Team",
-	u'cate':	u"Category",
+	u'cat':		u"Category",
 	u'uci':		u"UCI ID",
 	u'rfid':	u"RFID No",
-	u'nati':	u"Nation/DoB"
+	u'dob':	u"Nation/DoB"
 }
 
 RIDER_COLUMN_CONVERTERS= {
@@ -275,7 +275,7 @@ class riderdb(object):
             cr = ucsv.UnicodeWriter(f)
             cr.writerow([u'No.',u'First Name',u'Last Name',u'Club/Team',
                          u'Category',u'Series(optional)',u'Refid',
-                          u'UCI ID',u'Nation/DoB'])
+                          u'UCI ID',u'DoB'])
             cr.writerows(self)	# check the unicode out-in-out-in
 
     def gotorow(self, ref=None):

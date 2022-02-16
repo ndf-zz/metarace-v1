@@ -213,7 +213,7 @@ class fakemeet(object):
                                                   self.organiser_str)
         if self.distance:
             rep.strings[u'diststr'] = strops.promptstr(u'Distance:',
-                                           unicode(self.distance) + u' km')
+                                           unicode(self.distance) + u'\u2006km')
         else:
             rep.strings[u'diststr'] = self.diststr
 
@@ -244,7 +244,7 @@ class fakemeet(object):
             with open(CONFIGFILE, 'rb') as f:
                 cr.read(f)
         except Exception as e:
-            print(u'Error reading meet config: %s', e)
+            LOG.error(u'Error reading meet config: %s', e)
         # set meet meta, and then copy into text entries
         self.shortname = cr.get(u'roadmeet', u'shortname')
         self.title_str = cr.get(u'roadmeet', u'title')
@@ -446,7 +446,7 @@ class roadmeet(object):
                                                   self.organiser_str)
         if self.distance:
             rep.strings[u'diststr'] = strops.promptstr(u'Distance:',
-                                           unicode(self.distance) + u' km')
+                                           unicode(self.distance) + u'\u2006km')
         else:
             rep.strings[u'diststr'] = self.diststr
 
@@ -797,7 +797,7 @@ class roadmeet(object):
                                                   self.organiser_str)
         if self.distance:
             rep.strings[u'diststr'] = strops.promptstr(u'Distance:',
-                                             unicode(self.distance) + u' km')
+                                             unicode(self.distance) + u'\u2006km')
         else:
             rep.strings[u'diststr'] = self.diststr
 

@@ -348,6 +348,8 @@ class rms(object):
                 LOG.info(u'Ignoring duplicate points tally %r', i)
 
         starters = cr.get(u'event', u'startlist').split()
+        if len(starters) == 1 and starters[0] == u'all':
+            starters = strops.riderlist_split(u'all', self.meet.rdb)
         self.allowspares = strops.confopt_bool(cr.get(u'event',
                                   u'allowspares'))
         onestoft = False
@@ -591,7 +593,12 @@ class rms(object):
             cw.set(crkey, u'keepdnf', self.tallymap[i][u'keepdnf'])
 
         # save riders
-        cw.set(u'event', u'startlist', self.get_startlist())    
+        evtriders = self.get_startlist()
+        if evtriders:
+            cw.set(u'event', u'startlist', self.get_startlist())    
+        else:
+            if self.autostartlist is not None:
+                cw.set(u'event', u'startlist', self.autostartlist)
         if self.autocats:
             cw.set(u'event', u'categories', [u'AUTO'])
         else:
@@ -767,7 +774,7 @@ class rms(object):
             ret.append(sec)
         return ret
 
-    def startlist_report(self):
+    def startlist_report(self, uciids=True):
         """Return a startlist report."""
         ret = []
         self.reorder_startlist()
@@ -775,10 +782,10 @@ class rms(object):
             LOG.debug(u'Preparing categorised startlist for %r', self.cats)
             for c in self.cats:
                 LOG.debug(u'Startlist cat %r', c)
-                ret.extend(self.startlist_report_gen(c))
+                ret.extend(self.startlist_report_gen(c,uciids=uciids))
         else:
             LOG.debug(u'Preparing flat startlist')
-            ret = self.startlist_report_gen()
+            ret = self.startlist_report_gen(uciids=uciids)
         return ret
 
     def load_cat_data(self):
@@ -817,7 +824,7 @@ class rms(object):
                     LOG.error(u'Categories missing target lap count: %s',
                               u', '.join(missing))
 
-    def startlist_report_gen(self, cat=None):
+    def startlist_report_gen(self, cat=None, uciids=True):
         catname = u''
         subhead = u''
         footer = u''
@@ -884,6 +891,8 @@ class rms(object):
                         comment = cmt
                 riderno = r[COL_BIB].decode(u'utf-8').translate(
                                                     strops.INTEGER_UTRANS)
+                if not uciids:
+                    ucicode = None
                 sec.lines.append([comment,
                                   riderno,
                                   name,
@@ -3852,6 +3861,7 @@ class rms(object):
         self.catstarts = {}	# cache of cat start times
         self.catplaces = {}
         self.autocats = False
+        self.autostartlist = None
         self.bonuses = {}
         self.points = {}
         self.pointscb = {}

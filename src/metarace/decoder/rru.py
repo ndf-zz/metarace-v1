@@ -84,13 +84,14 @@ class rru(decoder):
     """Race Result USB Active thread object class."""
     def __init__(self):
         decoder.__init__(self)
-        self.looppower = 40	# percentage ish
+        self.looppower = 37	# percentage ish
         self.loopid = 1		# id number 1-8
         self.loopchannel = 1	# channel id 1-8
         self._sitenoise = {1:100, 2:100, 3:100, 4:100,
                             5:100, 6:100, 7:100, 8:100 }
-        self._boxname = self.name
+        self._boxname = u'rru'
         self._rrustamp = None
+        self._rruht = None
         self._error = False
         self._io = None
         self._rdbuf = b''
@@ -103,34 +104,40 @@ class rru(decoder):
         """Request new device address."""
         self._request_pending = False
         self._rrustamp = None
+        self._rruht = None
         self._flush()
         self._cqueue.put_nowait((u'_port', device))
 
     def sane(self):
         for m in [ u'ASCII',		# Decoder protocol
-        	   u'INFOGET;00',	# Decoder ID
-        	   u'CONFSET;01;00',	# Push Pre-Warn disabled
-        	   u'CONFSET;02;00',	# Blink on repeated... disabled
-        	   u'CONFSET;03;00',	# Impulse input
-        	   u'CONFSET;04;00',	# Auto-shutdown ... disabled
-        	   u'CONFSET;05;06',	# Operation Mode usb-timing
+                   u'INFOGET;01',	# Decoder ID
+                   u'INFOGET;02',	# Firmware Version
+                   u'INFOGET;03',	# Hardware Version
+                   u'INFOGET;04',	# Box Type
+                   u'CONFSET;01;00',	# Push Pre-Warn disabled
+                   u'CONFSET;02;00',	# Blink on repeated... disabled
+                   u'CONFSET;03;00',	# Impulse input (usb decoder problem)
+                   u'CONFSET;04;00',	# Auto-shutdown ... disabled
+                   u'CONFSET;05;06',	# Operation Mode usb-timing
                    u'CONFSET;06;{0:02x}'.format(self.loopchannel-1),
-        	   u'CONFSET;07;{0:02x}'.format(self.loopid-1),
-        	   u'CONFSET;08;{0:02x}'.format(self.looppower),
-        	   u'CONFSET;0a;00',	# Charging via USB disabled
-        	   u'CONFSET;0b;01',	# Use DTR enabled
-        	   u'CONFSET;b2;01',	# Push Passings enable
-        	   u'EPOCHREFGET',	# Request current epoch ref setting
+                   u'CONFSET;07;{0:02x}'.format(self.loopid-1),
+                   u'CONFSET;08;{0:02x}'.format(self.looppower),
+                   u'CONFSET;0a;00',	# Charging via USB disabled
+                   u'CONFSET;0b;01',	# Use DTR enabled
+                   u'EPOCHREFGET',	# Request current epoch ref setting
                    u'TIMESTAMPGET',	# Request number of ticks on decoder
                  ]:
             self.write(m)
 
     def status(self):
-        """Request status message from decoder."""
-        for m in [ u'INFOGET;00',       # Decoder ID
+        """Request status from decoder."""
+        for m in [ u'INFOGET;01',       # Decoder ID
+                   u'INFOGET;02',	# Firmware Version
+                   u'INFOGET;03',	# Hardware Version
+                   u'INFOGET;04',	# Box Type
                    u'INFOGET;07',	# Battery State
-        	   u'INFOGET;08',	# Battery Level
-        	   u'INFOGET;0b',	# Loop Status
+                   u'INFOGET;08',	# Battery Level
+                   u'INFOGET;0b',	# Loop Status
                    u'TIMESTAMPGET',	# Box timestamp
                  ]:
             self.write(m)
@@ -160,6 +167,7 @@ class rru(decoder):
         # for the purpose of sync, the "epoch" is considered to be
         # midnight localtime of the current day
         self._rrustamp = None
+        self._rruht = None
         # Determine the 'reference' epoch
         nt = tod.now()
         ntt = nt.truncate(0)
@@ -198,7 +206,11 @@ class rru(decoder):
         try:
             ti = int(ts, 16) - self._rrustamp
             tsec = decimal.Decimal(ti//256)+decimal.Decimal(ti%256)/256
-            ret = tod.tod(tsec%86400).truncate(3)
+            nsec = (self._rruht.timeval + tsec)%86400
+            if nsec < 0:
+                LOG.debug(u'Negative timestamp: %r', nsec)
+                nsec = 86400+nsec
+            ret = tod.tod(nsec).truncate(3)
         except Exception as e:
             LOG.error(u'%s converting timeval %r: %s',
                       e.__class__.__name__, ts, e)
@@ -252,9 +264,10 @@ class rru(decoder):
 
     def _refgetmsg(self, epoch, stime):
         """Collect the epoch ref and system tick message."""
-        ht = tod.mkagg(int(epoch, 16))
+        self._rruht = tod.mkagg(int(epoch, 16))
         self._rrustamp = int(stime, 16)
-        LOG.debug(u'Reference ticks: %r @ %r', self._rrustamp, ht.rawtime())
+        LOG.debug(u'Reference ticks: %r @ %r', self._rrustamp,
+                    self._rruht.rawtime())
 
     def _timestampchk(self, ticks):
         """Receive the number of ticks on the decoder."""
@@ -359,7 +372,8 @@ class rru(decoder):
             self._passingmsg(mv)
         elif self._curreply == u'PASSINGIDERROR':
             if len(mv) == 2:
-                self._idupdate(mv[1])
+                # this is problematic - check column
+                self._idupdate(mv[0])
         elif self._curreply == u'INFOGET':
             if len(mv) == 2:
                 self._infomsg(mv[0], mv[1])

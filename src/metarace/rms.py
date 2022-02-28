@@ -1109,7 +1109,7 @@ class rms(object):
             ret.append(s)
         return ret
 
-    def single_catresult(self, cat):
+    def single_catresult(self, cat, uciids=True):
         ret = []
         catname = cat	# fallback emergency
         if cat == u'':
@@ -1176,9 +1176,10 @@ class rms(object):
                 tstr = u''	# tstr not used in catresult
                 dstr = u''	# time/gap
                 cstr = u''	# todo? check for ucicode here !
-                dbr = self.meet.rdb.getrider(bstr, self.series)
-                if dbr is not None:
-                    cstr = self.meet.rdb.getvalue(dbr, riderdb.COL_UCICODE)
+                if uciids:
+                    dbr = self.meet.rdb.getrider(bstr, self.series)
+                    if dbr is not None:
+                        cstr = self.meet.rdb.getvalue(dbr, riderdb.COL_UCICODE)
                 placed = False		# placed at finish
                 timed = False		# timed at finish
                 comment = None

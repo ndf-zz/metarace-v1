@@ -785,7 +785,54 @@ class roadmeet(object):
             LOG.info(u'Export startlist to %r', rfilename)
 
     def export_result_maker(self):
-        # 1: make report with meta from event and meet
+        if self.mirrorfile:
+            filebase = self.mirrorfile
+        else:
+            filebase = u'.'
+        if filebase in [u'', u'.']:
+            filebase = u''
+            LOG.warn(u'Using default filenames for export')
+        else:
+            pass
+
+        # Write out a startlist if event idle
+        if self.curevent.timerstat in ['idle']:
+            rep = report.report()
+            rep.strings[u'title'] = self.title_str
+            rep.strings[u'subtitle'] = self.subtitle_str
+            rep.strings[u'docstr'] = self.document_str
+            rep.strings[u'datestr'] = strops.promptstr(u'Date:', self.date_str)
+            rep.strings[u'commstr'] = strops.promptstr(u'Chief Commissaire:',
+                                                      self.commissaire_str)
+            rep.strings[u'orgstr'] = strops.promptstr(u'Organiser:',
+                                                      self.organiser_str)
+            if self.distance:
+                rep.strings[u'diststr'] = strops.promptstr(u'Distance:',
+                                                 unicode(self.distance) + u'\u2006km')
+            else:
+                rep.strings[u'diststr'] = self.diststr
+            rep.indexlink = u'index'
+            for sec in self.curevent.startlist_report(uciids=False):
+                rep.add_section(sec)
+
+            filename = filebase + u'startlist'
+            lb = os.path.join(self.linkbase, filename)
+            lt = [u'pdf', u'xls']
+            rep.canonical = u'.'.join([lb, u'json'])
+            ofile = os.path.join(self.exportpath, filename+u'.pdf')
+            with metarace.savefile(ofile) as f:
+                rep.output_pdf(f)
+            ofile = os.path.join(self.exportpath, filename+u'.xls')
+            with metarace.savefile(ofile) as f:
+                rep.output_xls(f)
+            ofile = os.path.join(self.exportpath, filename+u'.json')
+            with metarace.savefile(ofile) as f:
+                rep.output_json(f)
+            ofile = os.path.join(self.exportpath, filename+u'.html')
+            with metarace.savefile(ofile) as f:
+                rep.output_html(f, linkbase=lb, linktypes=lt)
+
+        # Then export a result
         rep = report.report()
         rep.strings[u'title'] = self.title_str
         rep.strings[u'subtitle'] = self.subtitle_str
@@ -800,57 +847,31 @@ class roadmeet(object):
                                              unicode(self.distance) + u'\u2006km')
         else:
             rep.strings[u'diststr'] = self.diststr
-
+        rep.indexlink = u'index'
  
-        # 3: set provisional status	# TODO: other tests for prov flag?
+        # Set provisional status	# TODO: other tests for prov flag?
         if self.curevent.timerstat != u'finished':
             rep.set_provisional(True)
         else:
             rep.reportstatus = u'final'	# TODO: write in other phases
+        for sec in self.curevent.result_report():
+            rep.add_section(sec)
 
-        # 4: call into curevent to get result sections
-        ## TODO: if status is 'new' write out a startlist
-        ##       else result, but use catresult if flag in config
-        dostart = False	# assume not exporting startlist
-        if self.etype == u'irtt':
-            if not self.curevent.onestart:
-                dostart = True
-        else:
-            if self.curevent.timerstat in ['idle']:
-                dostart = True
-
-        if dostart:	# emit startlist(s) instead of result
-            for sec in self.curevent.startlist_report():
-                rep.add_section(sec)
-        else:
-            for sec in self.curevent.result_report():
-                rep.add_section(sec)
-
-        # 5: write out files
-        if self.mirrorfile:
-            filebase = self.mirrorfile
-        else:
-            filebase = u'.'
-        if filebase in [u'', u'.']:
-            filebase = u'result'
-            LOG.warn(u'Using default filename for export: result')
-        else:
-            pass
-
-        lb = os.path.join(self.linkbase, filebase)
+        filename = filebase + u'result'
+        lb = os.path.join(self.linkbase, filename)
         lt = [u'pdf', u'xls']
         rep.canonical = u'.'.join([lb, u'json'])
 
-        ofile = os.path.join(self.exportpath, filebase+u'.pdf')
+        ofile = os.path.join(self.exportpath, filename+u'.pdf')
         with metarace.savefile(ofile) as f:
             rep.output_pdf(f)
-        ofile = os.path.join(self.exportpath, filebase+u'.xls')
+        ofile = os.path.join(self.exportpath, filename+u'.xls')
         with metarace.savefile(ofile) as f:
             rep.output_xls(f)
-        ofile = os.path.join(self.exportpath, filebase+u'.json')
+        ofile = os.path.join(self.exportpath, filename+u'.json')
         with metarace.savefile(ofile) as f:
             rep.output_json(f)
-        ofile = os.path.join(self.exportpath, filebase+u'.html')
+        ofile = os.path.join(self.exportpath, filename+u'.html')
         with metarace.savefile(ofile) as f:
             rep.output_html(f, linkbase=lb, linktypes=lt)
 

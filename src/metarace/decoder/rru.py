@@ -9,6 +9,7 @@ import decimal
 import logging
 import serial
 import time
+from random import randint
 
 from . import decoder
 from metarace import tod
@@ -20,6 +21,7 @@ RRU_BAUD = 19200
 RRU_PASSLEN = 12
 RRU_BEACONLEN = 17
 RRU_LOWBATT = 2.0       # Warn if battery voltage is below this many volts
+RRU_REFCHECK = 3600	# check ref after this many timeouts
 RRU_REFTHRESH = 0x2a30000	# 2 x 86400 x 256
 RRU_ENCODING = u'iso8859-1'
 RRU_MARKER = u'_____127'	# trigger marker
@@ -28,7 +30,7 @@ RRU_IOTIMEOUT = 1.0	# Serial port I/O read timeout in seconds
 REPLIES = [
 	u'ASCII', u'CONFSET', u'CONFGET', u'INFOGET', u'SITESURVEY',
         u'TIMESTAMPGET', u'EPOCHREFGET', u'EPOCHREFSET',
-        u'EPOCHREFADJ1D', u'PASSINGGET', u'BEACONGET',
+        u'EPOCHREFADJ1D', u'PASSINGGET', u'PASSINGINFOGET', u'BEACONGET',
 ]
 CONFINFO = {
 	u'01': {u'label': u'Push Pre-Warn',
@@ -54,12 +56,23 @@ CONFINFO = {
 		u'00':u'1', u'01':u'2', u'02':u'3', u'03':u'4',
 		u'04':u'5', u'05':u'6', u'06':u'7', u'07':u'8'},
 	u'08': {u'label': u'Loop Power'},
+        u'09': {u'label': u'Blink dead-time'},
         u'0a': {u'label': u'Charging via USB',
 		u'00': u'disabled',
 		u'01': u'enabled' },
         u'0b': {u'label': u'Use DTR',
 		u'00': u'disabled',
 		u'01': u'enabled' },
+        u'0c': {u'label': u'Alternate Channel Switching',
+                u'00': u'disabled',
+                u'01': u'automatic',
+                u'02': u'force' },
+        u'0d': {u'label': u'Box Mode',
+                u'31': u'check',
+                u'32': u'deep-sleep',
+                u'33': u'health-check',
+                u'34': u'tracking',
+        },
 }
 INFOLBLS = {
 	u'01': u'Decoder ID',
@@ -80,6 +93,9 @@ BATTERY_STATES = { u'00':u'Fault', u'01':u'Charging',
 LOOP_STATES = { u'00':u'OK', u'01':u'Fault',
                 u'02':u'Limit', u'03':u'Overvoltage Error' }
 
+def randkey(junk):
+    return randint(0,0xffffff)
+
 class rru(decoder):
     """Race Result USB Active thread object class."""
     def __init__(self):
@@ -97,7 +113,9 @@ class rru(decoder):
         self._rdbuf = b''
         self._curreply = None	# current multi-line response mode
         self._lastpassing = 0
+        self._lastrequest = None
         self._request_pending = False
+        self._refcount = 0
 
     # API overrides
     def setport(self, device=None):
@@ -111,19 +129,16 @@ class rru(decoder):
     def sane(self):
         for m in [ u'ASCII',		# Decoder protocol
                    u'INFOGET;01',	# Decoder ID
-                   u'INFOGET;02',	# Firmware Version
-                   u'INFOGET;03',	# Hardware Version
-                   u'INFOGET;04',	# Box Type
-                   u'CONFSET;01;00',	# Push Pre-Warn disabled
-                   u'CONFSET;02;00',	# Blink on repeated... disabled
-                   u'CONFSET;03;00',	# Impulse input (usb decoder problem)
-                   u'CONFSET;04;00',	# Auto-shutdown ... disabled
                    u'CONFSET;05;06',	# Operation Mode usb-timing
+                   u'CONFSET;0b;01',	# Use DTR enabled
+                   u'CONFSET;01;00',	# Push Pre-Warn enabled
+                   u'CONFSET;02;00',	# Blink on repeated... disabled
+                   u'CONFSET;03;00',	# Impulse input must follow op mode
+                   u'CONFSET;04;00',	# Auto-shutdown ... disabled
+                   u'CONFSET;0a;00',	# Charging via USB disabled
                    u'CONFSET;06;{0:02x}'.format(self.loopchannel-1),
                    u'CONFSET;07;{0:02x}'.format(self.loopid-1),
                    u'CONFSET;08;{0:02x}'.format(self.looppower),
-                   u'CONFSET;0a;00',	# Charging via USB disabled
-                   u'CONFSET;0b;01',	# Use DTR enabled
                    u'EPOCHREFGET',	# Request current epoch ref setting
                    u'TIMESTAMPGET',	# Request number of ticks on decoder
                  ]:
@@ -131,16 +146,16 @@ class rru(decoder):
 
     def status(self):
         """Request status from decoder."""
-        for m in [ u'INFOGET;01',       # Decoder ID
-                   u'INFOGET;02',	# Firmware Version
-                   u'INFOGET;03',	# Hardware Version
-                   u'INFOGET;04',	# Box Type
-                   u'INFOGET;07',	# Battery State
-                   u'INFOGET;08',	# Battery Level
-                   u'INFOGET;0b',	# Loop Status
-                   u'TIMESTAMPGET',	# Box timestamp
-                 ]:
+        for c in range(0,0xff):
+        #for c in range(0,0x0f):
+            m = u'INFOGET;{0:02x}'.format(c)
             self.write(m)
+        self.write(u'BEACONGET')
+        self.write(u'TIMESTAMPGET')
+        self.write(u'PASSINGINFOGET')
+
+    def clear(self, data=None):
+        self._cqueue.put_nowait((u'_reset', data))
 
     # Device-specific functions
     def _close(self):
@@ -194,11 +209,23 @@ class rru(decoder):
         LOG.debug(u'Clear DTR')
         self._io.dtr = 0
 
+    def _reset(self, data=None):
+        LOG.debug(u'Performing box reset')
+        self._write(u'RESET')
+        while True:
+            m = self._readline()
+            #LOG.debug(u'RECV: %r', m)
+            if m == u'AUTOBOOT':
+                break
+        self._lastpassing = 0
+        self.sane()
+        self.sync()
+
     def _write(self, msg):
         if self._io is not None:
             ob = (msg + RRU_EOL)
             self._io.write(ob.encode(RRU_ENCODING))
-            LOG.debug(u'SEND: %r', ob)
+            #LOG.debug(u'SEND: %r', ob)
 
     def _tstotod(self, ts):
         """Convert a race result timestamp to time of day."""
@@ -260,7 +287,7 @@ class rru(decoder):
                     vbl = LOOP_STATES[val]
             LOG.info(u'Info %s: %s', lbl, vbl)
         else:
-            LOG.debug(u'Unknown Info %r: %r', lbl, val)
+            LOG.info(u'Info [undocumented] %s: %s', lbl, vbl)
 
     def _refgetmsg(self, epoch, stime):
         """Collect the epoch ref and system tick message."""
@@ -276,6 +303,23 @@ class rru(decoder):
         if tcnt > RRU_REFTHRESH:
             LOG.debug(u'Tick threshold exceeded, queue reref')
             self.write(u'EPOCHREFADJ1D')
+
+    def _passinginfomsg(self, mv):
+        """Receive info about internal passing memory."""
+        if len(mv) == 5:
+            pcount = int(mv[0], 16)
+            if pcount > 0:
+                pfirst = int(mv[1], 16)
+                pftime = self._tstotod(mv[2])
+                plast = int(mv[3], 16)
+                pltime = self._tstotod(mv[4])
+                LOG.info(u'Info %r Passings, %r@%s - %r@%s',
+                         pcount, pfirst, pftime.rawtime(2),
+                                  plast, pltime.rawtime(2))
+            else:
+                LOG.info(u'Info No Passings')
+        else:
+            LOG.debug(u'Non-passinginfo message: %r', mv)
 
     def _passingmsg(self, mv):
         """Receive a passing from the decoder."""
@@ -324,21 +368,41 @@ class rru(decoder):
                          u';'.join([istr, tagid, u'0000-00-00', timestr,
                                     self._boxname, loopid]))
             self._lastpassing += 1
+        elif len(mv) == 2:
+            resp = int(mv[0], 16)
+            rcount = int(mv[1], 16)
+            if resp != self._lastrequest:
+                LOG.error(u'Communication error Req: %r != Resp: %r',
+                          self._lastrequest, resp)
+                self._lastpassing = 0
+            elif rcount > 0:
+                LOG.debug(u'Receiving %r passings', rcount)
         else:
             LOG.debug(u'Non-passing message: %r', mv)
 
     def _beaconmsg(self, mv):
         """Receive a beacon from the decoder."""
         if len(mv) == RRU_BEACONLEN:
-            LOG.debug(u'Beacon: %r', mv)
+            # transponder averages
+            tlqi = int(mv[13], 16)/2.56
+            trssi = -90 + int(mv[14], 16)
+            LOG.info(u'Info Avg LQI: {0:0.0f}%'.format(tlqi))
+            LOG.info(u'Info Avg RSSI: {}dBm'.format(trssi))
+        elif len(mv) == 1:
+            bcount = int(mv[0], 16)
+            LOG.debug(u'Receiving %r beacons', bcount)
         else:
             LOG.debug(u'Non-beacon message: %r', mv)
 
-    def _idupdate(self, minid):
-        """Handle a passing request ID error."""
-        newid = int(minid, 16)
-        LOG.debug(u'First available passing %r', newid)
-        self._lastpassing = newid
+    def _idupdate(self, reqid, minid):
+        """Handle an empty PASSINGGET response."""
+        resp = int(reqid, 16)
+        if resp != self._lastrequest:
+            LOG.error(u'Communication error Req: %r != Resp: %r',
+                      self._lastrequest, resp)
+            newid = int(minid, 16)
+            LOG.info(u'Reset index to min: %r', newid)
+            self._lastpassing = newid
 
     def _surveymsg(self, chan, noise):
         """Receive a site survey update."""
@@ -353,7 +417,7 @@ class rru(decoder):
         ch = None
         cv = 55		# don't accept any channel with noise over 50%
         lv = []
-        for c in sorted(self._sitenoise):
+        for c in sorted(self._sitenoise, key=randkey):
             nv = self._sitenoise[c]
             lv.append(u'{}:{:d}%'.format(c, nv))
             if nv < cv:
@@ -370,10 +434,11 @@ class rru(decoder):
         """Process the body of a decoder response."""
         if self._curreply == u'PASSINGGET':
             self._passingmsg(mv)
+        elif self._curreply == u'PASSINGINFOGET':
+            self._passinginfomsg(mv)
         elif self._curreply == u'PASSINGIDERROR':
             if len(mv) == 2:
-                # this is problematic - check column
-                self._idupdate(mv[0])
+                self._idupdate(mv[0], mv[1])
         elif self._curreply == u'INFOGET':
             if len(mv) == 2:
                 self._infomsg(mv[0], mv[1])
@@ -445,8 +510,12 @@ class rru(decoder):
             if not self._request_pending:
                 self._request_pending = True
                 es = u'PASSINGGET;{0:08x}'.format(self._lastpassing)
+                self._lastrequest = self._lastpassing
                 self.write(es)
-            self.write(u'BEACONGET')
+                self._refcount += 1
+                if self._refcount > RRU_REFCHECK:
+                    self.write(u'TIMESTAMPGET')
+                    self._refcount = 0
 
     def run(self):
         """Decoder main loop."""
@@ -461,13 +530,16 @@ class rru(decoder):
                     while True:
                          l = self._readline()
                          if l is None:
-                             # When read times out, request passings
-                             refetch = True
-                             break
-                         LOG.debug(u'RECV: %r', l)
-                         self._procline(l)
-                         if l == u'EOR':
-                             break
+                             # wait for sitesurvey
+                             if self._curreply != u'SITESURVEY': 
+                                 # on time out, request passings
+                                 refetch = True
+                                 break
+                         else:
+                             #LOG.debug(u'RECV: %r', l)
+                             self._procline(l)
+                             if l == u'EOR':
+                                 break
                     if refetch:
                         self._request_next()
                     m = self._cqueue.get_nowait()

@@ -146,13 +146,12 @@ class rru(decoder):
 
     def status(self):
         """Request status from decoder."""
-        for c in range(0,0xff):
-        #for c in range(0,0x0f):
+        for c in range(0,0x0f):
             m = u'INFOGET;{0:02x}'.format(c)
             self.write(m)
         self.write(u'BEACONGET')
-        self.write(u'TIMESTAMPGET')
         self.write(u'PASSINGINFOGET')
+        self.write(u'TIMESTAMPGET')
 
     def clear(self, data=None):
         self._cqueue.put_nowait((u'_reset', data))
@@ -214,7 +213,7 @@ class rru(decoder):
         self._write(u'RESET')
         while True:
             m = self._readline()
-            #LOG.debug(u'RECV: %r', m)
+            LOG.debug(u'RECV: %r', m)
             if m == u'AUTOBOOT':
                 break
         self._lastpassing = 0
@@ -225,7 +224,7 @@ class rru(decoder):
         if self._io is not None:
             ob = (msg + RRU_EOL)
             self._io.write(ob.encode(RRU_ENCODING))
-            #LOG.debug(u'SEND: %r', ob)
+            LOG.debug(u'SEND: %r', ob)
 
     def _tstotod(self, ts):
         """Convert a race result timestamp to time of day."""
@@ -299,9 +298,9 @@ class rru(decoder):
     def _timestampchk(self, ticks):
         """Receive the number of ticks on the decoder."""
         tcnt = int(ticks, 16)
-        LOG.debug(u'Box tick count: %r', tcnt)
+        LOG.info(u'Box tick count: %r', tcnt)
         if tcnt > RRU_REFTHRESH:
-            LOG.debug(u'Tick threshold exceeded, queue reref')
+            LOG.info(u'Tick threshold exceeded, queue reref')
             self.write(u'EPOCHREFADJ1D')
 
     def _passinginfomsg(self, mv):
@@ -324,10 +323,13 @@ class rru(decoder):
     def _passingmsg(self, mv):
         """Receive a passing from the decoder."""
         if len(mv) == RRU_PASSLEN:
+            # USB decoder doesn't return passing ID, use internal count
             istr = unicode(self._lastpassing)
             tagid = mv[0]		# [TranspCode:string]
             wuc = mv[1]			# [WakeupCounter:4]
             timestr = mv[2]		# [Time:8]
+            hits = mv[3]		# [Hits:2]
+            rssi = mv[4]		# [RSSI:2]
             battery = mv[5]		# [Battery:2]
             loopid = mv[8]		# [LoopId:1]
             adata = mv[10]		# [InternalActiveData:2]
@@ -352,6 +354,22 @@ class rru(decoder):
                         LOG.warning(u'Low battery on %r: %0.1fV', tagid, bv)
                 except Exception as e:
                     LOG.debug(u'%s reading battery voltage: %s',
+                              e.__class__.__name__, e)
+
+            if hits and rssi and tagid:
+                try:
+                    hitcount = int(hits, 16)
+                    rssival = int(rssi, 16)
+                    twofour = -90 + ((rssival&0x70)>>2)
+                    lstrength = 1 + (rssival&0x0f)
+                    if lstrength < 5 or twofour < -82 or hitcount < 4:
+                        LOG.warning(u'%r Hits:%d RSSI:%ddBm Loop:%ddB',
+                                  tagid, hitcount, twofour, lstrength)
+                    else:
+                        LOG.debug(u'%r Hits:%d RSSI:%ddBm Loop:%ddB',
+                                  tagid, hitcount, twofour, lstrength)
+                except Exception as e:
+                    LOG.debug(u'%s reading hits/RSSI: %s',
                               e.__class__.__name__, e)
 
             # accept valid passings and trigger callback
@@ -536,7 +554,7 @@ class rru(decoder):
                                  refetch = True
                                  break
                          else:
-                             #LOG.debug(u'RECV: %r', l)
+                             LOG.debug(u'RECV: %r', l)
                              self._procline(l)
                              if l == u'EOR':
                                  break

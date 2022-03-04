@@ -125,6 +125,8 @@ class rrs(decoder):
             battery = pv[13]            # <Battery>
             adata = pv[15]              # <InternalActiveData>
             bname = pv[16]              # <BoxName>
+            hits = pv[5]		# <Hits>
+            rssi = pv[6]		# <MaxRSSI>
 
             # An error here will invalidate the whole passing
             pid = int(istr)
@@ -151,6 +153,22 @@ class rrs(decoder):
                         LOG.warning(u'Low battery on %r: %0.1fV', tagid, bv)
                 except Exception as e:
                     LOG.debug(u'%s reading battery voltage: %s',
+                              e.__class__.__name__, e)
+
+            if hits and rssi and tagid:
+                try:
+                    hitcount = int(hits, 16)
+                    rssival = int(rssi, 16)
+                    twofour = -90 + ((rssival&0x70)>>2)
+                    lstrength = 1 + (rssival&0x0f)
+                    if lstrength < 5 or twofour < -82 or hitcount < 4:
+                        LOG.warning(u'%r Hits:%d RSSI:%ddBm Loop:%ddB',
+                                  tagid, hitcount, twofour, lstrength)
+                    else:
+                        LOG.debug(u'%r Hits:%d RSSI:%ddBm Loop:%ddB',
+                                  tagid, hitcount, twofour, lstrength)
+                except Exception as e:
+                    LOG.debug(u'%s reading hits/RSSI: %s',
                               e.__class__.__name__, e)
 
             if not activestore and (date.startswith(u'0000-00-')

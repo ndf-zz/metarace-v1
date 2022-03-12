@@ -77,7 +77,7 @@ RUNNER_NOS = {
  u'grw': 13
 }
 
-DNFCODEMAP = { u'hd': 0,
+DNFCODEMAP = { u'otl': 0,
                u'dsq': 1,
                u'dnf': 3,
                u'dns': 4,
@@ -97,11 +97,11 @@ def riderno_key(bib):
 
 def dnfcode_key(code):
     """Return a rank/dnf code sorting key."""
-    # rank [rel] '' dsq hd|otl dnf dns
+    # rank [rel] '' dsq otl dnf dns
     dnfordmap = {
                  u'rel':8000,
                  u'':8500,
-                 u'hd':8800,u'otl':8800,
+                 u'otl':8800,
                  u'dnf':9000,
                  u'dns':9500,
                  u'dsq':10000,}

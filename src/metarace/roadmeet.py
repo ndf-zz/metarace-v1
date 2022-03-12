@@ -156,7 +156,7 @@ class registerdlg(object):
                     if not orefid:
                         nrefid = e.refid.lower()
                         self.rdb.editrider(r, refid=nrefid)
-                        LOG.warning(u'Assigned tag %r to %r:%r',
+                        LOG.warning(u'Assigned ID %r to %r:%r',
                                     nrefid, bib, ser)
                         self.rfidval.set_text(nrefid)
                         if self.autoinc.get_active():
@@ -355,7 +355,7 @@ class roadmeet(object):
         alte.set_text(self.alttimer_port)
         response = dlg.run()
         if response == 1:	# id 1 set in glade for "Apply"
-            LOG.debug(u'Updating meet properties.')
+            LOG.debug(u'Updating meet properties')
             self.title_str = t_ent.get_text().decode(u'utf-8')
             self.subtitle_str = st_ent.get_text().decode(u'utf-8')
             self.document_str = doc_ent.get_text().decode(u'utf-8')
@@ -423,13 +423,6 @@ class roadmeet(object):
             LOG.debug(u'Edit properties cancelled')
         dlg.destroy()
 
-    def menu_meet_fullscreen_toggled_cb(self, button, data=None):
-        """Update fullscreen window view."""
-        if button.get_active():
-            self.window.fullscreen()
-        else:
-            self.window.unfullscreen()
-
     def print_report(self, sections=[], provisional=False):
         """Print the pre-formatted sections in a standard report."""
         rep = report.report()
@@ -464,7 +457,7 @@ class roadmeet(object):
             LOG.debug(u'Print operation in progress')
         self.docindex += 1
 
-        # Convenience save copies to pdf and xls
+        # For convenience, also save copies to pdf and xls
         ofile = u'output.pdf'
         with metarace.savefile(ofile) as f:
             rep.output_pdf(f)
@@ -741,12 +734,6 @@ class roadmeet(object):
                             opr[i] = unicode(r[i].timeval)
                     cw.writerow(opr)
             LOG.info(u'Export result to %r', rfilename)
-            lifdat = self.curevent.lifexport()
-            if len(lifdat) > 0:
-                with metarace.savefile(u'lifexport.lif') as f:
-                    cw = ucsv.UnicodeWriter(f, quoting=ucsv.QUOTE_MINIMAL)
-                    for r in lifdat:
-                        cw.writerow(r)
 
     def menu_export_startlist_activate_cb(self, menuitem, data=None):
         """Extract startlist from current event."""
@@ -941,8 +928,10 @@ class roadmeet(object):
         self.alttimer.setport(self.alttimer_port)
         self.alttimer.sane()
         if self.etype == u'irtt':
-            self.alttimer.delaytime(u'0.01')	# irtt likes no delay
+            # IRTT impulses require no delay 
+            self.alttimer.delaytime(u'0.01')
         else:
+            # assume 1 second gaps at finish
             self.alttimer.write(u'DTF01.00')
         LOG.info(u'Re-connect/re-start attached timers')
 
@@ -964,7 +953,7 @@ class roadmeet(object):
             glib.timeout_add_seconds(60, self.restart_decoder)
             self.timer.ipconfig()
         else:
-            LOG.info(u'Decoder config not available.')
+            LOG.info(u'Decoder config not available')
         return None
 
     ## Help menu callbacks
@@ -1002,7 +991,7 @@ class roadmeet(object):
 
     def menu_clock_clicked_cb(self, button, data=None):
         """Handle click on menubar clock."""
-        LOG.info(u'PC ToD: %s', self.clock_label.get_text())
+        LOG.info(u'PC ToD: %s', tod.now().rawtime())
 
     ## 'Slow' Timer callback - this is the main ui event routine
     def timeout(self):
@@ -1061,7 +1050,7 @@ class roadmeet(object):
             key = gtk.gdk.keyval_name(event.keyval) or u'None' # str
             if event.state & gtk.gdk.CONTROL_MASK:
                 key = key.lower()
-                t = tod.now(chan='MAN', refid=key)
+                t = tod.now(chan=u'MAN', refid=unicode(key))
                 if key in ['0','1']:
                     # trigger
                     t.refid=u''
@@ -1077,8 +1066,6 @@ class roadmeet(object):
 
     def shutdown(self, msg=u''):
         """Cleanly shutdown threads and close application."""
-        ##if self.curevent is not None:
-            ##self.curevent.destroy()
         self.started = False
         self.timer.exit(msg)
         self.alttimer.exit(msg)
@@ -1267,14 +1254,16 @@ class roadmeet(object):
             event[u'type'] = self.etype
         else:
             self.etype = event[u'type']
-            LOG.debug(u'Existing event in db: ' + repr(self.etype))
+            LOG.debug(u'Existing event in db: %r', self.etype)
         self.open_event(event) # always open on load if posible
         self.set_title()
 
         # alt timer config post event load
         if self.etype == u'irtt':
-            self.alttimer.delaytime(u'0.01')	# irtt likes no delay
+            # IRTT impulses require no delay 
+            self.alttimer.delaytime(u'0.01')
         else:
+            # assume 1 second gaps at finish
             self.alttimer.write(u'DTF01.00')
 
         # make sure export path exists
@@ -1291,7 +1280,7 @@ class roadmeet(object):
         """Return race distance in km."""
         return self.distance
 
-    ## Announcer methods
+    ## Announcer methods (replaces old irc/unt telegraph)
     def cmd_announce(self, command, msg):
         """Announce the supplied message to the command topic."""
         if self.anntopic:
@@ -1386,7 +1375,6 @@ class roadmeet(object):
         glib.idle_add(self.timer_announce, evt, self.alttimer, u'timy')
 
     def _controlcb(self, topic=None, msg=None):
-        LOG.debug(u'Queue telegraph %r: %r', topic, msg)
         glib.idle_add(self.remote_command, topic, msg)
 
     def __init__(self, etype=None):
@@ -1430,7 +1418,7 @@ class roadmeet(object):
         self.timer_port = u''
         self.timer.setcb(self._timercb)
         self.timercb = None		# set by event app
-        self.alttimer = timy.timy()
+        self.alttimer = timy.timy()	# alttimer is always timy
         self.alttimer_port = u''
         self.alttimer.setcb(self._alttimercb)
         self.alttimercb = None		# set by event app
@@ -1551,7 +1539,7 @@ def main(etype=None):
         raise
 
 if __name__ == u'__main__':
-    # attach a console log handler to the root logger
+    # attach a console log handler to the root logger then call main
     ch = logging.StreamHandler()
     ch.setLevel(metarace.LOGLEVEL)
     fh = logging.Formatter(metarace.LOGFORMAT)

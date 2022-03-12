@@ -153,7 +153,7 @@
               <object class="GtkLabel" id="timing_topic_lbl">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">Remote:</property>
+                <property name="label" translatable="yes">Timer topic:</property>
                 <property name="single_line_mode">True</property>
               </object>
               <packing>
@@ -168,7 +168,7 @@
               <object class="GtkEntry" id="timing_topic_entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="tooltip_text" translatable="yes">Topic for remote timer messages (optional)</property>
+                <property name="tooltip_text" translatable="yes">Topic for timer messages (optional)</property>
                 <property name="invisible_char">&#x25CF;</property>
                 <property name="activates_default">True</property>
                 <property name="width_chars">30</property>
@@ -189,7 +189,7 @@
                 <property name="xalign">0</property>
                 <property name="yalign">1</property>
                 <property name="ypad">2</property>
-                <property name="label" translatable="yes">Timing</property>
+                <property name="label" translatable="yes">Hardware</property>
                 <property name="track_visited_links">False</property>
                 <attributes>
                   <attribute name="weight" value="bold"/>
@@ -205,7 +205,7 @@
               <object class="GtkLabel" id="timing_main">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">RF Timer Port:</property>
+                <property name="label" translatable="yes">Transponders:</property>
                 <property name="single_line_mode">True</property>
               </object>
               <packing>
@@ -220,7 +220,7 @@
               <object class="GtkEntry" id="timing_main_entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="tooltip_text" translatable="yes">Transponder timer port</property>
+                <property name="tooltip_text" translatable="yes">Transponder decoder port</property>
                 <property name="invisible_char">&#x25CF;</property>
                 <property name="activates_default">True</property>
               </object>
@@ -237,7 +237,7 @@
               <object class="GtkLabel" id="announce_topic_lbl">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">Announce:</property>
+                <property name="label" translatable="yes">Announce topic:</property>
                 <property name="single_line_mode">True</property>
               </object>
               <packing>
@@ -265,11 +265,11 @@
             </child>
             <child>
               <object class="GtkCheckButton" id="remote_enable_check">
-                <property name="label" translatable="yes">Enable remote control?</property>
+                <property name="label" translatable="yes">Receive passings from remote timer?</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
-                <property name="tooltip_text" translatable="yes">Allow remote control via telegraph</property>
+                <property name="tooltip_text" translatable="yes">Collect and process remote timer messages via telegraph</property>
                 <property name="draw_indicator">True</property>
               </object>
               <packing>
@@ -368,7 +368,7 @@
                   <object class="GtkLabel" id="distance_units">
                     <property name="visible">True</property>
                     <property name="xalign">0</property>
-                    <property name="label" translatable="yes">km</property>
+                    <property name="label" translatable="yes"> km</property>
                   </object>
                   <packing>
                     <property name="position">1</property>
@@ -387,7 +387,7 @@
               <object class="GtkLabel" id="timing_alt_label">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">Alt Timer Port:</property>
+                <property name="label" translatable="yes">Impulse:</property>
                 <property name="single_line_mode">True</property>
               </object>
               <packing>

@@ -4,7 +4,7 @@
   <!-- interface-naming-policy project-wide -->
   <object class="GtkDialog" id="tagregister">
     <property name="border_width">5</property>
-    <property name="title" translatable="yes">Register RFID Tags</property>
+    <property name="title" translatable="yes">Register Transponder IDs</property>
     <property name="modal">True</property>
     <property name="default_width">360</property>
     <property name="type_hint">dialog</property>
@@ -23,7 +23,7 @@
               <object class="GtkLabel" id="rfid_lbl">
                 <property name="visible">True</property>
                 <property name="xalign">1</property>
-                <property name="label" translatable="yes">RFID:</property>
+                <property name="label" translatable="yes">ID:</property>
               </object>
               <packing>
                 <property name="top_attach">2</property>
@@ -48,7 +48,7 @@
               <object class="GtkEntry" id="bib_entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="tooltip_text" translatable="yes">Rider's bib number</property>
+                <property name="tooltip_text" translatable="yes">Rider's number</property>
                 <property name="invisible_char">&#x25CF;</property>
                 <property name="width_chars">4</property>
                 <signal name="changed" handler="bib_entry_changed_cb"/>
@@ -93,7 +93,7 @@
               <object class="GtkEntry" id="series_entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="tooltip_text" translatable="yes">Bib series identifier - leave blank for a single set of numbers</property>
+                <property name="tooltip_text" translatable="yes">Number series identifier - leave blank for a single set of numbers</property>
                 <property name="invisible_char">&#x25CF;</property>
                 <property name="width_chars">4</property>
                 <signal name="changed" handler="series_entry_changed_cb"/>
@@ -141,7 +141,7 @@
               <object class="GtkLabel" id="autotrack_lbl">
                 <property name="visible">True</property>
                 <property name="xalign">1</property>
-                <property name="label" translatable="yes">Follow RiderDB:</property>
+                <property name="label" translatable="yes">Follow Riders:</property>
               </object>
               <packing>
                 <property name="top_attach">4</property>
@@ -157,7 +157,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
-                <property name="tooltip_text" translatable="yes">Automatically increment rider no</property>
+                <property name="tooltip_text" translatable="yes">Automatically increment rider number</property>
                 <property name="active">True</property>
                 <property name="draw_indicator">True</property>
               </object>
@@ -176,7 +176,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
-                <property name="tooltip_text" translatable="yes">Increment rider to next series rider in database</property>
+                <property name="tooltip_text" translatable="yes">Increment rider number from meet data</property>
                 <property name="active">False</property>
                 <property name="draw_indicator">True</property>
               </object>

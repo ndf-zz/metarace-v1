@@ -18,10 +18,11 @@ with a rider are unicode strings.
 		Rider full first name
 	last	"Last Name"
 		Rider full last name
-	club	"Club"
-		Club/team/state/nation field
+	org	"Org"
+		Organisation - Club/team/state/nation field
 	cate	"Category"
 		A space separated list of rider category keys for this rider
+		also used for nationality key in uncategorised events
 	uci	"UCI ID"
 		Rider's UCI ID
 	lice	"License No."
@@ -35,6 +36,7 @@ Reserved number series:
 
 	team	Extended team information (for road tours)
 	cat	Extended category information
+	spare	Spare bike entry
 
 
 """
@@ -80,7 +82,7 @@ RIDER_COLUMNS = {
 	u'seri':	u"Series",
 	u'firs':	u"First Name",
 	u'last':	u"Last Name",
-	u'club':	u"Club/Team",
+	u'org':		u"Org",
 	u'cat':		u"Category",
 	u'uci':		u"UCI ID",
 	u'rfid':	u"RFID No",
@@ -273,8 +275,8 @@ class riderdb(object):
         LOG.debug(u'Saving riders to %r', csvfile)
         with metarace.savefile(csvfile) as f:
             cr = ucsv.UnicodeWriter(f)
-            cr.writerow([u'No.',u'First Name',u'Last Name',u'Club/Team',
-                         u'Category',u'Series(optional)',u'Refid',
+            cr.writerow([u'No.',u'First Name',u'Last Name',u'Org',
+                         u'Category',u'Series',u'Refid',
                           u'UCI ID',u'DoB'])
             cr.writerows(self)	# check the unicode out-in-out-in
 
@@ -366,7 +368,7 @@ class riderdb(object):
             self.colmap[COL_LAST] = colcnt
             colcnt += 1
         if club:
-            uiutil.mkviewcoltxt(v, 'Club', COL_CLUB, self.__editcol_cb,
+            uiutil.mkviewcoltxt(v, 'Org', COL_CLUB, self.__editcol_cb,
                             editcb=self.__editstart_cb)
             self.colmap[COL_CLUB] = colcnt
             colcnt += 1
@@ -391,7 +393,7 @@ class riderdb(object):
             self.colmap[COL_UCICODE] = colcnt
             colcnt += 1
         if note:
-            uiutil.mkviewcoltxt(v, 'Note', COL_NOTE, self.__editcol_cb, 
+            uiutil.mkviewcoltxt(v, 'DoB', COL_NOTE, self.__editcol_cb, 
                             editcb=self.__editstart_cb)
             self.colmap[COL_NOTE] = colcnt
             colcnt += 1
@@ -521,9 +523,9 @@ class riderdb(object):
         for row in self.model:
             ucat = row[COL_CAT].decode('utf-8').upper().split()
             useries = row[COL_SERIES].decode('utf-8')
-            if useries not in [u'cat', u'spare']:
+            if useries not in [u'cat', u'spare', u'team']:
                 for rrcat in ucat:
-                    if rrcat not in [u'SPARE', u'CAT']:
+                    if rrcat not in [u'SPARE', u'CAT', u'TEAM']:
                         if rrcat and rrcat not in ret:
                             if series is None or useries == series:
                                 ret.append(rrcat)

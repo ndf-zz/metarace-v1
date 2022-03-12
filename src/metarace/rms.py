@@ -127,7 +127,7 @@ class rms(object):
             for cat in catlist:
                 if cat != u'':
                     cat = cat.upper()
-                    if cat not in [u'CAT', u'SPARE']:
+                    if cat not in [u'CAT', u'SPARE', u'TEAM']:
                         self.cats.append(cat)
                     else:
                         LOG.warning(u'Invalid result category: %r', cat)

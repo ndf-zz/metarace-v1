@@ -24,7 +24,6 @@ from metarace import telegraph
 from metarace import export
 from metarace import decoder
 from metarace import timy
-from metarace import unt4
 from metarace import strops
 from metarace import loghandler
 from metarace import namebank
@@ -36,21 +35,20 @@ from metarace import cross
 from metarace import rms
 
 LOGFILE = u'event.log'
-LOGFILE_LEVEL = logging.INFO
+LOGFILE_LEVEL = logging.DEBUG
 CONFIGFILE = u'config.json'
 ROADMEET_ID = u'roadmeet_3.0'  # configuration versioning
 EXPORTPATH = u'export'
 LOG = logging.getLogger(u'metarace.roadmeet')
 LOG.setLevel(logging.DEBUG)
-ROADRACE_TYPES = {u'irtt':u'Road Time Trial',
-                  u'rms':u'Road Race',
-                  u'trtt':u'Team Road Time Trial',
-                  u'crit':u'Criterium/Kermesse',
-                  u'rhcp':u'Handicap',
-                  u'sportif':u'Sportif Ride',
-                  u'crosslap':u'Cross Laps',
-                  u'cross':u'Cyclocross Race',
-                  u'hour24':u'24 Hour Road Race'}
+ROADRACE_TYPES = {
+ u'rms':u'Road Race',
+ u'crit':u'Criterium/Kermesse',
+ u'rhcp':u'Handicap',
+ u'cross':u'Cyclocross Race',
+ u'irtt':u'Road Time Trial',
+ u'trtt':u'Team Road Time Trial',
+}
 
 class registerdlg(object):
     def __init__(self, meet=None):
@@ -101,7 +99,7 @@ class registerdlg(object):
         r = self.rdb.getrider(bib, ser)
         if r is not None:
             self.rdb.editrider(r, refid=nrid)
-            LOG.info(u'Updated refid on rider %r to %r', bib, nrid)
+            LOG.info(u'Updated transponder id for rider %r to %r', bib, nrid)
 
     def bib_entry_activate_cb(self, entry, data=None):
         """Activate on bib adds new rider, unless it exists."""
@@ -632,9 +630,8 @@ class roadmeet(object):
                 self.print_report(sections,
                                   self.curevent.timerstat!=u'finished')
 
-    ## TODO: launch rego dlg with card swiper -> namebank hooks
     def menu_data_rego_activate_cb(self, menuitem, data=None):
-        """Open rider registration dialog."""
+        """Open transponder registration dialog."""
         rdlg = registerdlg(self)
         ocb = self.timercb
         LOG.debug(u'Save ocb %r', ocb)
@@ -674,14 +671,6 @@ class roadmeet(object):
         else:
             LOG.debug(u'Import chipfile cancelled')
 
-    def menu_import_replay_activate_cb(self, menuitem, data=None):
-        """Replay an RFID logfile snippet."""
-        LOG.warning(u'Import passings not implemented')
-
-    def menu_import_lif_activate_cb(self, menuitem, data=None):
-        """Import a LIF file."""
-        LOG.warning(u'Import LIF result not implemented')
-
     def menu_import_startlist_activate_cb(self, menuitem, data=None):
         """Import a startlist."""
         if self.curevent is None:
@@ -707,11 +696,6 @@ class roadmeet(object):
             LOG.info(u'Import %r starters from %r', count, sfile)
         else:
             LOG.debug(u'Import startlist cancelled')
-
-    # no export support yet
-    def menu_export_rftimes_activate_cb(self, menuitem, data=None):
-        """Export raw rf timing data."""
-        LOG.warning(u'Export raw rf timing data not implemented')
 
     def menu_export_riders_activate_cb(self, menuitem, data=None):
         """Export rider database."""
@@ -876,22 +860,19 @@ class roadmeet(object):
             rep.output_html(f, linkbase=lb, linktypes=lt)
 
     def menu_data_results_cb(self, menuitem, data=None):
-        """Create live result report and export to MR"""
+        """Create live result report and export"""
         self.saveconfig()
         if self.curevent is None:
             return
         if self.lifexport:	# save current lif with export 
             lifdat = self.curevent.lifexport()
             if len(lifdat) > 0:
-                with metarace.savefile(u'lifexport.lif') as f:
+                liffile = os.path.join(self.exportpath, u'lifexport.lif')
+                with metarace.savefile(liffile) as f:
                     cw = ucsv.UnicodeWriter(f, quoting=csv.QUOTE_MINIMAL)
                     for r in lifdat:
                         cw.writerow(r)
-
-        # only build reports if the race is really stand-alone
-        if u'mk' not in self.mirrorcmd:
-            self.export_result_maker()
-
+        self.export_result_maker()
         glib.idle_add(self.mirror_start)
 
     ## Directory utilities
@@ -1319,7 +1300,7 @@ class roadmeet(object):
 
     def rider_announce(self, rvec):
         """Issue a serialised rider vector to announcer."""
-        # \x1f == unt4.US
+        # Deprecated UNT-style list
         self.cmd_announce(u'rider', u'\x1f'.join(rvec))
 
     def timer_announce(self, evt, timer=None, source=u''):

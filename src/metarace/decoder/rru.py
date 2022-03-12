@@ -133,14 +133,14 @@ class rru(decoder):
                    u'CONFSET;0b;01',	# Use DTR enabled
                    u'CONFSET;01;00',	# Push Pre-Warn enabled
                    u'CONFSET;02;00',	# Blink on repeated... disabled
-                   u'CONFSET;03;00',	# Impulse input must follow op mode
                    u'CONFSET;04;00',	# Auto-shutdown ... disabled
-                   u'CONFSET;0a;00',	# Charging via USB disabled
+                   u'CONFSET;0a;01',	# Charging via USB enabled
                    u'CONFSET;06;{0:02x}'.format(self.loopchannel-1),
                    u'CONFSET;07;{0:02x}'.format(self.loopid-1),
                    u'CONFSET;08;{0:02x}'.format(self.looppower),
                    u'EPOCHREFGET',	# Request current epoch ref setting
                    u'TIMESTAMPGET',	# Request number of ticks on decoder
+                   u'CONFSET;03;00',	# Impulse input (must follow op mode)
                  ]:
             self.write(m)
 
@@ -213,7 +213,7 @@ class rru(decoder):
         self._write(u'RESET')
         while True:
             m = self._readline()
-            LOG.debug(u'RECV: %r', m)
+            #LOG.debug(u'RECV: %r', m)
             if m == u'AUTOBOOT':
                 break
         self._lastpassing = 0
@@ -224,7 +224,7 @@ class rru(decoder):
         if self._io is not None:
             ob = (msg + RRU_EOL)
             self._io.write(ob.encode(RRU_ENCODING))
-            LOG.debug(u'SEND: %r', ob)
+            #LOG.debug(u'SEND: %r', ob)
 
     def _tstotod(self, ts):
         """Convert a race result timestamp to time of day."""
@@ -300,7 +300,7 @@ class rru(decoder):
         tcnt = int(ticks, 16)
         LOG.info(u'Box tick count: %r', tcnt)
         if tcnt > RRU_REFTHRESH:
-            LOG.info(u'Tick threshold exceeded, queue reref')
+            LOG.info(u'Tick threshold exceeded, adjusting ref')
             self.write(u'EPOCHREFADJ1D')
 
     def _passinginfomsg(self, mv):
@@ -554,7 +554,7 @@ class rru(decoder):
                                  refetch = True
                                  break
                          else:
-                             LOG.debug(u'RECV: %r', l)
+                             #LOG.debug(u'RECV: %r', l)
                              self._procline(l)
                              if l == u'EOR':
                                  break

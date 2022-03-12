@@ -207,7 +207,7 @@ def about_dlg(window):
     dlg.set_transient_for(window)
     dlg.set_name(u'metarace')
     dlg.set_version(VERSION)
-    dlg.set_copyright(u'Copyright \u00a9 2012-2021 Nathan Fraser and contributors')
+    dlg.set_copyright(u'Copyright \u00a9 2012-2022 Nathan Fraser and contributors')
     dlg.set_comments(u'Cycle Race Toolkit')
     dlg.set_license(LICENSETEXT)
     dlg.run()
@@ -216,7 +216,7 @@ def about_dlg(window):
 LICENSETEXT="""
 MIT License
 
-Copyright (c) 2012-2021 Nathan Fraser and contributors
+Copyright (c) 2012-2022 Nathan Fraser and contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -587,10 +587,6 @@ class roadmeet(object):
                 self.print_report(sections)
             else:
                 LOG.info(u'Startlist - Nothing to print')
-            if not self.curevent.readonly:
-                # emit starters to announcer
-                self.cmd_announce(u'startlist',
-                                  self.curevent.get_startlist())
 
     def menu_reports_signon_activate_cb(self, menuitem, data=None):
         """Generate a sign on sheet."""

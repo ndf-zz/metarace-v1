@@ -410,6 +410,10 @@ class roadmeet(object):
                 if nt != self.etype:
                     LOG.info(u'Event type changed from %r to %r',
                               self.etype, nt)
+                    if nt == u'crit':
+                        self.curevent.downtimes(False)
+                    else:
+                        self.curevent.downtimes(True)
                     reload = True
             if reload:
                 event = self.edb.getfirst()

@@ -2867,9 +2867,23 @@ class rms(object):
             self.recalculate()
             if self.autoexport and self.timerstat in [u'armfinish']:
                 glib.idle_add(self.meet.menu_data_results_cb,None);
-        et = self.get_elapsed()
+        et = None
+        nt = None
+        if self.start is not None and self.timerstat != u'finished':
+            nt = tod.now()
+            et = nt - self.start
         if et is not None:
-            self.elaplbl.set_text(et.rawtime(0))
+            evec = [et.rawtime(0)]
+            if self.finish is not None:
+                # event down time is on first finisher
+                ft = (self.finish - self.start).truncate(0)
+                evec.append(u'+' + (et - ft).rawtime(0))
+
+                # time limit is applied to total event time/first finisher
+                limit = self.decode_limit(self.timelimit, ft)
+                if limit is not None:
+                    evec.append('Limit: +' + (limit-ft).rawtime(0))
+            self.elaplbl.set_text(u' '.join(evec))
         else:
             self.elaplbl.set_text(u'')
         return True

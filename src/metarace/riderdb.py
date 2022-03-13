@@ -606,6 +606,10 @@ class riderdb(object):
                     else:  # This path is almost never a real problem
                         LOG.debug(u'Did not update series to duplicate rider')
                         ret = True
+                elif col == COL_CAT:
+                    nt = u' '.join(new_text.replace(',',' ').split())
+                    self.model[path][col] = nt
+                    ret = True
                 else:
                     self.model[path][col] = new_text
                     ret = True

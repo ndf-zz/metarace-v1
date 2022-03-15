@@ -325,23 +325,6 @@
                                     <signal name="activate" handler="menu_import_startlist_activate_cb"/>
                                   </object>
                                 </child>
-                                <child>
-                                  <object class="GtkMenuItem" id="menu_import_replay">
-                                    <property name="visible">False</property>
-                                    <property name="tooltip_text" translatable="yes">Replay an RFID log into the current event</property>
-                                    <property name="label" translatable="yes">R_FID Log</property>
-                                    <property name="use_underline">True</property>
-                                    <signal name="activate" handler="menu_import_replay_activate_cb"/>
-                                  </object>
-                                </child>
-                                <child>
-                                  <object class="GtkMenuItem" id="menu_import_lif">
-                                    <property name="visible">False</property>
-                                    <property name="label" translatable="yes">LIF Result</property>
-                                    <property name="use_underline">True</property>
-                                    <signal name="activate" handler="menu_import_lif_activate_cb"/>
-                                  </object>
-                                </child>
                               </object>
                             </child>
                           </object>
@@ -379,15 +362,6 @@
                                     <property name="label" translatable="yes">_Chipfile</property>
                                     <property name="use_underline">True</property>
                                     <signal name="activate" handler="menu_export_chipfile_activate_cb"/>
-                                  </object>
-                                </child>
-                                <child>
-                                  <object class="GtkMenuItem" id="menu_export_rftimes">
-                                    <property name="visible">False</property>
-                                    <property name="tooltip_text" translatable="yes">Export raw transponder information</property>
-                                    <property name="label" translatable="yes">_Passings</property>
-                                    <property name="use_underline">True</property>
-                                    <signal name="activate" handler="menu_export_rftimes_activate_cb"/>
                                   </object>
                                 </child>
                                 <child>

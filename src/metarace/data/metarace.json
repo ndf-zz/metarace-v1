@@ -29,9 +29,21 @@
     "fontsize": 20,
     "fullscreen": false
   },
-  "timy":{
+  "timy": {
     "baudrate":38400,
     "ctsrts":false,
     "chandelay":{}
+  },
+  "rms": {
+    "dofastestlap": false,
+    "clubmode": false,
+    "autofinish": true,
+    "showuciids": false,
+    "minlap": "20.0",
+    "allowspares": false,
+    "gapthresh": "1.1200",
+    "autoexport": false,
+    "timelimit": null,
+    "showdowntimes": true
   }
 }

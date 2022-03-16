@@ -31,7 +31,6 @@ from metarace import report
 from metarace import uiutil
 from metarace import irtt
 from metarace import trtt
-from metarace import cross
 from metarace import rms
 
 LOGFILE = u'event.log'
@@ -42,10 +41,11 @@ EXPORTPATH = u'export'
 LOG = logging.getLogger(u'metarace.roadmeet')
 LOG.setLevel(logging.DEBUG)
 ROADRACE_TYPES = {
- u'rms':u'Road Race',
- u'crit':u'Criterium/Kermesse',
- u'rhcp':u'Handicap',
- u'cross':u'Cyclocross Race',
+ u'road':u'Road Race',
+ u'circuit':u'Circuit',
+ u'criterium':u'Criterium',
+ u'handicap':u'Handicap',
+ u'cross':u'Cyclocross',
  u'irtt':u'Road Time Trial',
  u'trtt':u'Team Road Time Trial',
 }
@@ -300,18 +300,22 @@ class roadmeet(object):
         tmodel = b.get_object(u'type_model')
         tlbl = self.etype
         dotype = False
+        # correct empty type
+        if self.etype == u'':
+            self.etype = u'road'
         if self.etype in ROADRACE_TYPES:
             tlbl = ROADRACE_TYPES[self.etype]
-        if self.etype in [u'rms', u'rhcp', u'crit']:
             dotype = True
             cnt = 0
-            for t in [u'rms', u'rhcp', u'crit']:
+            for t in [u'road', u'circuit', u'handicap', u'criterium',
+                          u'cross', u'irtt', u'trtt']:
                 tmodel.append([t, ROADRACE_TYPES[t]])
                 if t == self.etype:
                     tcombo.set_active(cnt)
                 cnt += 1
             tcombo.set_sensitive(True)
         else:
+            LOG.warning(u'Unknown event type %r', self.etype)
             tmodel.append([self.etype,tlbl])
             tcombo.set_active(0)
             tcombo.set_sensitive(False)
@@ -399,7 +403,7 @@ class roadmeet(object):
 
             reload = False
             if self.curevent is not None:
-                ncats = cat_ent.get_text().decode(u'utf-8')
+                ncats = cat_ent.get_text().decode(u'utf-8').split()
                 if ncats != ocats:
                     self.curevent.loadcats(ncats)
                     reload = True
@@ -541,13 +545,13 @@ class roadmeet(object):
         """Open provided event handle."""
         if eventhdl is not None:
             self.close_event()
+            if self.etype not in ROADRACE_TYPES:
+                LOG.warning(u'Unknown event type %r', self.etype)
             if self.etype == u'irtt':
                 self.curevent = irtt.irtt(self, eventhdl, True)
             elif self.etype == u'trtt':
                 self.curevent = trtt.trtt(self, eventhdl, True)
-            elif self.etype == u'cross':
-                self.curevent = cross.cross(self, eventhdl, True)
-            else:	# default is fall back to road mass start 'rms'
+            else:
                 self.curevent = rms.rms(self, eventhdl, True)
             
             self.curevent.loadconfig()
@@ -1382,7 +1386,7 @@ class roadmeet(object):
         self.loghandler = None	# set in loadconfig to meet dir
         self.exportpath = EXPORTPATH
         if etype not in ROADRACE_TYPES:
-            etype = u'rms'
+            etype = u'road'
         self.etype = etype
         self.shortname = None
         self.title_str = u''

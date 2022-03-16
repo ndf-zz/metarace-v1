@@ -57,7 +57,7 @@ def meet_identify(configpath=None):
                 ret = [u'track', configpath,
                         descr.strip(), ecstr, infostr]
             elif cr.has_section(u'roadmeet'):	# this is Road
-                etype = u'rms'
+                etype = u'road'
                 eh = edb.getfirst()
                 if eh is not None and eh[u'type']:
                     etype = eh[u'type']
@@ -175,22 +175,20 @@ class apploader(object):
         """Return a human-readable type string."""
         ret = u'Unknown'
         if maintype == u'road':
-            if subtype == u'rhcp':
+            if subtype == u'handicap':
                 ret = u'Road Handicap'
-            elif subtype == u'rms':
+            elif subtype == u'road':
                 ret = u'Road Race'
             elif subtype == u'irtt':
                 ret = u'Road Time Trial'
             elif subtype == u'trtt':
                 ret = u'Team Time Trial'
-            elif subtype == u'crit':
-                ret = u'Criterium/Kermesse'
-            elif subtype == u'sportif':
-                ret = u'Sportif'
+            elif subtype == u'criterium':
+                ret = u'Criterium'
+            elif subtype == u'circuit':
+                ret = u'Circuit'
             elif subtype == u'cross':
                 ret = u'Cyclocross'
-            elif subtype == u'hour24':
-                ret = u'24 Hour Road Race'
         elif maintype == u'track':
             ret = u'Track (' + subtype.title() + ')'
         return ret
@@ -202,7 +200,6 @@ class apploader(object):
         if etype == u'track':
             os.chdir(cfpath)
             self.window.hide()
-            #from metarace import trackmeet
             self.subapp = trackmeet.trackmeet(cfpath)
             self.subapp.loadconfig()
             self.subapp.window.show()
@@ -210,8 +207,7 @@ class apploader(object):
         else:
             os.chdir(cfpath)
             self.window.hide()
-            #from metarace import roadmeet
-            self.subapp = roadmeet.roadmeet(cfpath, u'rms')
+            self.subapp = roadmeet.roadmeet(cfpath)
             self.subapp.loadconfig()
             self.subapp.window.show()
             self.subapp.start()

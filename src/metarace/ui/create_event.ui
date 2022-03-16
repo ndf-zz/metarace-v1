@@ -18,8 +18,16 @@
         <col id="1" translatable="yes">Road Race</col>
       </row>
       <row>
-        <col id="0" translatable="yes">road:rhcp</col>
+        <col id="0" translatable="yes">road:circuit</col>
+        <col id="1" translatable="yes">Road Circuit</col>
+      </row>
+      <row>
+        <col id="0" translatable="yes">road:handicap</col>
         <col id="1" translatable="yes">Road Handicap</col>
+      </row>
+      <row>
+        <col id="0" translatable="yes">road:criterium</col>
+        <col id="1" translatable="yes">Criterium</col>
       </row>
       <row>
         <col id="0" translatable="yes">road:irtt</col>

@@ -1,7 +1,7 @@
-
 """Event loader application."""
 
 import pygtk
+
 pygtk.require("2.0")
 
 import gtk
@@ -24,6 +24,7 @@ from metarace import eventdb
 LOG = logging.getLogger(u'metarace.apploader')
 LOG.setLevel(logging.DEBUG)
 
+
 def meet_identify(configpath=None):
     """Try to identify the meet located at configpath, returning info."""
     # Returns an array:
@@ -40,7 +41,7 @@ def meet_identify(configpath=None):
             edb = eventdb.eventdb()
             LOG.debug(u'Reading meet events %r', efile)
             edb.load(efile)
-            if cr.has_section(u'trackmeet'):	# this is TRACK
+            if cr.has_section(u'trackmeet'):  # this is TRACK
                 descr = u''
                 if cr.has_option(u'trackmeet', u'title'):
                     descr = cr.get(u'trackmeet', u'title') + u' '
@@ -54,9 +55,8 @@ def meet_identify(configpath=None):
                 if cr.has_option(u'trackmeet', u'date'):
                     infostr = cr.get(u'trackmeet', u'date')
                 LOG.debug(u'Track meet: %s/%s/%s', descr, ecstr, infostr)
-                ret = [u'track', configpath,
-                        descr.strip(), ecstr, infostr]
-            elif cr.has_section(u'roadmeet'):	# this is Road
+                ret = [u'track', configpath, descr.strip(), ecstr, infostr]
+            elif cr.has_section(u'roadmeet'):  # this is Road
                 etype = u'road'
                 eh = edb.getfirst()
                 if eh is not None and eh[u'type']:
@@ -70,16 +70,17 @@ def meet_identify(configpath=None):
                 if cr.has_option(u'roadmeet', u'date'):
                     infostr = cr.get(u'roadmeet', u'date')
                 LOG.debug(u'Road meet: %s/%s/%s', descr, etype, infostr)
-                ret = [u'road', configpath,
-                       descr.strip(), etype, infostr]
+                ret = [u'road', configpath, descr.strip(), etype, infostr]
             else:
                 LOG.warning(u'Meet type could not be identified')
         except Exception as e:
             LOG.error(u'Error reading meet folder %r: %s', configpath, e)
     return ret
-    
+
+
 class apploader(object):
     """Event loader."""
+
     def destroy_cb(self, window, msg=u''):
         """Handle destroy signal and exit application."""
         self.window.hide()
@@ -100,7 +101,7 @@ class apploader(object):
         etmodel = b.get_object('type_model')
         pent = b.get_object('path_entry')
         pent.set_text(path)
-        
+
         response = dlg.run()
         dlg.hide()
         if response == 1:
@@ -115,9 +116,10 @@ class apploader(object):
             oktogo = True
             # refuse to continue if path contains a config.json
             if os.path.exists(os.path.join(np, u'config.json')):
-                over = uiutil.questiondlg(self.window,
-                         u'Overwrite existing event?',
-                         u'The chosen path appears to already contain an event. Overwriting the event will destroy any existing event information.')
+                over = uiutil.questiondlg(
+                    self.window, u'Overwrite existing event?',
+                    u'The chosen path appears to already contain an event. Overwriting the event will destroy any existing event information.'
+                )
                 if over:
                     os.unlink(os.path.join(np, u'config.json'))
                     os.unlink(os.path.join(np, u'events.csv'))
@@ -136,7 +138,8 @@ class apploader(object):
                     subtype = tv[1]
 
             if oktogo:
-                print(u'CREATE: ' + repr(etype) + u':' + repr(subtype) + u' at: ' + repr(np))
+                print(u'CREATE: ' + repr(etype) + u':' + repr(subtype) +
+                      u' at: ' + repr(np))
                 cw = jsonconfig.config()
                 ## Question: merge in defaults here? For now, no
                 if etype == u'track':
@@ -155,7 +158,7 @@ class apploader(object):
             print(u'CREATE: cancelled.')
 
         dlg.destroy()
-        return False	# if called from idle_add
+        return False  # if called from idle_add
 
     def create_but_clicked_cb(self, button, data=None):
         """Handle create new event."""
@@ -222,9 +225,9 @@ class apploader(object):
         ## IF Row Selected, try to open that one, else open file chooser..
         sel = self.view.get_selection()
         cnt = sel.count_selected_rows()
-        if cnt > 0:	# Degenerate path
+        if cnt > 0:  # Degenerate path
             (model, iters) = sel.get_selected_rows()
-            elist = [(model[i][6],model[i][0]) for i in iters]
+            elist = [(model[i][6], model[i][0]) for i in iters]
             if len(elist) == 1:
                 print(u'Open event: ' + repr(elist))
                 return self.run_event(elist[0][0], elist[0][1])
@@ -235,8 +238,9 @@ class apploader(object):
             print(u'No selection, continue to open dialog...')
         path = None
         dlg = gtk.FileChooserDialog(u'Open metarace event', self.window,
-            gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER, (gtk.STOCK_CANCEL,
-            gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+                                    gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
+                                    (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                     gtk.STOCK_OPEN, gtk.RESPONSE_OK))
         dlg.set_current_folder(self.path)
         response = dlg.run()
         if response == gtk.RESPONSE_OK:
@@ -263,13 +267,14 @@ class apploader(object):
             #print(u'dirs iter: ' + repr([root, dirs, files]))
             if root == self.path:
                 for d in dirs:
-                    if d != u'.default':	# ignore config dir
+                    if d != u'.default':  # ignore config dir
                         event = meet_identify(os.path.join(root, d))
                         if event is not None:
                             tinfo = self.infostring(event[0], event[3])
-                            self.model.append([event[1], d, event[2],
-                                               tinfo, event[4], u'',
-                                               event[0],u''])
+                            self.model.append([
+                                event[1], d, event[2], tinfo, event[4], u'',
+                                event[0], u''
+                            ])
             del dirs[0:]
         return False
 
@@ -283,31 +288,32 @@ class apploader(object):
         b.add_from_file(os.path.join(metarace.UI_PATH, u'mr_init.ui'))
         self.window = b.get_object('window')
 
-
-        self.model = gtk.ListStore(gobject.TYPE_STRING, # fullpath
-                                   gobject.TYPE_STRING, # shortpath
-                                   gobject.TYPE_STRING, # descr
-                                   gobject.TYPE_STRING, # type
-                                   gobject.TYPE_STRING, # date
-                                   gobject.TYPE_STRING, # extra info
-                                   gobject.TYPE_STRING, # class road/track
-                                   gobject.TYPE_STRING) # sorting?
+        self.model = gtk.ListStore(
+            gobject.TYPE_STRING,  # fullpath
+            gobject.TYPE_STRING,  # shortpath
+            gobject.TYPE_STRING,  # descr
+            gobject.TYPE_STRING,  # type
+            gobject.TYPE_STRING,  # date
+            gobject.TYPE_STRING,  # extra info
+            gobject.TYPE_STRING,  # class road/track
+            gobject.TYPE_STRING)  # sorting?
         t = gtk.TreeView(self.model)
         #t.set_reorderable(True)
         t.set_rules_hint(True)
         #t.set_headers_clickable(True)
-        self.model.set_sort_column_id(1,gtk.SORT_ASCENDING)
+        self.model.set_sort_column_id(1, gtk.SORT_ASCENDING)
         #t.set_headers_visible(False)
         t.set_search_column(1)
-        uiutil.mkviewcoltxt(t, 'Path', 1,width=100)
-        uiutil.mkviewcoltxt(t, 'Description', 2,expand=True,maxwidth=300)
-        uiutil.mkviewcoltxt(t, 'Type', 3,width=100)
+        uiutil.mkviewcoltxt(t, 'Path', 1, width=100)
+        uiutil.mkviewcoltxt(t, 'Description', 2, expand=True, maxwidth=300)
+        uiutil.mkviewcoltxt(t, 'Type', 3, width=100)
         t.connect('row-activated', self.row_activated_cb)
         t.show()
         self.view = t
         b.get_object('scrollbox').add(t)
         b.connect_signals(self)
         glib.idle_add(self.loadpath)
+
 
 def appmain():
     configpath = metarace.config_path(metarace.DATA_PATH)
@@ -325,6 +331,7 @@ def appmain():
         if app.subapp is not None:
             app.subapp.shutdown()
         raise
+
 
 def meetmain(cfpath):
     configpath = metarace.config_path(cfpath)
@@ -361,6 +368,7 @@ def meetmain(cfpath):
         app.shutdown(u'Exception from main loop')
         raise
 
+
 def main():
     """Run the app loader."""
     # check for a provided path
@@ -371,6 +379,7 @@ def main():
         meetmain(sys.argv[1])
     else:
         appmain()
+
 
 if __name__ == '__main__':
     # attach a console log handler to the root logger

@@ -1,4 +1,3 @@
-
 """Road team time trial handler for roadmeet."""
 
 import gtk
@@ -26,23 +25,23 @@ COL_NAMESTR = 1
 COL_SHORTNAME = 2
 COL_CAT = 3
 COL_COMMENT = 4
-COL_INRACE = 5		# boolean in the race
-COL_PLACE = 6		# Place assigned in result
-COL_LAPS = 7		# Incremented if inrace and not finished
+COL_INRACE = 5  # boolean in the race
+COL_PLACE = 6  # Place assigned in result
+COL_LAPS = 7  # Incremented if inrace and not finished
 
 # timing infos
-COL_RFTIME = 8		# one-off finish time by rfid
-COL_CBUNCH = 9		# computed bunch time	-> derived from rftime
-COL_MBUNCH = 10		# manual bunch time	-> manual overrive
-COL_STOFT = 11		# start time 'offset' - only reported in result
+COL_RFTIME = 8  # one-off finish time by rfid
+COL_CBUNCH = 9  # computed bunch time	-> derived from rftime
+COL_MBUNCH = 10  # manual bunch time	-> manual overrive
+COL_STOFT = 11  # start time 'offset' - only reported in result
 COL_BONUS = 12
 COL_PENALTY = 13
-COL_RFSEEN = 14		# list of tods this rider 'seen' by rfid
-COL_TEAM = 15	# stored team ref for quick refs
+COL_RFSEEN = 14  # list of tods this rider 'seen' by rfid
+COL_TEAM = 15  # stored team ref for quick refs
 
 # Nth wheel decides whose time is counted to the team
-NTH_WHEEL = 4	# 4th wheel for NRS/ToT (default)
-STARTFUDGE = tod.tod(u'2:00')   # min elapsed time
+NTH_WHEEL = 4  # 4th wheel for NRS/ToT (default)
+STARTFUDGE = tod.tod(u'2:00')  # min elapsed time
 
 # listview column nos
 CATCOLUMN = 2
@@ -52,67 +51,73 @@ LAPCOLUMN = 5
 STARTCOLUMN = 6
 
 # rider commands
-RIDER_COMMANDS_ORD = [ 'add', 'del', 'que', 'dns', 'hd',
-                       'dnf', 'dsq', 'com', 'ret', 'run', 'man',
-                       '', 'fin']	# then intermediates...
-RIDER_COMMANDS = {'dns':'Did not start',
-                   'hd':'Outside time limit',
-                   'dnf':'Did not finish',
-                   'dsq':'Disqualify',
-                   'add':'Add starters',
-                   'del':'Remove starters',
-                   'que':'Query riders',
-                   'fin':'Final places',
-                   'com':'Add comment',
-                   'ret':'Return to race',
-                   'man':'Manual passing',
-                   '':'',
-                   'run':'Show team time'
-                   }
+RIDER_COMMANDS_ORD = [
+    'add', 'del', 'que', 'dns', 'hd', 'dnf', 'dsq', 'com', 'ret', 'run', 'man',
+    '', 'fin'
+]  # then intermediates...
+RIDER_COMMANDS = {
+    'dns': 'Did not start',
+    'hd': 'Outside time limit',
+    'dnf': 'Did not finish',
+    'dsq': 'Disqualify',
+    'add': 'Add starters',
+    'del': 'Remove starters',
+    'que': 'Query riders',
+    'fin': 'Final places',
+    'com': 'Add comment',
+    'ret': 'Return to race',
+    'man': 'Manual passing',
+    '': '',
+    'run': 'Show team time'
+}
 
-RESERVED_SOURCES = ['fin',	# finished stage
-                    'reg',	# registered to stage
-                    'start']	# started stage
-				# additional cat finishes added in loadconfig
+RESERVED_SOURCES = [
+    'fin',  # finished stage
+    'reg',  # registered to stage
+    'start'
+]  # started stage
+# additional cat finishes added in loadconfig
 
 DNFCODES = ['hd', 'dsq', 'dnf', 'dns']
 
-BREAKTHRESH = 0.2	# aim for <20% break to rider thresh
+BREAKTHRESH = 0.2  # aim for <20% break to rider thresh
 
 # timing keys
 key_announce = 'F4'
 key_armstart = 'F5'
 key_armlap = 'F6'
-key_placesto = 'F7'     # fill places to selected rider
+key_placesto = 'F7'  # fill places to selected rider
 key_appendplace = 'F8'  # append sepected rider to places
 key_armfinish = 'F9'
 key_raceover = 'F10'
 
 # extended fn keys	(ctrl + key)
 key_abort = 'F5'
-key_clearfrom = 'F7'    # clear places on selected rider and all following
-key_clearplace = 'F8'   # clear rider from place list
+key_clearfrom = 'F7'  # clear places on selected rider and all following
+key_clearplace = 'F8'  # clear rider from place list
 key_undo = 'Z'
 
 # config version string
 EVENT_ID = 'roadrace-2.0'
 
+
 def key_bib(x):
     """Sort on bib field of aux row."""
     return strops.riderno_key(x[1])
 
+
 def sort_bib(x, y):
     """Rider bib sorter."""
-    return cmp(strops.riderno_key(x[1]),
-               strops.riderno_key(y[1]))
+    return cmp(strops.riderno_key(x[1]), strops.riderno_key(y[1]))
+
 
 def sort_starters(x, y):
     """Start order sorter."""
     if x[1] == y[1]:
-        return cmp(strops.riderno_key(x[2]),
-                   strops.riderno_key(y[2]))
+        return cmp(strops.riderno_key(x[2]), strops.riderno_key(y[2]))
     else:
-        return cmp(x[1],y[1])
+        return cmp(x[1], y[1])
+
 
 def sort_tally(x, y):
     """Points tally sort using countback struct."""
@@ -120,6 +125,7 @@ def sort_tally(x, y):
         return cmp(y[3], x[3])
     else:
         return cmp(y[0], x[0])
+
 
 class trtt(object):
     """Road time trial handler."""
@@ -141,7 +147,7 @@ class trtt(object):
                 if cat != u'':
                     cat = cat.upper()
                     self.cats.append(cat)
-        self.cats.append(u'')   # always include one empty cat
+        self.cats.append(u'')  # always include one empty cat
         self.log.debug(u'Result category list updated: ' + repr(self.cats))
 
     def team_start_times(self):
@@ -151,10 +157,10 @@ class trtt(object):
         for r in self.riders:
             nt = r[COL_TEAM]
             if nt not in teamstarts:
-                dbr = self.meet.rdb.getrider(nt,u'team')
+                dbr = self.meet.rdb.getrider(nt, u'team')
                 if dbr is not None:
-                    st = tod.mktod(self.meet.rdb.getvalue(dbr,
-                                     riderdb.COL_REFID))
+                    st = tod.mktod(
+                        self.meet.rdb.getvalue(dbr, riderdb.COL_REFID))
                     teamstarts[nt] = st
 
         # pass 2: patch start times if present
@@ -172,31 +178,35 @@ class trtt(object):
         self.resettimer()
         self.cats = []
 
-        cr = jsonconfig.config({u'event':{u'start':u'',
-                                        u'id':EVENT_ID,
-                                        u'finish':u'',
-                                        u'finished':u'No',
-                                        u'places':u'',
-                                        u'comment':[],
-                                        u'hidecols':[],	# TODO: default hides
-                                        u'categories':[],
-                                        u'intermeds':[],
-                                        u'contests':[],
-                                        u'tallys':[],
-                                        u'lapstart':u'',
-                                        u'lapfin':u'',
-                                        u'owntime':True,
-                                        u'curlap':0,
-                                        u'totlaps':None,
-                                        u'sprintlaps':[],
-                                        u'nolaps':u'False',
-                                        u'defaultnth':NTH_WHEEL,
-                                        u'minelap':STARTFUDGE,
-                                        u'minlap':None,
-                                        u'nthwheel':{},
-                                        u'gapfinish':False,
-                                        u'startlist':u'',
-                                        u'resultcats':u'False'}})
+        cr = jsonconfig.config({
+            u'event': {
+                u'start': u'',
+                u'id': EVENT_ID,
+                u'finish': u'',
+                u'finished': u'No',
+                u'places': u'',
+                u'comment': [],
+                u'hidecols': [],  # TODO: default hides
+                u'categories': [],
+                u'intermeds': [],
+                u'contests': [],
+                u'tallys': [],
+                u'lapstart': u'',
+                u'lapfin': u'',
+                u'owntime': True,
+                u'curlap': 0,
+                u'totlaps': None,
+                u'sprintlaps': [],
+                u'nolaps': u'False',
+                u'defaultnth': NTH_WHEEL,
+                u'minelap': STARTFUDGE,
+                u'minlap': None,
+                u'nthwheel': {},
+                u'gapfinish': False,
+                u'startlist': u'',
+                u'resultcats': u'False'
+            }
+        })
         cr.add_section(u'event')
         cr.add_section(u'riders')
         # sections for commissaire awarded bonus/penalty
@@ -212,7 +222,7 @@ class trtt(object):
 
         # load _result_ categories
         catlist = cr.get(u'event', u'categories')
-        if u'AUTO' in catlist:	# ignore any others and re-load from rdb
+        if u'AUTO' in catlist:  # ignore any others and re-load from rdb
             self.cats = self.meet.rdb.listcats()
             self.autocats = True
         else:
@@ -221,7 +231,7 @@ class trtt(object):
                 if cat != u'':
                     cat = cat.upper()
                     self.cats.append(cat)
-        self.cats.append(u'')	# always include one empty cat
+        self.cats.append(u'')  # always include one empty cat
 
         # read in category nth wheel values
         self.defaultnth = cr.get(u'event', u'defaultnth')
@@ -252,18 +262,21 @@ class trtt(object):
                 if cr.has_option(crkey, u'abbr'):
                     abbr = cr.get(crkey, u'abbr')
                 if cr.has_option(crkey, u'places'):
-                    places = strops.reformat_placelist(
-                                 cr.get(crkey, u'places'))
+                    places = strops.reformat_placelist(cr.get(
+                        crkey, u'places'))
                 if i not in self.intermeds:
-                    self.log.debug(u'Adding intermediate: '
-                                    + repr(i) + u':' + descr
-                                    + u':' + places)
+                    self.log.debug(u'Adding intermediate: ' + repr(i) + u':' +
+                                   descr + u':' + places)
                     self.intermeds.append(i)
-                    self.intermap[i] = {u'descr':descr, u'places':places,
-                                        u'dist':km, u'abbr':abbr}
+                    self.intermap[i] = {
+                        u'descr': descr,
+                        u'places': places,
+                        u'dist': km,
+                        u'abbr': abbr
+                    }
                 else:
-                    self.log.info(u'Ignoring duplicate intermediate: '
-                                   + repr(i))
+                    self.log.info(u'Ignoring duplicate intermediate: ' +
+                                  repr(i))
 
         # load contest meta data
         tallyset = set()
@@ -299,45 +312,45 @@ class trtt(object):
                     for bstr in cr.get(crkey, u'bonuses').split():
                         bt = tod.mktod(bstr)
                         if bt is None:
-                            self.log.info(u'Invalid bonus ' + repr(bstr)
-                              + u' in contest ' + repr(i))
+                            self.log.info(u'Invalid bonus ' + repr(bstr) +
+                                          u' in contest ' + repr(i))
                             bt = tod.ZERO
                         bonuses.append(bt)
                 self.contestmap[i][u'bonuses'] = bonuses
                 points = []
                 if cr.has_option(crkey, u'points'):
                     pliststr = cr.get(crkey, u'points').strip()
-                    if pliststr and tally == u'': # no tally for these points!
-                        self.log.error(u'No tally for points in contest: '
-                                        + repr(i))
-                        tallyset.add(u'')	# add empty placeholder
+                    if pliststr and tally == u'':  # no tally for these points!
+                        self.log.error(u'No tally for points in contest: ' +
+                                       repr(i))
+                        tallyset.add(u'')  # add empty placeholder
                     for pstr in pliststr.split():
                         pt = 0
                         try:
                             pt = int(pstr)
                         except:
-                            self.log.info(u'Invalid points ' + repr(pstr)
-                              + u' in contest ' + repr(i))
+                            self.log.info(u'Invalid points ' + repr(pstr) +
+                                          u' in contest ' + repr(i))
                         points.append(pt)
                 self.contestmap[i][u'points'] = points
-                allsrc = False		# all riders in source get same pts
+                allsrc = False  # all riders in source get same pts
                 if cr.has_option(crkey, u'all_source'):
                     allsrc = strops.confopt_bool(cr.get(crkey, u'all_source'))
                 self.contestmap[i][u'all_source'] = allsrc
                 self.contestmap[i][u'category'] = 0
-                if cr.has_option(crkey, u'category'):	# for climbs
+                if cr.has_option(crkey, u'category'):  # for climbs
                     self.contestmap[i][u'category'] = strops.confopt_posint(
-                                                    cr.get(crkey, u'category'))
+                        cr.get(crkey, u'category'))
             else:
                 self.log.info(u'Ignoring duplicate contest: ' + repr(i))
 
             # check for invalid allsrc
             if self.contestmap[i][u'all_source']:
-                if (len(self.contestmap[i][u'points']) > 1 
-                    or len(self.contestmap[i][u'bonuses']) > 1):
-                    self.log.info(u'Ignoring extra points/bonus for '
-                                  + u'all source contest ' + repr(i))
-     
+                if (len(self.contestmap[i][u'points']) > 1
+                        or len(self.contestmap[i][u'bonuses']) > 1):
+                    self.log.info(u'Ignoring extra points/bonus for ' +
+                                  u'all source contest ' + repr(i))
+
         # load points tally meta data
         tallylist = cr.get('event', 'tallys')
         # append any 'missing' tallys from points data errors
@@ -350,7 +363,7 @@ class trtt(object):
             if i not in self.tallys:
                 self.tallys.append(i)
                 self.tallymap[i] = {}
-                self.points[i] = {}	 # redundant, but ok
+                self.points[i] = {}  # redundant, but ok
                 self.pointscb[i] = {}
                 crkey = u'tally_' + i
                 descr = u''
@@ -364,7 +377,6 @@ class trtt(object):
             else:
                 self.log.info(u'Ignoring duplicate points tally: ' + repr(i))
 
-
         starters = cr.get(u'event', u'startlist').split()
         dolaps = not strops.confopt_bool(cr.get(u'event', u'nolaps'))
         for r in starters:
@@ -372,7 +384,7 @@ class trtt(object):
             if cr.has_option(u'riders', r):
                 nr = self.getrider(r)
                 # bib = comment,in,laps,rftod,mbunch,rfseen...
-                ril = cr.get(u'riders', r)	# rider op is vec
+                ril = cr.get(u'riders', r)  # rider op is vec
                 lr = len(ril)
                 if lr > 0:
                     nr[COL_COMMENT] = ril[0]
@@ -412,7 +424,7 @@ class trtt(object):
         self.totlaps = cr.get(u'event', u'totlaps')
         self.sprintlaps = cr.get(u'event', u'sprintlaps')
         self.places = strops.reformat_placelist(cr.get(u'event', u'places'))
-        self.comment = cr.get(u'event', u'comment')	# comments are vec
+        self.comment = cr.get(u'event', u'comment')  # comments are vec
         self.gapfinish = strops.confopt_bool(cr.get(u'event', u'gapfinish'))
         if strops.confopt_bool(cr.get(u'event', u'finished')):
             self.set_finished()
@@ -423,7 +435,7 @@ class trtt(object):
             if target is not None:
                 self.hidecolumn(target)
         #if self.totlaps is None:	# NO should be config'ble
-                #self.hidecolumn(LAPCOLUMN)
+        #self.hidecolumn(LAPCOLUMN)
         self.load_cat_starts()
 
         if self.totlaps is not None:
@@ -439,21 +451,23 @@ class trtt(object):
         # an appropriate outcome.
         eid = cr.get(u'event', u'id')
         if eid and eid != EVENT_ID:
-            self.log.error(u'Event configuration mismatch: '
-                           + repr(eid) + u' != ' + repr(EVENT_ID))
+            self.log.error(u'Event configuration mismatch: ' + repr(eid) +
+                           u' != ' + repr(EVENT_ID))
             self.readonly = True
 
     def load_cat_starts(self):
         self.catlaps = {}
         for c in self.cats:
-            ls = self.totlaps	# default to meet config
-            dbr = self.meet.rdb.getrider(c,u'cat')
+            ls = self.totlaps  # default to meet config
+            dbr = self.meet.rdb.getrider(c, u'cat')
             if dbr is not None:
-                lt = strops.confopt_posint(self.meet.rdb.getvalue(dbr, riderdb.COL_CAT))
+                lt = strops.confopt_posint(
+                    self.meet.rdb.getvalue(dbr, riderdb.COL_CAT))
                 if lt:
                     ls = lt
             self.catlaps[c] = ls
-            self.log.debug(u'Set cat total laps to ' + repr(ls) + u' for cat ' + repr(c))
+            self.log.debug(u'Set cat total laps to ' + repr(ls) +
+                           u' for cat ' + repr(c))
 
     def get_ridercmdorder(self):
         """Return rider command list order."""
@@ -505,7 +519,7 @@ class trtt(object):
                 self.riders.append(r)
             self.places = self.placeundo
             self.canundo = False
-          
+
     def get_catlist(self):
         """Return the ordered list of categories."""
         rvec = []
@@ -516,7 +530,7 @@ class trtt(object):
 
     def ridercat(self, cat):
         """Return a category from the result for the riders cat."""
-        ret = ''        # default is the 'None' category - uncategorised
+        ret = ''  # default is the 'None' category - uncategorised
         checka = cat.upper()
         if checka in self.cats:
             ret = checka
@@ -553,7 +567,7 @@ class trtt(object):
         cw.set(u'event', u'gapfinish', self.gapfinish)
         cw.set(u'event', u'defaultnth', self.defaultnth)
         cw.set(u'event', u'owntime', self.owntime)
-        cw.set(u'event', u'nthwheel', self.nthwheel)	# dict of cat keys
+        cw.set(u'event', u'nthwheel', self.nthwheel)  # dict of cat keys
 
         # save intermediate data
         cw.set(u'event', u'intermeds', self.intermeds)
@@ -590,7 +604,7 @@ class trtt(object):
             cw.set(crkey, u'keepdnf', self.tallymap[i][u'keepdnf'])
 
         # save riders
-        cw.set(u'event', u'startlist', self.get_startlist())    
+        cw.set(u'event', u'startlist', self.get_startlist())
         if self.autocats:
             cw.set(u'event', u'categories', [u'AUTO'])
         else:
@@ -604,7 +618,7 @@ class trtt(object):
             idx += 1
         if len(hides) > 0:
             cw.set(u'event', u'hidecols', hides)
-            
+
         cw.add_section(u'riders')
         # sections for commissaire awarded bonus/penalty
         cw.add_section(u'stagebonus')
@@ -620,8 +634,10 @@ class trtt(object):
             if r[COL_STOFT] is not None:
                 sto = r[COL_STOFT].rawtime(2)
             # bib = comment,in,laps,rftod,mbunch,rfseen...
-            slice = [r[COL_COMMENT].decode('utf-8'), r[COL_INRACE],
-                     r[COL_LAPS], rt, mb, sto]
+            slice = [
+                r[COL_COMMENT].decode('utf-8'), r[COL_INRACE], r[COL_LAPS], rt,
+                mb, sto
+            ]
             for t in r[COL_RFSEEN]:
                 if t is not None:
                     slice.append(t.rawtime(2))
@@ -676,20 +692,24 @@ class trtt(object):
             for bib in self.points[tally]:
                 r = self.getrider(bib)
                 tallytot += self.points[tally][bib]
-                aux.append([self.points[tally][bib], strops.riderno_key(bib),
-                           [None, r[COL_BIB], r[COL_NAMESTR],
-                           strops.truncpad(str(self.pointscb[tally][bib]), 10,
-                                                   elipsis=False),
-                             None, str(self.points[tally][bib])],
-                           self.pointscb[tally][bib]
-                        ])
+                aux.append([
+                    self.points[tally][bib],
+                    strops.riderno_key(bib),
+                    [
+                        None, r[COL_BIB], r[COL_NAMESTR],
+                        strops.truncpad(str(self.pointscb[tally][bib]),
+                                        10,
+                                        elipsis=False), None,
+                        str(self.points[tally][bib])
+                    ], self.pointscb[tally][bib]
+                ])
             aux.sort(sort_tally)
             for r in aux:
                 sec.lines.append(r[2])
             sec.lines.append([None, None, None])
             sec.lines.append([None, None, 'Total Points: ' + str(tallytot)])
             ret.append(sec)
-        
+
         if len(self.bonuses) > 0:
             sec = report.section()
             sec.heading = 'Stage Bonuses'
@@ -697,14 +717,18 @@ class trtt(object):
             aux = []
             for bib in self.bonuses:
                 r = self.getrider(bib)
-                aux.append([self.bonuses[bib], strops.riderno_key(bib),
-                       [None,r[COL_BIB],r[COL_NAMESTR],None,None,
-                        str(int(self.bonuses[bib].truncate(0).timeval))],
-                        0, 0, 0])
+                aux.append([
+                    self.bonuses[bib],
+                    strops.riderno_key(bib),
+                    [
+                        None, r[COL_BIB], r[COL_NAMESTR], None, None,
+                        str(int(self.bonuses[bib].truncate(0).timeval))
+                    ], 0, 0, 0
+                ])
             aux.sort(sort_tally)
             for r in aux:
                 sec.lines.append(r[2])
-            ret.append(sec)            
+            ret.append(sec)
         return ret
 
     def reorder_startlist(self):
@@ -728,8 +752,8 @@ class trtt(object):
         rcount = 0
 
         ##residual = set(get_startlist().split())	- required?
-        sec = None	# TEST FOR ERROR
-     
+        sec = None  # TEST FOR ERROR
+
         lcat = None
         ltod = None
         lteam = None
@@ -739,7 +763,7 @@ class trtt(object):
             rname = r[COL_SHORTNAME].decode('utf-8')
             rteam = r[COL_TEAM]
             rstart = r[COL_STOFT]
-            if rteam != lteam:	# issue team time
+            if rteam != lteam:  # issue team time
                 ltod = None
                 tcat = self.ridercat(r[COL_CAT].decode('utf-8'))
                 if lcat != tcat:
@@ -752,20 +776,19 @@ class trtt(object):
                         ret.append(pb)
                     sec = report.rttstartlist(u'startlist')
                     sec.heading = u'Startlist'
-                    dbr = self.meet.rdb.getrider(tcat,u'cat')
+                    dbr = self.meet.rdb.getrider(tcat, u'cat')
                     if dbr is not None:
-                        catname = self.meet.rdb.getvalue(dbr,
-                                      riderdb.COL_FIRST) # already decode
+                        catname = self.meet.rdb.getvalue(
+                            dbr, riderdb.COL_FIRST)  # already decode
                         if catname:
                             sec.heading += u' - ' + catname
-                        subhead = self.meet.rdb.getvalue(dbr,
-                                      riderdb.COL_LAST)
+                        subhead = self.meet.rdb.getvalue(dbr, riderdb.COL_LAST)
                         if subhead:
                             sec.subheading = subhead
                 lcat = tcat
 
-                tname = rteam	# use key and only replace if avail
-                dbr = self.meet.rdb.getrider(rteam,u'team')
+                tname = rteam  # use key and only replace if avail
+                dbr = self.meet.rdb.getrider(rteam, u'team')
                 if dbr is not None:
                     tname = self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB)
                     #tname = self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST)
@@ -777,52 +800,49 @@ class trtt(object):
                 tcount += 1
                 ## NO: for now just break over pages automatically
                 #if tcount >= 7:
-                    ## new page
-                    #ret.append(sec)
-                    #ret.append(report.pagebreak())
-                    #sec = report.rttstartlist(u'startlist')
-                    #sec.heading = u'Startlist (Continued)'
-                    #tcount = 1
-                    #rcount = 0
+                ## new page
+                #ret.append(sec)
+                #ret.append(report.pagebreak())
+                #sec = report.rttstartlist(u'startlist')
+                #sec.heading = u'Startlist (Continued)'
+                #tcount = 1
+                #rcount = 0
                 tcodestr = rteam.upper()
                 if rteam.isdigit():
                     tcodestr = None
-                sec.lines.append([rstart.meridiem(),
-                                  tcodestr,tname,ustr,u'____',cstr])
+                sec.lines.append(
+                    [rstart.meridiem(), tcodestr, tname, ustr, u'____', cstr])
                 lteam = rteam
-            sec.lines.append([None,rno,rname,None,None,None,None])
-        ret.append(sec) 
+            sec.lines.append([None, rno, rname, None, None, None, None])
+        ret.append(sec)
         #if len(self.cats) > 1:
-            #for c in self.cats:
-                #if c:
-                    #ret.extend(self.startlist_report_gen(c))
-                    #ret.append(report.pagebreak())
+        #for c in self.cats:
+        #if c:
+        #ret.extend(self.startlist_report_gen(c))
+        #ret.append(report.pagebreak())
         #else:
-            #ret = self.startlist_report_gen()
+        #ret = self.startlist_report_gen()
         return ret
 
     def startlist_report_gen(self, cat=None):
         catname = u''
         subhead = u''
         if cat is not None:
-            dbr = self.meet.rdb.getrider(cat,u'cat')
+            dbr = self.meet.rdb.getrider(cat, u'cat')
             if dbr is not None:
-                catname = self.meet.rdb.getvalue(dbr,
-                                          riderdb.COL_FIRST)
-                subhead = self.meet.rdb.getvalue(dbr,
-                                          riderdb.COL_LAST)
+                catname = self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST)
+                subhead = self.meet.rdb.getvalue(dbr, riderdb.COL_LAST)
         else:
-            cat = u''	# match all riders
+            cat = u''  # match all riders
 
-        catcache = {u'':None}
+        catcache = {u'': None}
         if cat == u'':
             for c in self.meet.rdb.listcats(self.series):
                 if c != u'':
                     catnm = c
-                    dbr = self.meet.rdb.getrider(c,u'cat')
+                    dbr = self.meet.rdb.getrider(c, u'cat')
                     if dbr is not None:
-                        catnm = self.meet.rdb.getvalue(dbr,
-                                         riderdb.COL_FIRST)
+                        catnm = self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST)
                     catcache[c] = catnm
         ret = []
         sec = report.section()
@@ -840,20 +860,20 @@ class trtt(object):
                 dbr = self.meet.rdb.getrider(r[COL_BIB].decode('utf-8'),
                                              self.series)
                 if dbr is not None:
-                    ucicode = self.meet.rdb.getvalue(dbr,
-                                             riderdb.COL_UCICODE)
+                    ucicode = self.meet.rdb.getvalue(dbr, riderdb.COL_UCICODE)
                 if not ucicode and cat == u'':
-                    ucicode = catcache[rcat] # try and fill cat
+                    ucicode = catcache[rcat]  # try and fill cat
                 comment = None
                 #if r[COL_CAT] == 'U23': # hack -> should be config'ble
-                    #comment = '*' 
+                #comment = '*'
                 if not r[COL_INRACE]:
                     cmt = r[COL_COMMENT].decode('utf-8')
                     if cmt == u'dns':
                         comment = cmt
-                sec.lines.append([comment, r[COL_BIB].decode('utf-8'),
-                                       r[COL_NAMESTR].decode('utf-8'),
-                                           ucicode])
+                sec.lines.append([
+                    comment, r[COL_BIB].decode('utf-8'),
+                    r[COL_NAMESTR].decode('utf-8'), ucicode
+                ])
                 rcnt += 1
         ret.append(sec)
         if rcnt > 1:
@@ -865,7 +885,7 @@ class trtt(object):
     def camera_report(self):
         """Return the judges (camera) report."""
         ret = []
-        self.recalculate()	# fill places and bunch info
+        self.recalculate()  # fill places and bunch info
         pthresh = self.meet.timer.photothresh()
         totcount = 0
         dnscount = 0
@@ -874,7 +894,7 @@ class trtt(object):
         lcomment = ''
         if self.timerstat != 'idle':
             sec = report.section()
-            sec.colheader = ['','no','rider','lap','finish','rftime']
+            sec.colheader = ['', 'no', 'rider', 'lap', 'finish', 'rftime']
             first = True
             ft = None
             lt = None
@@ -891,19 +911,19 @@ class trtt(object):
                     if bt is not None:
                         fincount += 1
                         if r[COL_PLACE] != '':
-                           comment = r[COL_PLACE] + '.'
-                           pset = True
+                            comment = r[COL_PLACE] + '.'
+                            pset = True
 
                         # format 'elapsed' rftime
                         if r[COL_RFTIME] is not None:
                             if not pset and lrf is not None:
-                                if r[COL_RFTIME]-lrf < pthresh:
+                                if r[COL_RFTIME] - lrf < pthresh:
                                     comment = '[pf]__'
                                     prcom = sec.lines[-1][0]
                                     if prcom in ['___', '[pf]__']:
                                         sec.lines[-1][0] = '[pf]__'
                             if self.start is not None:
-                                es =  (r[COL_RFTIME]-self.start).rawtime(2)
+                                es = (r[COL_RFTIME] - self.start).rawtime(2)
                             else:
                                 es = r[COL_RFTIME].rawtime(2)
                             lrf = r[COL_RFTIME]
@@ -927,9 +947,10 @@ class trtt(object):
                         if r[COL_COMMENT].strip() != '':
                             comment = r[COL_COMMENT].strip()
 
-                    sec.lines.append([comment, r[riderdb.COL_BIB],
-                                     r[COL_NAMESTR], str(r[COL_LAPS]),
-                                     bs, es])
+                    sec.lines.append([
+                        comment, r[riderdb.COL_BIB], r[COL_NAMESTR],
+                        str(r[COL_LAPS]), bs, es
+                    ])
                 else:
                     comment = r[COL_COMMENT]
                     if comment == '':
@@ -941,21 +962,22 @@ class trtt(object):
                         dnscount += 1
                     else:
                         dnfcount += 1
-                    sec.lines.append([comment, r[riderdb.COL_BIB],
-                                     r[COL_NAMESTR], str(r[COL_LAPS]),
-                                     None, None])
+                    sec.lines.append([
+                        comment, r[riderdb.COL_BIB], r[COL_NAMESTR],
+                        str(r[COL_LAPS]), None, None
+                    ])
                 first = False
 
             ret.append(sec)
             sec = report.section()
-            sec.lines.append([None,None,'Total riders: ' + str(totcount)])
-            sec.lines.append([None,None,'Did not start: ' + str(dnscount)])
-            sec.lines.append([None,None,'Did not finish: ' + str(dnfcount)])
-            sec.lines.append([None,None,'Finishers: ' + str(fincount)])
+            sec.lines.append([None, None, 'Total riders: ' + str(totcount)])
+            sec.lines.append([None, None, 'Did not start: ' + str(dnscount)])
+            sec.lines.append([None, None, 'Did not finish: ' + str(dnfcount)])
+            sec.lines.append([None, None, 'Finishers: ' + str(fincount)])
             residual = totcount - (fincount + dnfcount + dnscount)
             if residual > 0:
-                sec.lines.append([None,None,
-                                  'Unaccounted for: ' + str(residual)])
+                sec.lines.append(
+                    [None, None, 'Unaccounted for: ' + str(residual)])
             if len(sec.lines) > 0:
                 ret.append(sec)
         else:
@@ -969,7 +991,7 @@ class trtt(object):
         ret = []
         for cat in self.cats:
             #if not cat:
-                #continue	# ignore empty and None cat
+            #continue	# ignore empty and None cat
             ret.extend(self.single_catresult(cat))
 
         if len(self.comment) > 0:
@@ -983,24 +1005,22 @@ class trtt(object):
 
     def single_catresult(self, cat):
         ret = []
-        catname = cat	# fallback emergency
+        catname = cat  # fallback emergency
         subhead = u''
         distance = None
-        dbr = self.meet.rdb.getrider(cat,u'cat')
+        dbr = self.meet.rdb.getrider(cat, u'cat')
         if dbr is not None:
-            catname = self.meet.rdb.getvalue(dbr,
-                                      riderdb.COL_FIRST) # already decode
-            subhead = self.meet.rdb.getvalue(dbr,
-                                      riderdb.COL_LAST)
-            dist = self.meet.rdb.getvalue(dbr,
-                                      riderdb.COL_REFID)
+            catname = self.meet.rdb.getvalue(
+                dbr, riderdb.COL_FIRST)  # already decode
+            subhead = self.meet.rdb.getvalue(dbr, riderdb.COL_LAST)
+            dist = self.meet.rdb.getvalue(dbr, riderdb.COL_REFID)
             try:
                 distance = float(dist)
             except:
-                self.log.warn(u'Invalid distance: ' + repr(dist)
-                               + u' for cat ' + repr(cat))
+                self.log.warn(u'Invalid distance: ' + repr(dist) +
+                              u' for cat ' + repr(cat))
 
-        # scan result and collect team lists 
+        # scan result and collect team lists
         tcnt = 0
         rcnt = 0
         fcnt = 0
@@ -1010,70 +1030,72 @@ class trtt(object):
         teammap = {}
         for r in self.riders:
             rcat = self.ridercat(r[COL_CAT].decode('utf-8'))
-            if cat == rcat:	# rider in cat
+            if cat == rcat:  # rider in cat
                 rcnt += 1
                 bt = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
                 team = r[COL_TEAM]
                 teamset.add(team)
                 ## NOTE: bunch time in ttt overrides INRACE flag
-                if bt is not None:	# team/rider has a result
+                if bt is not None:  # team/rider has a result
                     if team not in teammap:
                         tcnt += 1
                         # first rider for the team
-                        trank = unicode(len(teamlist)+1) + u'.'
-                        tname = team.upper()	# fallback
+                        trank = unicode(len(teamlist) + 1) + u'.'
+                        tname = team.upper()  # fallback
                         tcode = tname
                         if tcode.isdigit():
                             tcode = None
                         tucicode = None
                         # lookup team name in rdb
-                        dbr = self.meet.rdb.getrider(team,u'team')
+                        dbr = self.meet.rdb.getrider(team, u'team')
                         if dbr is not None:
-                            tname = self.meet.rdb.getvalue(dbr,
-                                     riderdb.COL_CLUB)
-                            tucicode = self.meet.rdb.getvalue(dbr,
-                                     riderdb.COL_UCICODE)
-                        teamlist.append(team)	# add onto team result
+                            tname = self.meet.rdb.getvalue(
+                                dbr, riderdb.COL_CLUB)
+                            tucicode = self.meet.rdb.getvalue(
+                                dbr, riderdb.COL_UCICODE)
+                        teamlist.append(team)  # add onto team result
                         teammap[team] = {}
                         dstr = u''
                         estr = bt.rawtime(1)
                         ## if first team set wt
                         if not wt:
-                            wt = bt	# and 'down' time will be bunch time
+                            wt = bt  # and 'down' time will be bunch time
                         else:
                             dstr = u'+' + (bt - wt).rawtime(1)
 
                         ## Initialise the team record:
-                        teammap[team][u'tline'] = [trank, tcode, tname,
-                                          tucicode, estr, dstr]
+                        teammap[team][u'tline'] = [
+                            trank, tcode, tname, tucicode, estr, dstr
+                        ]
                         teammap[team][u'ttime'] = bt
                         teammap[team][u'rlines'] = []
                     rtime = None
                     if bt != teammap[team][u'ttime']:
-                        dt = bt.truncate(0) - teammap[team][u'ttime'].truncate(0)
-                        rtime = u'[+' + dt.rawtime(0) + u']'	# down is stage
+                        dt = bt.truncate(0) - teammap[team][u'ttime'].truncate(
+                            0)
+                        rtime = u'[+' + dt.rawtime(0) + u']'  # down is stage
                     rno = r[COL_BIB].decode('utf-8')
                     rname = r[COL_SHORTNAME].decode('utf-8')
-                    ruci = None ## TODO - ucicode per rider
-                    teammap[team][u'rlines'].append([None, rno, 
-                                    rname, ruci, rtime, None])
+                    ruci = None  ## TODO - ucicode per rider
+                    teammap[team][u'rlines'].append(
+                        [None, rno, rname, ruci, rtime, None])
                     fcnt += 1
-                elif not r[COL_INRACE] and team in teammap:	# dnf etc
+                elif not r[COL_INRACE] and team in teammap:  # dnf etc
                     rtime = u'[dnf]'
-                    if r[COL_COMMENT]:	# overwrite
+                    if r[COL_COMMENT]:  # overwrite
                         rtime = u'[' + r[COL_COMMENT].decode('utf-8') + u']'
                     rno = r[COL_BIB].decode('utf-8')
                     rname = r[COL_SHORTNAME].decode('utf-8')
-                    ruci = None ## TODO - ucicode per rider
-                    teammap[team][u'rlines'].append([None, rno, 
-                                    rname, ruci, rtime, None])
+                    ruci = None  ## TODO - ucicode per rider
+                    teammap[team][u'rlines'].append(
+                        [None, rno, rname, ruci, rtime, None])
                     fcnt += 1
                 # otherwise rider is not yet finished or abandon
         if len(teamset) == 0:
-            return []	# nothing to report
+            return []  # nothing to report
         # scan team result and output to section
         sec = report.section()
-        rsec = sec	# remember first section
+        rsec = sec  # remember first section
         first = True
         for team in teamlist:
             if not first:
@@ -1085,9 +1107,9 @@ class trtt(object):
         if self.timerstat == 'finished':
             sec.heading = u'Result'
         else:
-            if len(teamset) == len(teamlist):	# all teams in
+            if len(teamset) == len(teamlist):  # all teams in
                 sec.heading = u'Provisional Result'
-            else:	# not all teams in cat finsihed yet
+            else:  # not all teams in cat finsihed yet
                 if len(teamlist) > 0:
                     sec.heading = u'Virtual Standings'
                 else:
@@ -1098,25 +1120,25 @@ class trtt(object):
         sec = report.bullet_text()
         if wt is not None:
             if distance is not None:
-                sec.lines.append([None, u'Average speed of the winning team: '
-                                    + wt.speedstr(1000.0*distance)])
-        sec.lines.append([None,
-                          u'Number of teams: '
-                          + unicode(len(teamset))])
+                sec.lines.append([
+                    None, u'Average speed of the winning team: ' +
+                    wt.speedstr(1000.0 * distance)
+                ])
+        sec.lines.append([None, u'Number of teams: ' + unicode(len(teamset))])
         #if hdcount > 0:
-            #sec.lines.append([None,
-                          #u'Riders finishing out of time limits: '
-                          #+ unicode(hdcount)])
+        #sec.lines.append([None,
+        #u'Riders finishing out of time limits: '
+        #+ unicode(hdcount)])
         #if dnfcount > 0:
-            #sec.lines.append([None,
-                          #u'Riders abandoning the race: '
-                          #+ unicode(dnfcount)])
+        #sec.lines.append([None,
+        #u'Riders abandoning the race: '
+        #+ unicode(dnfcount)])
         #residual = totcount - (fincount + dnfcount + dnscount + hdcount)
         #if residual > 0:
-            #self.log.info(u'Unaccounted for: ' + unicode(residual))
+        #self.log.info(u'Unaccounted for: ' + unicode(residual))
         #else:	 # everyone accounted for, change stat if prov
-            #if self.timerstat in ['running', 'ready', 'armfinish']:
-                #rsec.heading = u'Provisional Result'
+        #if self.timerstat in ['running', 'ready', 'armfinish']:
+        #rsec.heading = u'Provisional Result'
         ret.append(sec)
         # finish report title manipulation
         if catname:
@@ -1124,7 +1146,6 @@ class trtt(object):
             rsec.subheading = subhead
         ret.append(report.pagebreak())
         return ret
-
 
     def junx(self):
 
@@ -1143,27 +1164,27 @@ class trtt(object):
         fincount = 0
         for r in self.riders:
             rcat = self.ridercat(r[COL_CAT].decode('utf-8'))
-            if cat == rcat:	# rider in cat
+            if cat == rcat:  # rider in cat
                 totcount += 1
                 bstr = r[COL_BIB].decode('utf-8')
                 nstr = r[COL_NAMESTR].decode('utf-8')
                 pstr = u''
                 tstr = u''
                 dstr = u''
-                cstr = u''		# check for ucicode here !
+                cstr = u''  # check for ucicode here !
                 dbr = self.meet.rdb.getrider(bstr, self.series)
                 if dbr is not None:
                     cstr = self.meet.rdb.getvalue(dbr, riderdb.COL_UCICODE)
-                placed = False		# placed at finish
-                timed = False		# timed at finish
+                placed = False  # placed at finish
+                timed = False  # timed at finish
                 if r[COL_INRACE]:
                     psrc = r[COL_PLACE].decode('utf-8')
                     if psrc != u'':
                         placed = True
-                        if lsrc != psrc:	# previous total place differs
+                        if lsrc != psrc:  # previous total place differs
                             lp = unicode(plcnt)
                         else:
-                            pass		# dead heat in cat
+                            pass  # dead heat in cat
                         lsrc = psrc
                     else:
                         lp = u''
@@ -1173,16 +1194,16 @@ class trtt(object):
                         pstr = lp + u'.'
                     bt = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
                     if bt is not None:
-                        fincount += 1 # for accounting, use bunch time
+                        fincount += 1  # for accounting, use bunch time
                         timed = True
                         #tstr = bt.rawtime(0)
                         # compute elapsed
                         et = bt
                         # stoft in recalc
                         #if r[COL_STOFT] is not None: # apply a start offset
-                            #et = bt - r[COL_STOFT]
-                            #tstr = et.rawtime(0)
-                        if wt is None:	# first finish time
+                        #et = bt - r[COL_STOFT]
+                        #tstr = et.rawtime(0)
+                        if wt is None:  # first finish time
                             wt = et
                         if bt != lt:
                             if not first:
@@ -1193,12 +1214,12 @@ class trtt(object):
                     lt = bt
                 else:
                     # Non-finishers dns, dnf. hd, dsq
-                    placed = True	# for purpose of listing
+                    placed = True  # for purpose of listing
                     comment = r[COL_COMMENT].decode('utf-8')
                     if comment == u'':
                         comment = u'dnf'
                     if comment != lcomment:
-                        sec.lines.append([None, None, None])# new bunch
+                        sec.lines.append([None, None, None])  # new bunch
                     lcomment = comment
                     # account for special cases
                     if comment == u'dns':
@@ -1227,23 +1248,24 @@ class trtt(object):
         if wt is not None:
             #sec.lines.append([None, u"Winner's time: " + wt.rawtime(0)])
             if distance is not None:
-                sec.lines.append([None, u'Average speed of the winner: '
-                                    + wt.speedstr(1000.0*distance)])
-        sec.lines.append([None,
-                          u'Number of starters: '
-                          + unicode(totcount-dnscount)])
+                sec.lines.append([
+                    None, u'Average speed of the winner: ' +
+                    wt.speedstr(1000.0 * distance)
+                ])
+        sec.lines.append(
+            [None, u'Number of starters: ' + unicode(totcount - dnscount)])
         if hdcount > 0:
-            sec.lines.append([None,
-                          u'Riders finishing out of time limits: '
-                          + unicode(hdcount)])
+            sec.lines.append([
+                None,
+                u'Riders finishing out of time limits: ' + unicode(hdcount)
+            ])
         if dnfcount > 0:
-            sec.lines.append([None,
-                          u'Riders abandoning the race: '
-                          + unicode(dnfcount)])
+            sec.lines.append(
+                [None, u'Riders abandoning the race: ' + unicode(dnfcount)])
         residual = totcount - (fincount + dnfcount + dnscount + hdcount)
         if residual > 0:
             self.log.info(u'Unaccounted for: ' + unicode(residual))
-        else:	 # everyone accounted for, change stat if prov
+        else:  # everyone accounted for, change stat if prov
             if self.timerstat in ['running', 'ready', 'armfinish']:
                 rsec.heading = u'Provisional Result'
         ret.append(sec)
@@ -1267,11 +1289,11 @@ class trtt(object):
         ret = []
         wt = None
         we = None
-        dofastest = False	# ftime for handicap races
+        dofastest = False  # ftime for handicap races
         fastest = None
         vfastest = None
         curelap = None
-        if self.start is not None:	# virtual bunch time
+        if self.start is not None:  # virtual bunch time
             curelap = (tod.now() - self.start).truncate(0)
         fastestbib = None
         totcount = 0
@@ -1281,14 +1303,13 @@ class trtt(object):
         fincount = 0
         lcomment = ''
         gapcount = 0
-        catcache = {u'':None}
+        catcache = {u'': None}
         for c in self.meet.rdb.listcats(self.series):
             if c != u'':
                 catnm = c
-                dbr = self.meet.rdb.getrider(c,u'cat')
+                dbr = self.meet.rdb.getrider(c, u'cat')
                 if dbr is not None:
-                    catnm = self.meet.rdb.getvalue(dbr,
-                                     riderdb.COL_FIRST)
+                    catnm = self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST)
                 catcache[c] = catnm
         lt = None
         if self.timerstat != 'idle':
@@ -1299,20 +1320,20 @@ class trtt(object):
                 sec.heading = u'Race in Progress'
             else:
                 sec.heading = u'Provisional Result'
-            
+
             first = True
             for r in self.riders:
                 totcount += 1
-                bstr = r[COL_BIB].decode('utf-8')	# 'bib'
-                nstr = r[COL_NAMESTR].decode('utf-8')	# 'name'
-                cstr = r[COL_CAT].decode('utf-8')	# 'cat'
+                bstr = r[COL_BIB].decode('utf-8')  # 'bib'
+                nstr = r[COL_NAMESTR].decode('utf-8')  # 'name'
+                cstr = r[COL_CAT].decode('utf-8')  # 'cat'
                 if cstr.upper() in catcache:
                     cstr = catcache[cstr.upper()]
-                pstr = u''				# 'place'
-                tstr = u''				# 'time'
-                dstr = u''				# 'gap/down'
-                placed = False				# placed at finish
-                timed = False				# timed at finish
+                pstr = u''  # 'place'
+                tstr = u''  # 'time'
+                dstr = u''  # 'gap/down'
+                placed = False  # placed at finish
+                timed = False  # timed at finish
                 if r[COL_INRACE]:
                     psrc = r[COL_PLACE].decode('utf-8')
                     if psrc != u'':
@@ -1321,7 +1342,7 @@ class trtt(object):
                     bt = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
                     if bt is not None:
                         timed = True
-                        fincount += 1	# for accounting, use bunch time
+                        fincount += 1  # for accounting, use bunch time
                         tstr = bt.rawtime(1)
                         if bt != lt:
                             if not first:
@@ -1329,7 +1350,7 @@ class trtt(object):
                                 if not self.gapfinish:
                                     sec.lines.append([None, None, None])
                                 dstr = '+' + (bt - wt).rawtime(1)
-                        if wt is None:	# first finish time
+                        if wt is None:  # first finish time
                             wt = bt
                             first = False
                             if self.event[u'type'] == u'rhcp':
@@ -1339,29 +1360,29 @@ class trtt(object):
                         et = bt
                         # elapsed is written into bunch time for trtt
                         #if r[COL_STOFT] is not None:	# apply a start offset
-                            #dofastest = True	# will need to report!
-                            #et = bt - r[COL_STOFT]
-                            #tstr = et.rawtime(1)
-                            #if we is None:
-                                #we = et
+                        #dofastest = True	# will need to report!
+                        #et = bt - r[COL_STOFT]
+                        #tstr = et.rawtime(1)
+                        #if we is None:
+                        #we = et
                         if fastest is None or et < fastest:
                             fastest = et
                             fastestbib = r[COL_BIB]
-                    else:	# check virtual finish time
+                    else:  # check virtual finish time
                         pass
                         #if r[COL_STOFT] is not None:
-                            #vt = curelap - r[COL_STOFT]
-                            #if vfastest is None or vt < vfastest:
-                                #vfastest = vt
+                        #vt = curelap - r[COL_STOFT]
+                        #if vfastest is None or vt < vfastest:
+                        #vfastest = vt
                     lt = bt
                 else:
                     # Non-finishers dns, dnf. hd, dsq
-                    placed = True	# for purpose of listing
+                    placed = True  # for purpose of listing
                     comment = r[COL_COMMENT].decode('utf-8')
                     if comment == u'':
                         comment = u'dnf'
                     if comment != lcomment:
-                        sec.lines.append([None, None, None])# new bunch
+                        sec.lines.append([None, None, None])  # new bunch
                     lcomment = comment
                     # account for special cases
                     if comment == u'dns':
@@ -1375,7 +1396,7 @@ class trtt(object):
                     sec.lines.append([pstr, bstr, nstr, cstr, tstr, dstr])
             ret.append(sec)
             # check bunchthresh
-            if fincount>6 and float(gapcount)/float(fincount) > BREAKTHRESH:
+            if fincount > 6 and float(gapcount) / float(fincount) > BREAKTHRESH:
                 self.gapfinish = True
             else:
                 self.gapfinish = False
@@ -1388,8 +1409,10 @@ class trtt(object):
                     we = wt
                 dval = self.meet.get_distance()
                 if dval is not None:
-                    sec.lines.append([None, u'Average speed of the winner: '
-                                        + we.speedstr(1000.0*dval)])
+                    sec.lines.append([
+                        None, u'Average speed of the winner: ' +
+                        we.speedstr(1000.0 * dval)
+                    ])
             if dofastest:
                 if vfastest and vfastest < fastest:
                     self.log.info(u'Fastest time not yet available.')
@@ -1401,28 +1424,28 @@ class trtt(object):
                         if ftcat.upper() in catcache:
                             ftcat = catcache[ftcat.upper()]
                         fts = ftr[COL_NAMESTR].decode('utf-8') + u' ' + ftcat
-                    fmsg = (u'Fastest time: ' + fastest.rawtime(0)
-                            + u'  ' + fastestbib + u' ' + fts)
+                    fmsg = (u'Fastest time: ' + fastest.rawtime(0) + u'  ' +
+                            fastestbib + u' ' + fts)
                     sec.lines.append([None, fmsg])
-                    if not self.readonly:	# in a ui window?
+                    if not self.readonly:  # in a ui window?
                         self.meet.cmd_announce(u'resultmsg', fmsg)
 
-            sec.lines.append([None,
-                              u'Number of starters: '
-                              + unicode(totcount-dnscount)])
+            sec.lines.append(
+                [None, u'Number of starters: ' + unicode(totcount - dnscount)])
             if hdcount > 0:
-                sec.lines.append([None,
-                              u'Riders finishing out of time limits: '
-                              + unicode(hdcount)])
+                sec.lines.append([
+                    None,
+                    u'Riders finishing out of time limits: ' + unicode(hdcount)
+                ])
             if dnfcount > 0:
-                sec.lines.append([None,
-                              u'Riders abandoning the race: '
-                              + unicode(dnfcount)])
+                sec.lines.append([
+                    None, u'Riders abandoning the race: ' + unicode(dnfcount)
+                ])
             residual = totcount - (fincount + dnfcount + dnscount + hdcount)
             if residual > 0:
                 self.log.info(u'Unaccounted for: ' + unicode(residual))
             ret.append(sec)
-            
+
             # Decisions of commissaires panel
             if len(self.comment) > 0:
                 sec = report.bullet_text()
@@ -1459,8 +1482,8 @@ class trtt(object):
                 self.intermap[acode]['places'] = rlist
                 self.recalculate()
                 self.intsprint(acode, rlist)
-                self.log.info('Intermediate ' + repr(acode) + ' == '
-                               + repr(rlist))
+                self.log.info('Intermediate ' + repr(acode) + ' == ' +
+                              repr(rlist))
             else:
                 self.log.error('Intermediate ' + repr(acode) + ' not updated.')
                 return False
@@ -1490,14 +1513,14 @@ class trtt(object):
             self.retriders(strops.reformat_biblist(rlist))
             return True
         elif acode == 'del':
-            rlist = strops.reformat_riderlist(rlist,
-                                              self.meet.rdb, self.series)
+            rlist = strops.reformat_riderlist(rlist, self.meet.rdb,
+                                              self.series)
             for bib in rlist.split():
                 self.delrider(bib)
             return True
         elif acode == 'add':
-            rlist = strops.reformat_riderlist(rlist,
-                                              self.meet.rdb, self.series)
+            rlist = strops.reformat_riderlist(rlist, self.meet.rdb,
+                                              self.series)
             for bib in rlist.split():
                 self.addrider(bib)
             return True
@@ -1520,7 +1543,7 @@ class trtt(object):
                 self.running_team = team
             else:
                 self.running_team = None
-                self.meet.scb.add_rider([u'',u'',u'',u'',u''], 'finpanel')
+                self.meet.scb.add_rider([u'', u'', u'', u'', u''], 'finpanel')
         else:
             self.log.error('Ignoring invalid action.')
         return False
@@ -1533,14 +1556,14 @@ class trtt(object):
     def manpassing(self, biblist=''):
         """Register a manual passing, preserving order."""
         for bib in biblist.split():
-            # NOTE: All bibs are sent into trigger interface so that 
+            # NOTE: All bibs are sent into trigger interface so that
             #       timing master will propagate to slaves, race module
             #       will process as if timing came from attached decoder.
-            rno,rser = strops.bibstr2bibser(bib)
-            if not rser:        # allow series manual override
+            rno, rser = strops.bibstr2bibser(bib)
+            if not rser:  # allow series manual override
                 rser = self.series
-            bibstr = strops.bibser2bibstr(rno,rser)
-            self.meet.timer.trig(refid=u'riderno:'+bibstr)
+            bibstr = strops.bibser2bibstr(rno, rser)
+            self.meet.timer.trig(refid=u'riderno:' + bibstr)
             self.log.debug(u'Manual Passing: ' + bibstr)
 
     def query_rider(self, bib=None):
@@ -1568,8 +1591,7 @@ class trtt(object):
                     self.log.info(' '.join(['\t', ns, ls]))
                     lt = nt
             if r[COL_RFTIME] is not None:
-                self.log.info(' '.join([' Finish:',
-                                          r[COL_RFTIME].timestr(1)]))
+                self.log.info(' '.join([' Finish:', r[COL_RFTIME].timestr(1)]))
         else:
             self.log.info(bib.ljust(4) + ' ' + 'Not in startlist.')
 
@@ -1589,19 +1611,21 @@ class trtt(object):
                 firstxtra = ''
                 lastxtra = ''
                 clubxtra = ''
-                dbr = self.meet.rdb.getrider(r[COL_BIB],self.series)
+                dbr = self.meet.rdb.getrider(r[COL_BIB], self.series)
                 if dbr is not None:
-                    firstxtra = self.meet.rdb.getvalue(dbr,
-                                         riderdb.COL_FIRST).capitalize()
-                    lastxtra = self.meet.rdb.getvalue(dbr, 
-                                         riderdb.COL_LAST).upper()
+                    firstxtra = self.meet.rdb.getvalue(
+                        dbr, riderdb.COL_FIRST).capitalize()
+                    lastxtra = self.meet.rdb.getvalue(
+                        dbr, riderdb.COL_LAST).upper()
                     clubxtra = self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB)
-                yield [start, bib, series, name, cat,
-                       firstxtra, lastxtra, clubxtra]
+                yield [
+                    start, bib, series, name, cat, firstxtra, lastxtra,
+                    clubxtra
+                ]
 
     def result_gen(self, cat=''):
         """Generator function to export a final result."""
-        self.recalculate()	# fix up ordering of rows
+        self.recalculate()  # fix up ordering of rows
         mcat = self.ridercat(cat)
         rcount = 0
         lrank = None
@@ -1618,18 +1642,18 @@ class trtt(object):
                     bt = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
                     ft = bt
                     #if r[COL_STOFT] is not None and bt is not None:
-                        #if self.event[u'type'] != u'rhcp':
-                            #ft = bt - r[COL_STOFT]
-                        #else:
-                            ## for handicap, time is stage time, bonus
-                            ## carries the start offset, elapsed is:
-                            ## stage - bonus
-                            #ft = bt
-                            #bonus = r[COL_STOFT]
+                    #if self.event[u'type'] != u'rhcp':
+                    #ft = bt - r[COL_STOFT]
+                    #else:
+                    ## for handicap, time is stage time, bonus
+                    ## carries the start offset, elapsed is:
+                    ## stage - bonus
+                    #ft = bt
+                    #bonus = r[COL_STOFT]
 
                 if r[COL_PLACE].isdigit():
                     rank = int(r[COL_PLACE])
-                    if rank != lrank: 
+                    if rank != lrank:
                         crank = rcount
                     else:
                         crank = lcrank
@@ -1638,7 +1662,7 @@ class trtt(object):
                 else:
                     crank = r[COL_COMMENT]
                 if self.event[u'type'] != u'rhcp' and (
-                         bib in self.bonuses or r[COL_BONUS] is not None):
+                        bib in self.bonuses or r[COL_BONUS] is not None):
                     bonus = tod.ZERO
                     if bib in self.bonuses:
                         bonus += self.bonuses[bib]
@@ -1689,21 +1713,23 @@ class trtt(object):
     def addrider(self, bib='', series=None):
         """Add specified rider to race model."""
         if series is not None and series != self.series:
-            self.log.debug('Ignoring non-series starter: '
-                            + repr(strops.bibser2bibstr(bib, series)))
+            self.log.debug('Ignoring non-series starter: ' +
+                           repr(strops.bibser2bibstr(bib, series)))
             return None
         if bib == '' or self.getrider(bib) is None:
-            nr = [bib, '', '', '', '', True, '', 0, None, None, None, None, 
-                           None, None, [], '']	# add team key
+            nr = [
+                bib, '', '', '', '', True, '', 0, None, None, None, None, None,
+                None, [], ''
+            ]  # add team key
             dbr = self.meet.rdb.getrider(bib, self.series)
             if dbr is not None:
                 nr[COL_NAMESTR] = strops.listname(
-                      self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
-                      self.meet.rdb.getvalue(dbr, riderdb.COL_LAST),
-                      self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB))
+                    self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
+                    self.meet.rdb.getvalue(dbr, riderdb.COL_LAST),
+                    self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB))
                 nr[COL_SHORTNAME] = strops.listname(
-                      self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
-                      self.meet.rdb.getvalue(dbr, riderdb.COL_LAST))
+                    self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
+                    self.meet.rdb.getvalue(dbr, riderdb.COL_LAST))
                 nr[COL_CAT] = self.meet.rdb.getvalue(dbr, riderdb.COL_CAT)
                 nr[COL_TEAM] = self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB)
             return self.riders.append(nr)
@@ -1722,19 +1748,19 @@ class trtt(object):
         self.meet.stat_but.set_sensitive(True)
         self.curlap = 0
         self.live_announce = True
-        
+
     def armstart(self):
         """Process an armstart request."""
         if self.timerstat == 'idle':
             self.timerstat = 'armstart'
             self.meet.cmd_announce(u'timerstat', u'armstart')
             self.meet.cmd_announce(u'timerstat', u'armstart')
-            uiutil.buttonchg(self.meet.stat_but,
-                             uiutil.bg_armstart, 'Arm Start')
+            uiutil.buttonchg(self.meet.stat_but, uiutil.bg_armstart,
+                             'Arm Start')
         elif self.timerstat == 'armstart':
             self.timerstat = 'idle'
             self.meet.cmd_announce(u'timerstat', u'idle')
-            uiutil.buttonchg(self.meet.stat_but, uiutil.bg_none, 'Idle') 
+            uiutil.buttonchg(self.meet.stat_but, uiutil.bg_none, 'Idle')
         elif self.timerstat == 'ready':
             self.set_running()
 
@@ -1746,8 +1772,8 @@ class trtt(object):
                 self.armlap()
             self.timerstat = 'armfinish'
             self.meet.cmd_announce(u'timerstat', u'armfinish')
-            uiutil.buttonchg(self.meet.stat_but,
-                             uiutil.bg_armfin, 'Arm Finish')
+            uiutil.buttonchg(self.meet.stat_but, uiutil.bg_armfin,
+                             'Arm Finish')
             self.meet.stat_but.set_sensitive(True)
             self.meet.alttimer.armlock(True)
             self.meet.alttimer.arm(1)
@@ -1755,8 +1781,7 @@ class trtt(object):
             self.meet.alttimer.dearm(1)
             self.timerstat = 'running'
             self.meet.cmd_announce(u'timerstat', u'running')
-            uiutil.buttonchg(self.meet.stat_but,
-                             uiutil.bg_none, 'Running')
+            uiutil.buttonchg(self.meet.stat_but, uiutil.bg_none, 'Running')
 
     def last_rftime(self):
         """Find the last rider with a RFID finish time set."""
@@ -1765,7 +1790,7 @@ class trtt(object):
             if r[COL_RFTIME] is not None:
                 ret = r[COL_BIB]
         return ret
-        
+
     def armlap(self):
         ## announce text handling...
         self.scratch_tot = 0
@@ -1777,26 +1802,26 @@ class trtt(object):
 
         self.meet.cmd_announce(u'finstr', self.meet.get_short_name())
         self.running_team = None
-        self.meet.scb.add_rider([u'',u'',u'',u'',u''], 'finpanel')
+        self.meet.scb.add_rider([u'', u'', u'', u'', u''], 'finpanel')
 
     def key_event(self, widget, event):
         """Handle global key presses in event."""
         if event.type == gtk.gdk.KEY_PRESS:
             key = gtk.gdk.keyval_name(event.keyval) or 'None'
             if event.state & gtk.gdk.CONTROL_MASK:
-                if key == key_abort:    # override ctrl+f5
+                if key == key_abort:  # override ctrl+f5
                     self.resettimer()
                     return True
-                elif key == key_announce: # re-send current announce vars
+                elif key == key_announce:  # re-send current announce vars
                     self.reannounce_times()
                     return True
-                elif key == key_clearfrom: # clear all places from selected
+                elif key == key_clearfrom:  # clear all places from selected
                     self.clear_places_from_selection()
                     return True
-                elif key == key_clearplace: # clear selected rider from places
+                elif key == key_clearplace:  # clear selected rider from places
                     self.clear_selected_place()
                     return True
-                elif key.upper() == key_undo:	# Undo model change if possible
+                elif key.upper() == key_undo:  # Undo model change if possible
                     self.undo_riders()
                     return True
             if key[0] == 'F':
@@ -1838,7 +1863,7 @@ class trtt(object):
             oplaces.append(selbib)
             self.checkpoint_model()
             self.places = ' '.join(oplaces)
-            self.__dorecalc = True      # flag recalculate
+            self.__dorecalc = True  # flag recalculate
 
     def fill_places_to_selected(self):
         """Update places to match ordering up to selected rider."""
@@ -1865,7 +1890,7 @@ class trtt(object):
                 nplaces.append(p)
             self.checkpoint_model()
             self.places = ' '.join(nplaces)
-            self.__dorecalc = True      # flag recalculate
+            self.__dorecalc = True  # flag recalculate
 
     def clear_selected_place(self):
         """Remove the selected rider from places."""
@@ -1882,7 +1907,7 @@ class trtt(object):
                 oplaces.remove(selbib)
             self.checkpoint_model()
             self.places = ' '.join(oplaces)
-            self.__dorecalc = True      # flag recalculate
+            self.__dorecalc = True  # flag recalculate
 
     def dnfriders(self, biblist='', code='dnf'):
         """Remove each rider from the race with supplied code."""
@@ -1893,14 +1918,14 @@ class trtt(object):
                 r[COL_INRACE] = False
                 r[COL_COMMENT] = code
                 recalc = True
-                self.log.info('Rider ' + str(bib) 
-                               + ' did not finish with code: ' + code)
+                self.log.info('Rider ' + str(bib) +
+                              ' did not finish with code: ' + code)
             else:
                 self.log.warn('Unregistered Rider ' + str(bib) + ' unchanged.')
         if recalc:
             self.recalculate()
         return False
-  
+
     def retriders(self, biblist=''):
         """Return all listed riders to the race."""
         recalc = False
@@ -1910,14 +1935,13 @@ class trtt(object):
                 r[COL_INRACE] = True
                 r[COL_COMMENT] = ''
                 recalc = True
-                self.log.info('Rider ' + str(bib) 
-                               + ' returned to race.')
+                self.log.info('Rider ' + str(bib) + ' returned to race.')
             else:
                 self.log.warn('Unregistered Rider ' + str(bib) + ' unchanged.')
         if recalc:
             self.recalculate()
         return False
-  
+
     def shutdown(self, win=None, msg='Race Sutdown'):
         """Close event."""
         self.log.debug('Event shutdown: ' + msg)
@@ -1927,7 +1951,7 @@ class trtt(object):
 
     def starttrig(self, e):
         """Process a 'start' trigger signal."""
-        self.log.info(u'Trigger: ' + e.rawtime(2)) 
+        self.log.info(u'Trigger: ' + e.rawtime(2))
         if self.timerstat == 'armstart':
             self.set_start(e)
         return False
@@ -1935,7 +1959,7 @@ class trtt(object):
     def set_lap_finish(self, e):
         """Write lap time into model and emit changed state."""
         self.lapfin = e
-        self.meet.cmd_announce(u'laptype',None)
+        self.meet.cmd_announce(u'laptype', None)
         self.reannounce_times()
 
     def timertrig(self, e):
@@ -1954,7 +1978,7 @@ class trtt(object):
         # bounce message onto announcer: HACK
         self.meet.announce_timer(e)
 
-        if e.refid in ['', '255']:      # got a trigger
+        if e.refid in ['', '255']:  # got a trigger
             return self.starttrig(e)
         elif e.chan == u'STS':  # status message
             return self.rfidstat(e)
@@ -1977,13 +2001,13 @@ class trtt(object):
         # at this point should always have a valid source rider vector
         lr = self.getrider(bib)
         if lr is None:
-            self.log.warn('Ignoring non starter: ' + bib
-                          + ' @ ' + e.rawtime(2))
+            self.log.warn('Ignoring non starter: ' + bib + ' @ ' +
+                          e.rawtime(2))
             return False
 
         if not lr[COL_INRACE]:
-            self.log.warn('Withdrawn rider: ' + lr[COL_BIB]
-                          + ' @ ' + e.rawtime(2))
+            self.log.warn('Withdrawn rider: ' + lr[COL_BIB] + ' @ ' +
+                          e.rawtime(2))
             # but continue anyway just in case it was not correct?
         else:
             self.log.info('Saw: ' + bib + ' @ ' + e.rawtime(2))
@@ -2001,11 +2025,11 @@ class trtt(object):
             if self.minlap is not None:
                 st += self.start + self.minlap
             else:
-                st = self.start + tod.tod(u'30') # 30sec fudge pad
+                st = self.start + tod.tod(u'30')  # 30sec fudge pad
 
         if e <= st:
-            self.log.info(u'Ignored early passing: '
-                              + bib + ' < ' + st.rawtime(2))
+            self.log.info(u'Ignored early passing: ' + bib + ' < ' +
+                          st.rawtime(2))
             return False
         else:
             if self.minlap is not None:
@@ -2013,8 +2037,8 @@ class trtt(object):
                     lastlap = lr[COL_RFSEEN][-1]
                     nl = lastlap + self.minlap
                     if e <= nl:
-                        self.log.info(u'Ignored short lap: '
-                              + bib + ' < ' + nl.rawtime(2))
+                        self.log.info(u'Ignored short lap: ' + bib + ' < ' +
+                                      nl.rawtime(2))
                         return False
 
         lr[COL_RFSEEN].append(e)
@@ -2023,16 +2047,16 @@ class trtt(object):
             targetlap = self.catlaps[rcat]
             self.log.debug(u'Target lap for this rider is: ' + repr(targetlap))
             if lr[COL_LAPS] >= targetlap - 1:
-                catfinish = True        # arm just this rider
+                catfinish = True  # arm just this rider
 
         if self.timerstat == 'armfinish' or catfinish:
             st = tod.ZERO
             if lr[COL_STOFT] is not None:
                 st = lr[COL_STOFT]
-            st += self.minelap	# check agains minelap even if lap count arms
+            st += self.minelap  # check agains minelap even if lap count arms
             if e < st:
-                self.log.info(u'Ignored early finish: '
-                              + bib + ' < ' + st.rawtime(2))
+                self.log.info(u'Ignored early finish: ' + bib + ' < ' +
+                              st.rawtime(2))
                 return False
 
             if self.finish is None:
@@ -2042,7 +2066,7 @@ class trtt(object):
             if lr[COL_RFTIME] is None:
                 lr[COL_LAPS] += 1
                 lr[COL_RFTIME] = e
-                self.__dorecalc = True	# cleared in timeout, from same thread
+                self.__dorecalc = True  # cleared in timeout, from same thread
                 if self.announce_team is None:
                     # announce this rider's team in recalc(dubious)
                     theteam = lr[COL_TEAM]
@@ -2054,22 +2078,21 @@ class trtt(object):
                             self.set_lap_finish(e)
                         else:
                             pass
-                            #self.log.info(u'Lap finish ignored: ' + 
-                                       #lr[COL_BIB] + u'@' + e.rawtime(3)
-                                       #+ u' on lap ' + unicode(lr[COL_LAPS]))
+                            #self.log.info(u'Lap finish ignored: ' +
+                            #lr[COL_BIB] + u'@' + e.rawtime(3)
+                            #+ u' on lap ' + unicode(lr[COL_LAPS]))
                     #if self.scratch_start is None:
-                        #self.scratch_start = e
-                    self.announce_rider('', bib, lr[COL_NAMESTR],
-                                    lr[COL_CAT], e)
+                    #self.scratch_start = e
+                    self.announce_rider('', bib, lr[COL_NAMESTR], lr[COL_CAT],
+                                        e)
             else:
-                self.log.error('Duplicate finish rider = ' + bib
-                                  + ' @ ' + e.rawtime())
+                self.log.error('Duplicate finish rider = ' + bib + ' @ ' +
+                               e.rawtime())
         elif self.timerstat in ['running']:
             lr[COL_LAPS] += 1
             if lr[COL_INRACE]:
-                self.announce_rider('', bib, lr[COL_NAMESTR],
-                                lr[COL_CAT], e)
-        return False	# called from glib_idle_add
+                self.announce_rider('', bib, lr[COL_NAMESTR], lr[COL_CAT], e)
+        return False  # called from glib_idle_add
 
     def announce_rider(self, place, bib, namestr, cat, rftime):
         """Log a rider in the lap and emit to announce."""
@@ -2077,8 +2100,9 @@ class trtt(object):
             self.scratch_map[bib] = rftime
             self.scratch_ord.append(bib)
         if self.live_announce:
-            glib.idle_add(self.meet.announce_rider, [place,bib,namestr,
-                                     cat,rftime.rawtime()])
+            glib.idle_add(self.meet.announce_rider,
+                          [place, bib, namestr, cat,
+                           rftime.rawtime()])
 
     def finsprint(self, places):
         """Display a final sprint 'provisional' result."""
@@ -2087,7 +2111,7 @@ class trtt(object):
         self.meet.announce_clear()
         scrollmsg = u'Provisional - '
         self.meet.announce_title('Provisional Result')
-        self.meet.cmd_announce(u'bunches',u'final')
+        self.meet.cmd_announce(u'bunches', u'final')
         placeset = set()
         idx = 0
         st = tod.tod('0')
@@ -2103,8 +2127,7 @@ class trtt(object):
                     placeset.add(bib)
                     r = self.getrider(bib)
                     if r is not None:
-                        ft = self.vbunch(r[COL_CBUNCH],
-                                         r[COL_MBUNCH])
+                        ft = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
                         fs = ''
                         if ft is not None:
                             # temp -> just use the no-blob style to correct
@@ -2112,17 +2135,14 @@ class trtt(object):
                             if wt is None:
                                 wt = ft
                             lb = ft
-                        scrollmsg += (u' ' +
-                                     r[COL_PLACE] + u'. ' 
-                                     + r[COL_NAMESTR].decode('utf-8')
-                                     + u' ')
-                        glib.idle_add(self.meet.announce_rider,
-                                                 [r[COL_PLACE]+'.',
-                                                 bib,
-                                                 r[COL_NAMESTR],
-                                                 r[COL_CAT], fs])
+                        scrollmsg += (u' ' + r[COL_PLACE] + u'. ' +
+                                      r[COL_NAMESTR].decode('utf-8') + u' ')
+                        glib.idle_add(self.meet.announce_rider, [
+                            r[COL_PLACE] + '.', bib, r[COL_NAMESTR],
+                            r[COL_CAT], fs
+                        ])
                     idx += 1
-        self.meet.cmd_announce(u'scrollmsg',scrollmsg)
+        self.meet.cmd_announce(u'scrollmsg', scrollmsg)
         if wt is not None:
             pass
 
@@ -2131,8 +2151,8 @@ class trtt(object):
 
         ## TODO : Fix offset time calcs - too many off by ones
         if acode not in self.intermeds:
-            self.log.debug('Attempt to display non-existent intermediate: '
-                              + repr(acode))
+            self.log.debug('Attempt to display non-existent intermediate: ' +
+                           repr(acode))
             return
         descr = acode
         if self.intermap[acode]['descr']:
@@ -2151,19 +2171,17 @@ class trtt(object):
                     placeset.add(bib)
                     r = self.getrider(bib)
                     if r is not None:
-                        scrollmsg += (u' ' +
-                                     str(curplace) + u'. ' 
-                                     + r[COL_NAMESTR].decode('utf-8')
-                                     + u' ')
-                        glib.idle_add(self.meet.announce_rider,
-                                                [str(curplace)+'.',
-                                                 bib,
-                                                 r[COL_NAMESTR],
-                                                 r[COL_CAT], ''])
+                        scrollmsg += (u' ' + str(curplace) + u'. ' +
+                                      r[COL_NAMESTR].decode('utf-8') + u' ')
+                        glib.idle_add(self.meet.announce_rider, [
+                            str(curplace) + '.', bib, r[COL_NAMESTR],
+                            r[COL_CAT], ''
+                        ])
                     idx += 1
                 else:
-                    self.log.warn('Duplicate no. = ' + str(bib) + ' in places.')
-        self.meet.cmd_announce(u'scrollmsg',scrollmsg)
+                    self.log.warn('Duplicate no. = ' + str(bib) +
+                                  ' in places.')
+        self.meet.cmd_announce(u'scrollmsg', scrollmsg)
         glib.timeout_add_seconds(15, self.reannounce_lap)
 
     def todempty(self, val):
@@ -2190,9 +2208,10 @@ class trtt(object):
         for bib in self.scratch_ord:
             r = self.getrider(bib)
             if r is not None:
-                glib.idle_add(self.meet.announce_rider,
-                                        ['',bib,r[COL_NAMESTR],r[COL_CAT],
-                                         self.scratch_map[bib].rawtime()])
+                glib.idle_add(self.meet.announce_rider, [
+                    '', bib, r[COL_NAMESTR], r[COL_CAT],
+                    self.scratch_map[bib].rawtime()
+                ])
         self.live_announce = True
         return False
 
@@ -2271,30 +2290,30 @@ class trtt(object):
         for r in self.riders:
             if r[COL_INRACE] and r[COL_PLACE] != '':
                 if lplace == r[COL_PLACE] and r[COL_PLACE] != '':
-                    nplaces += '-' + r[COL_BIB] # dead heat riders
+                    nplaces += '-' + r[COL_BIB]  # dead heat riders
                 else:
                     nplaces += ' ' + r[COL_BIB]
                     lplace = r[COL_PLACE]
         self.places = strops.reformat_placelist(nplaces)
-        self.meet.action_combo.set_active(10)	# 'fin'
+        self.meet.action_combo.set_active(10)  # 'fin'
         self.meet.action_entry.set_text(self.places)
-        
+
     def fill_places_to(self, bib=None):
         """Fill in finish places up to the nominated bib."""
         if self.places.find('-') > 0:
             self.log.warn('Fill places with dead heat not yet implemented.')
             return
-        oplaces = self.places.split()	# only patch if no dead heats
+        oplaces = self.places.split()  # only patch if no dead heats
         nplaces = []
         for r in self.riders:
             if r[COL_INRACE]:
                 if r[COL_BIB] in oplaces:
-                    oplaces.remove(r[COL_BIB])	# remove from old list
-                nplaces.append(r[COL_BIB])      # add to new list
+                    oplaces.remove(r[COL_BIB])  # remove from old list
+                nplaces.append(r[COL_BIB])  # add to new list
             else:
                 if r[COL_BIB] in oplaces:
-                    oplaces.remove(r[COL_BIB])	# strip out DNFed riders
-            if r[COL_BIB] == bib:		# break after to get sel rider
+                    oplaces.remove(r[COL_BIB])  # strip out DNFed riders
+            if r[COL_BIB] == bib:  # break after to get sel rider
                 break
         nplaces.extend(oplaces)
         self.checkpoint_model()
@@ -2332,43 +2351,43 @@ class trtt(object):
         """Clear places off all riders."""
         for r in self.riders:
             r[COL_PLACE] = ''
-        self.bonuses = {}	# bonuses are global to stage
-        for c in self.tallys:	# points are grouped by tally
+        self.bonuses = {}  # bonuses are global to stage
+        for c in self.tallys:  # points are grouped by tally
             self.points[c] = {}
             self.pointscb[c] = {}
-            
+
     def sortteams(self, x, y):
         """Roughly sort into team groups - all teams have same start time?"""
         #             0    1   2      3       4     5
         # aux cols: ind, stoft, in, place, rftime, laps
 
-        if x[1] != y[1]:               # same team?
+        if x[1] != y[1]:  # same team?
             return cmp(x[1], y[1])
         else:
-            if x[2] != y[2]:           # both in?
+            if x[2] != y[2]:  # both in?
                 if x[2]:
                     return -1
                 else:
                     return 1
             else:
-                if x[4] != y[4]:       # same time?
+                if x[4] != y[4]:  # same time?
                     return cmp(x[4], y[4])
                 else:
-                    return cmp(x[3], y[3])	# last resort is 'place'
+                    return cmp(x[3], y[3])  # last resort is 'place'
         return 0
 
     # do final sort on manual places then manual bunch entries
     def sortvbunch(self, x, y):
         # aux cols: ind, bib, in, place, vbunch, comment
         #             0    1   2      3       4        5
-        if x[2] != y[2]:		# in the race?
-            if x[2]:			# return bool comparison equiv
+        if x[2] != y[2]:  # in the race?
+            if x[2]:  # return bool comparison equiv
                 return -1
             else:
                 return 1
         else:
-            if x[2]:			# in the race...
-                if x[3] != y[3]:		# places not same?
+            if x[2]:  # in the race...
+                if x[3] != y[3]:  # places not same?
                     if y[3] == '':
                         return -1
                     elif x[3] == '':
@@ -2378,7 +2397,7 @@ class trtt(object):
                     else:
                         return 1
                 else:
-                    if x[4] == y[4]:	# same time?
+                    if x[4] == y[4]:  # same time?
                         return 0
                     else:
                         if y[4] is None:
@@ -2389,12 +2408,12 @@ class trtt(object):
                             return -1
                         else:
                             return 1
-            else:			# not in the race
+            else:  # not in the race
                 if x[5] != y[5]:
-                    return strops.cmp_dnf(x[5], y[5]) # sort by code
+                    return strops.cmp_dnf(x[5], y[5])  # sort by code
                 else:
-                    return cmp(strops.riderno_key(x[1]), 
-                               strops.riderno_key(y[1])) # sort on no
+                    return cmp(strops.riderno_key(x[1]),
+                               strops.riderno_key(y[1]))  # sort on no
         return 0
 
     def vbunch(self, cbunch=None, mbunch=None):
@@ -2446,10 +2465,10 @@ class trtt(object):
 
     def editbunch_cb(self, cell, path, new_text, col=None):
         """Edit bunch time on rider view."""
-        # NOTE: This is the cascading bunch time editor, 
+        # NOTE: This is the cascading bunch time editor,
         new_text = new_text.strip()
         dorecalc = False
-        if new_text == '':	# user request to clear RFTIME?
+        if new_text == '':  # user request to clear RFTIME?
             self.riders[path][COL_RFTIME] = None
             self.riders[path][COL_MBUNCH] = None
             self.riders[path][COL_CBUNCH] = None
@@ -2466,23 +2485,23 @@ class trtt(object):
                 dorecalc = True
             # bunch times don't cascade for trtt
             #if nmb is not None:
-                #i = int(path)+1
-                #tl = len (self.riders)
-                ## until next rider has mbunch set OR place clear assign new bt
-                #while i < tl:
-                    #ivb = self.vbunch(self.riders[i][COL_CBUNCH], 
-                                      #self.riders[i][COL_MBUNCH])
-                    #if (self.riders[i][COL_PLACE] != ''
-                          #and (ivb is None
-                              #or ivb == omb)):
-                        #self.riders[i][COL_MBUNCH] = nmb
-                        #dorecalc = True
-                    #else:
-                        #break
-                    #i += 1
+            #i = int(path)+1
+            #tl = len (self.riders)
+            ## until next rider has mbunch set OR place clear assign new bt
+            #while i < tl:
+            #ivb = self.vbunch(self.riders[i][COL_CBUNCH],
+            #self.riders[i][COL_MBUNCH])
+            #if (self.riders[i][COL_PLACE] != ''
+            #and (ivb is None
+            #or ivb == omb)):
+            #self.riders[i][COL_MBUNCH] = nmb
+            #dorecalc = True
+            #else:
+            #break
+            #i += 1
         if dorecalc:
             self.recalculate()
-    
+
     def checkplaces(self, rlist='', dnf=True):
         """Check the proposed places against current race model."""
         ret = True
@@ -2514,7 +2533,7 @@ class trtt(object):
         """Recalculator, acquires lock and then continues."""
         if not self.recalclock.acquire(False):
             self.log.warn('Recalculate already in progress.')
-            return None	# allow only one entry
+            return None  # allow only one entry
         try:
             self.__recalc()
         finally:
@@ -2522,7 +2541,7 @@ class trtt(object):
 
     def get_ridercat(self, bib):
         """Return the primary category for the specified rider."""
-        ret = None	# unknown
+        ret = None  # unknown
         r = self.getrider(bib)
         if r is not None:
             ret = self.ridercat(r[COL_CAT].decode('utf-8').upper())
@@ -2539,7 +2558,7 @@ class trtt(object):
             for bib in placegroup.split('-'):
                 if self.get_ridercat(bib) == cat:
                     cg.append(bib)
-            if len(cg) > 0:	# >= one cat rider in this group 
+            if len(cg) > 0:  # >= one cat rider in this group
                 pgroups.append(u'-'.join(cg))
 
         ret = u' '.join(pgroups)
@@ -2564,21 +2583,21 @@ class trtt(object):
                         idx += 1
                         r[COL_PLACE] = str(curplace)
                     else:
-                        self.log.warn('DNF Rider ' + str(bib)
-                                       + ' in finish places.')
+                        self.log.warn('DNF Rider ' + str(bib) +
+                                      ' in finish places.')
                 else:
                     self.log.warn('Duplicate no. = ' + str(bib) +
-                                   ' in finish places.')
+                                  ' in finish places.')
 
     def assign_places(self, contest):
         """Transfer points and bonuses into the named contest."""
         # fetch context meta infos
         src = self.contestmap[contest]['source']
         if src not in RESERVED_SOURCES and src not in self.intermeds:
-            self.log.info('Invalid intermediate source: ' + repr(src)
-                           + ' in contest: ' + repr(contest))
+            self.log.info('Invalid intermediate source: ' + repr(src) +
+                          ' in contest: ' + repr(contest))
             return
-        countbackwinner = False	# for stage finish only track winner in cb
+        countbackwinner = False  # for stage finish only track winner in cb
         category = self.contestmap[contest]['category']
         tally = self.contestmap[contest]['tally']
         bonuses = self.contestmap[contest]['bonuses']
@@ -2594,13 +2613,13 @@ class trtt(object):
         placestr = ''
         if src == 'fin':
             placestr = self.places
-            if tally != u'climb':	# really only for sprints
+            if tally != u'climb':  # really only for sprints
                 countbackwinner = True
         elif src == 'reg':
             placestr = self.get_startlist()
         elif src == 'start':
             placestr = self.get_starters()
-        elif src in self.catplaces: # ERROR -> cat climb tally needs type?
+        elif src in self.catplaces:  # ERROR -> cat climb tally needs type?
             placestr = self.get_cat_placesr(self.catplaces[src])
             countbackwinner = True
         else:
@@ -2617,10 +2636,10 @@ class trtt(object):
                         self.addrider(bib)
                         r = self.getrider(bib)
                     idx += 1
-                    if allsrc:	# all listed places get same pts/bonus..
+                    if allsrc:  # all listed places get same pts/bonus..
                         if allbonus is not tod.ZERO:
                             if bib in self.bonuses:
-                                self.bonuses[bib] += allbonus 
+                                self.bonuses[bib] += allbonus
                             else:
                                 self.bonuses[bib] = allbonus
                         if allpts != 0:
@@ -2630,65 +2649,66 @@ class trtt(object):
                                 self.points[tally][bib] = allpts
                                 self.pointscb[tally][bib] = strops.countback()
                             # No countback for all_source entries
-                    else:	# points/bonus as per config
-                        if len(bonuses) >= curplace:	# bonus is vector
+                    else:  # points/bonus as per config
+                        if len(bonuses) >= curplace:  # bonus is vector
                             if bib in self.bonuses:
-                                self.bonuses[bib] += bonuses[curplace-1]
+                                self.bonuses[bib] += bonuses[curplace - 1]
                             else:
-                                self.bonuses[bib] = bonuses[curplace-1]
+                                self.bonuses[bib] = bonuses[curplace - 1]
                         if tally:
-                            if len(points) >= curplace: # points vector
+                            if len(points) >= curplace:  # points vector
                                 if bib in self.points[tally]:
-                                    self.points[tally][bib] += points[curplace-1]
+                                    self.points[tally][bib] += points[curplace
+                                                                      - 1]
                                 else:
-                                    self.points[tally][bib] = points[curplace-1]
+                                    self.points[tally][bib] = points[curplace -
+                                                                     1]
                             if bib not in self.pointscb[tally]:
                                 self.pointscb[tally][bib] = strops.countback()
-                        if countbackwinner:	# stage finish
-                            if curplace == 1:	# only track winner at finish
+                        if countbackwinner:  # stage finish
+                            if curplace == 1:  # only track winner at finish
                                 self.pointscb[tally][bib][0] += 1
-                        else:			# intermediate/other
-                            if tally == u'climb': # climbs countback on category winners only
+                        else:  # intermediate/other
+                            if tally == u'climb':  # climbs countback on category winners only
                                 if curplace == 1:
                                     self.pointscb[tally][bib][category] += 1
                             else:
                                 self.pointscb[tally][bib][curplace] += 1
                 else:
-                    self.log.warn('Duplicate no. = ' + str(bib) + ' in '
-                                    + repr(contest) + ' places.')
+                    self.log.warn('Duplicate no. = ' + str(bib) + ' in ' +
+                                  repr(contest) + ' places.')
 
     def bounceteam(self, team, cat, time):
         ## HACK: bounce a teamname and time onto the panel
         tname = u''
         # lookup team name in rdb
-        dbr = self.meet.rdb.getrider(team,u'team')
+        dbr = self.meet.rdb.getrider(team, u'team')
         if dbr is not None:
             #tname = self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST)
             tname = self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB)
         #tcat = self.ridercat(cat)
-        tstr = time.rawtime(1) + u' ' # hunges blanked
+        tstr = time.rawtime(1) + u' '  # hunges blanked
         #self.meet.scb.add_rider([cat,u'',tname,u'',tstr], 'finpanel')
-        self.meet.scb.add_rider([u'',team,tname,u'',tstr], 'finpanel')
+        self.meet.scb.add_rider([u'', team, tname, u'', tstr], 'finpanel')
         return False
 
     def bounceruntime(self, team, cat):
         ## HACK: bounce a teamname and running time onto the panel
         tname = u''
         # lookup team name in rdb
-        dbr = self.meet.rdb.getrider(team,u'team')
+        dbr = self.meet.rdb.getrider(team, u'team')
         if dbr is not None:
             tname = self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB)
             #tname = self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST)
             tstr = u''
         if team in self.teamtimes:
             tstr = self.teamtimes[team].rawtime(1) + u' '
-        else: 
-            tstart = tod.mktod(self.meet.rdb.getvalue(dbr,
-                                                        riderdb.COL_REFID))
-            if tstart is not None: 
+        else:
+            tstart = tod.mktod(self.meet.rdb.getvalue(dbr, riderdb.COL_REFID))
+            if tstart is not None:
                 tstr = (tod.now() - tstart).rawtime(0)
         #self.meet.scb.add_rider([cat,u'',tname,u'',tstr], 'finpanel')
-        self.meet.scb.add_rider([u'',team,tname,u'',tstr], 'finpanel')
+        self.meet.scb.add_rider([u'', team, tname, u'', tstr], 'finpanel')
         return False
 
     def __recalc(self):
@@ -2715,8 +2735,10 @@ class trtt(object):
         idx = 0
         for r in self.riders:
             # aux cols: ind, stoft(team), in, place, rftime, laps
-            auxtbl.append([idx, r[COL_STOFT], r[COL_INRACE], r[COL_PLACE],
-                           r[COL_RFTIME], r[COL_LAPS]])
+            auxtbl.append([
+                idx, r[COL_STOFT], r[COL_INRACE], r[COL_PLACE], r[COL_RFTIME],
+                r[COL_LAPS]
+            ])
             idx += 1
         if len(auxtbl) > 1:
             auxtbl.sort(self.sortteams)
@@ -2732,22 +2754,21 @@ class trtt(object):
             nteam = r[COL_TEAM]
             if nteam != cteam:
                 ncat = self.ridercat(r[COL_CAT])
-                nth = self.defaultnth # overridden by cat
+                nth = self.defaultnth  # overridden by cat
                 if ncat in self.nthwheel:
                     try:
                         nth = int(self.nthwheel[ncat])
-                        self.log.debug(repr(ncat) + u' Nth Wheel: '
-                                       + repr(NTH_WHEEL))
+                        self.log.debug(
+                            repr(ncat) + u' Nth Wheel: ' + repr(NTH_WHEEL))
                     except Exception as e:
-                        self.log.warn(u'Invalid nth wheel for '
-                                       + repr(ncat) + u', default used: '
-                                       + repr(nth))
+                        self.log.warn(u'Invalid nth wheel for ' + repr(ncat) +
+                                      u', default used: ' + repr(nth))
                 teammap[nteam] = []
                 teamnth[nteam] = nth
                 teamcats[nteam] = ncat
                 cteam = nteam
             # cteam will be valid at this point
-            if r[COL_RFTIME] is not None:      # will already be sorted!
+            if r[COL_RFTIME] is not None:  # will already be sorted!
                 teammap[cteam].append(r)
                 #cteamlist.append(r)
 
@@ -2757,22 +2778,23 @@ class trtt(object):
             tlist = teammap[t]
             nth_wheel = teamnth[t]
             if len(tlist) >= nth_wheel:
-                ct = (tlist[nth_wheel-1][COL_RFTIME] - self.start
-                       - tlist[nth_wheel-1][COL_STOFT])
+                ct = (tlist[nth_wheel - 1][COL_RFTIME] - self.start -
+                      tlist[nth_wheel - 1][COL_STOFT])
                 thetime = ct.truncate(1)
-                self.teamtimes[t] = thetime	# save to times map
-                if (t not in self.announced_teams
-                      and self.announce_team and self.announce_team == t):
+                self.teamtimes[t] = thetime  # save to times map
+                if (t not in self.announced_teams and self.announce_team
+                        and self.announce_team == t):
                     # bounce this time onto the panel? HACK
                     self.announced_teams.add(t)
-                    self.running_team = None	# cancel a running time
+                    self.running_team = None  # cancel a running time
                     self.bounceteam(t, teamcats[t], thetime)
                     self.announce_team = None
                 for r in tlist[0:nth_wheel]:
                     r[COL_CBUNCH] = thetime
                 for r in tlist[nth_wheel:]:
                     et = r[COL_RFTIME] - self.start - r[COL_STOFT]
-                    if self.owntime and (et > ct and (et - ct) > tod.tod('1.12')):
+                    if self.owntime and (et > ct and
+                                         (et - ct) > tod.tod('1.12')):
                         # TIME GAP!
                         thetime = et.truncate(1)
                     r[COL_CBUNCH] = thetime
@@ -2786,14 +2808,15 @@ class trtt(object):
         idx = 0
         for r in self.riders:
             # aux cols: ind, bib, in, place, vbunch
-            auxtbl.append([idx, r[COL_BIB], r[COL_INRACE], r[COL_PLACE],
-                           self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH]),
-                           r[COL_COMMENT]])
+            auxtbl.append([
+                idx, r[COL_BIB], r[COL_INRACE], r[COL_PLACE],
+                self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH]), r[COL_COMMENT]
+            ])
             idx += 1
         if len(auxtbl) > 1:
             auxtbl.sort(self.sortvbunch)
             self.riders.reorder([a[0] for a in auxtbl])
-        return False	# allow idle add
+        return False  # allow idle add
 
     def new_start_trigger(self, rfid):
         """Collect a RFID trigger signal and apply it to the model."""
@@ -2803,7 +2826,7 @@ class trtt(object):
                 st = rfid - et
                 self.set_start(st)
                 self.newstartdlg.response(1)
-                self.newstartdlg = None	# try to ignore the 'up' impulse
+                self.newstartdlg = None  # try to ignore the 'up' impulse
             else:
                 self.log.warn('Invalid elapsed time: Start not updated.')
         return False
@@ -2840,7 +2863,7 @@ class trtt(object):
 
         response = dlg.run()
         self.newstartdlg = None
-        if response == 1:       # id 1 set in glade for "Apply"
+        if response == 1:  # id 1 set in glade for "Apply"
             self.log.info('Start time updated: ' + self.start.rawtime(2))
         else:
             self.log.info('Set elapsed time cancelled.')
@@ -2849,8 +2872,8 @@ class trtt(object):
 
     def time_context_menu(self, widget, event, data=None):
         """Popup menu for result list."""
-        self.context_menu.popup(None, None, None, event.button,
-                                event.time, selpath)
+        self.context_menu.popup(None, None, None, event.button, event.time,
+                                selpath)
 
     def treerow_selected(self, treeview, path, view_column, data=None):
         """Select row, use to confirm places to."""
@@ -2865,8 +2888,8 @@ class trtt(object):
                 path, col, cellx, celly = pathinfo
                 treeview.grab_focus()
                 treeview.set_cursor(path, col, 0)
-                self.context_menu.popup(None, None, None,
-                                        event.button, event.time)
+                self.context_menu.popup(None, None, None, event.button,
+                                        event.time)
                 return True
         return False
 
@@ -2874,7 +2897,7 @@ class trtt(object):
         """Transfer total lap entry string into model if possible."""
         try:
             nt = entry.get_text().decode('utf-8')
-            if nt:      # not empty
+            if nt:  # not empty
                 self.totlaps = int(entry.get_text().decode('utf-8'))
             else:
                 self.totlaps = None
@@ -2902,10 +2925,8 @@ class trtt(object):
                 ftx = ft.rawtime(2)
             tvec = uiutil.edit_times_dlg(self.meet.window, stx, ftx)
             if len(tvec) > 2 and tvec[0] == 1:
-                self.riders.set_value(sel[1],
-                                      COL_STOFT, tod.mktod(tvec[1]))
-                self.riders.set_value(sel[1],
-                                      COL_RFTIME, tod.mktod(tvec[2]))
+                self.riders.set_value(sel[1], COL_STOFT, tod.mktod(tvec[1]))
+                self.riders.set_value(sel[1], COL_RFTIME, tod.mktod(tvec[2]))
                 bib = self.riders.get_value(sel[1], COL_BIB)
                 nst = u'-'
                 st = self.riders.get_value(sel[1], COL_STOFT)
@@ -2915,10 +2936,8 @@ class trtt(object):
                 ft = self.riders.get_value(sel[1], COL_RFTIME)
                 if ft:
                     nft = ft.rawtime(2)
-                self.log.info(u'Adjusted rider ' + bib + u' - Start: '
-                  + nst
-                  + u' Raw Finish: '
-                  + nft)
+                self.log.info(u'Adjusted rider ' + bib + u' - Start: ' + nst +
+                              u' Raw Finish: ' + nft)
                 self.recalculate()
 
     def rms_context_clear_activate_cb(self, menuitem, data=None):
@@ -2963,12 +2982,12 @@ class trtt(object):
         self.teamtimes = {}
         self.announced_teams = set()
         self.announce_team = None
-        self.running_team = None	# show running time for team
+        self.running_team = None  # show running time for team
 
         # race property attributes
 
         # race run time attributes
-        self.owntime = True		# dropped riders get own time
+        self.owntime = True  # dropped riders get own time
         self.readonly = not ui
         self.start = None
         self.finish = None
@@ -2981,22 +3000,22 @@ class trtt(object):
         self.ridermark = None
         self.cats = []
         self.catplaces = {}
-        self.catlaps = {}       # cache of cat lap counts
+        self.catlaps = {}  # cache of cat lap counts
         self.defaultnth = NTH_WHEEL
         self.nthwheel = {}
         self.autocats = False
         self.bonuses = {}
         self.points = {}
         self.pointscb = {}
-        self.gapfinish = False	# set automatically if count>breakthresh
+        self.gapfinish = False  # set automatically if count>breakthresh
 
         # intermediates
-        self.intermeds = []	# sorted list of intermediate keys
-        self.intermap = {}	# map of intermediate keys to results
-        self.contests = []	# sorted list of contests
-        self.contestmap = {}	# map of contest keys
-        self.tallys = []	# sorted list of points tallys
-        self.tallymap = {}	# map of tally keys
+        self.intermeds = []  # sorted list of intermediate keys
+        self.intermap = {}  # map of intermediate keys to results
+        self.contests = []  # sorted list of contests
+        self.contestmap = {}  # map of contest keys
+        self.tallys = []  # sorted list of points tallys
+        self.tallymap = {}  # map of tally keys
 
         # Scratch pad status variables - check if needed?
         self.last_scratch = None
@@ -3009,7 +3028,7 @@ class trtt(object):
         self.totlaps = None
         self.lapstart = None
         self.lapfin = None
- 
+
         # lap tracking
         self.scratch_map = {}
         self.scratch_ord = []
@@ -3019,38 +3038,40 @@ class trtt(object):
         self.newstartent = None
         self.newstartdlg = None
 
-        self.riders = gtk.ListStore(gobject.TYPE_STRING, # BIB = 0
-                                    gobject.TYPE_STRING, # NAMESTR = 1
-                                    gobject.TYPE_STRING, # NAMESTR = 1
-                                    gobject.TYPE_STRING, # CAT = 2
-                                    gobject.TYPE_STRING, # COMMENT = 3
-                                    gobject.TYPE_BOOLEAN, # INRACE = 4
-                                    gobject.TYPE_STRING,  # PLACE = 5
-                                    gobject.TYPE_INT,  # LAP COUNT = 6
-                                    gobject.TYPE_PYOBJECT, # RFTIME = 7
-                                    gobject.TYPE_PYOBJECT, # CBUNCH = 8
-                                    gobject.TYPE_PYOBJECT, # MBUNCH = 9
-                                    gobject.TYPE_PYOBJECT, # STOFT = 10
-                                    gobject.TYPE_PYOBJECT, # BONUS = 11
-                                    gobject.TYPE_PYOBJECT, # PENALTY = 12
-                                    gobject.TYPE_PYOBJECT, # RFSEEN = 13
-                                    gobject.TYPE_STRING)  # TEAM = 14
-        self.undomod = gtk.ListStore(gobject.TYPE_STRING, # BIB = 0
-                                    gobject.TYPE_STRING, # NAMESTR = 1
-                                    gobject.TYPE_STRING, # NAMESTR = 1
-                                    gobject.TYPE_STRING, # CAT = 2
-                                    gobject.TYPE_STRING, # COMMENT = 3
-                                    gobject.TYPE_BOOLEAN, # INRACE = 4
-                                    gobject.TYPE_STRING,  # PLACE = 5
-                                    gobject.TYPE_INT,  # LAP COUNT = 6
-                                    gobject.TYPE_PYOBJECT, # RFTIME = 7
-                                    gobject.TYPE_PYOBJECT, # CBUNCH = 8
-                                    gobject.TYPE_PYOBJECT, # MBUNCH = 9
-                                    gobject.TYPE_PYOBJECT, # STOFT = 10
-                                    gobject.TYPE_PYOBJECT, # BONUS = 11
-                                    gobject.TYPE_PYOBJECT, # PENALTY = 12
-                                    gobject.TYPE_PYOBJECT, # RFSEEN = 13
-                                    gobject.TYPE_STRING)  # TEAM = 14
+        self.riders = gtk.ListStore(
+            gobject.TYPE_STRING,  # BIB = 0
+            gobject.TYPE_STRING,  # NAMESTR = 1
+            gobject.TYPE_STRING,  # NAMESTR = 1
+            gobject.TYPE_STRING,  # CAT = 2
+            gobject.TYPE_STRING,  # COMMENT = 3
+            gobject.TYPE_BOOLEAN,  # INRACE = 4
+            gobject.TYPE_STRING,  # PLACE = 5
+            gobject.TYPE_INT,  # LAP COUNT = 6
+            gobject.TYPE_PYOBJECT,  # RFTIME = 7
+            gobject.TYPE_PYOBJECT,  # CBUNCH = 8
+            gobject.TYPE_PYOBJECT,  # MBUNCH = 9
+            gobject.TYPE_PYOBJECT,  # STOFT = 10
+            gobject.TYPE_PYOBJECT,  # BONUS = 11
+            gobject.TYPE_PYOBJECT,  # PENALTY = 12
+            gobject.TYPE_PYOBJECT,  # RFSEEN = 13
+            gobject.TYPE_STRING)  # TEAM = 14
+        self.undomod = gtk.ListStore(
+            gobject.TYPE_STRING,  # BIB = 0
+            gobject.TYPE_STRING,  # NAMESTR = 1
+            gobject.TYPE_STRING,  # NAMESTR = 1
+            gobject.TYPE_STRING,  # CAT = 2
+            gobject.TYPE_STRING,  # COMMENT = 3
+            gobject.TYPE_BOOLEAN,  # INRACE = 4
+            gobject.TYPE_STRING,  # PLACE = 5
+            gobject.TYPE_INT,  # LAP COUNT = 6
+            gobject.TYPE_PYOBJECT,  # RFTIME = 7
+            gobject.TYPE_PYOBJECT,  # CBUNCH = 8
+            gobject.TYPE_PYOBJECT,  # MBUNCH = 9
+            gobject.TYPE_PYOBJECT,  # STOFT = 10
+            gobject.TYPE_PYOBJECT,  # BONUS = 11
+            gobject.TYPE_PYOBJECT,  # PENALTY = 12
+            gobject.TYPE_PYOBJECT,  # RFSEEN = 13
+            gobject.TYPE_STRING)  # TEAM = 14
         self.canundo = False
         self.placeundo = None
 
@@ -3076,19 +3097,23 @@ class trtt(object):
         t.show()
         self.view = t
         uiutil.mkviewcoltxt(t, 'No.', COL_BIB, calign=1.0)
-        uiutil.mkviewcoltxt(t, 'Rider', COL_NAMESTR, expand=True,maxwidth=500)
+        uiutil.mkviewcoltxt(t, 'Rider', COL_NAMESTR, expand=True, maxwidth=500)
         uiutil.mkviewcoltxt(t, 'Cat', COL_CAT)
-        uiutil.mkviewcoltxt(t, 'Com', COL_COMMENT,
-                                cb=self.editcol_cb)
+        uiutil.mkviewcoltxt(t, 'Com', COL_COMMENT, cb=self.editcol_cb)
         uiutil.mkviewcolbool(t, 'In', COL_INRACE, width=50)
-				# too dangerous!
-                                #cb=self.cr_inrace_toggled, width=50)
+        # too dangerous!
+        #cb=self.cr_inrace_toggled, width=50)
         uiutil.mkviewcoltxt(t, 'Lap', COL_LAPS, width=40, cb=self.editlap_cb)
-        uiutil.mkviewcoltod(t, 'Start', cb=self.showstart_cb, width=50,
-                                editcb=self.editstart_cb)
-        uiutil.mkviewcoltod(t, 'Bunch', cb=self.showbunch_cb,
-                                editcb=self.editbunch_cb,
-                                width=50)
+        uiutil.mkviewcoltod(t,
+                            'Start',
+                            cb=self.showstart_cb,
+                            width=50,
+                            editcb=self.editstart_cb)
+        uiutil.mkviewcoltod(t,
+                            'Bunch',
+                            cb=self.showbunch_cb,
+                            editcb=self.editbunch_cb,
+                            width=50)
         uiutil.mkviewcoltxt(t, 'Place', COL_PLACE, calign=0.5, width=50)
         b.get_object('race_result_win').add(t)
 

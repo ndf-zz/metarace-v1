@@ -1,4 +1,3 @@
-
 """Cyclocross handler for roadmeet."""
 
 import gtk
@@ -13,6 +12,7 @@ from metarace import tod
 from metarace import eventdb
 from metarace import riderdb
 from metarace import strops
+from metarace import countback
 from metarace import uiutil
 from metarace import report
 from metarace import jsonconfig
@@ -28,102 +28,105 @@ COL_NAMESTR = 1
 COL_SHORTNAME = 2
 COL_CAT = 3
 COL_COMMENT = 4
-COL_INRACE = 5		# boolean in the race
-COL_PLACE = 6		# Place assigned in result
-COL_LAPS = 7		# Incremented if inrace and not finished
+COL_INRACE = 5  # boolean in the race
+COL_PLACE = 6  # Place assigned in result
+COL_LAPS = 7  # Incremented if inrace and not finished
 
 # timing infos
-COL_RFTIME = 8		# one-off finish time by rfid
-COL_CBUNCH = 9		# computed bunch time	-> derived from rftime
-COL_MBUNCH = 10		# manual bunch time	-> manual overrive
-COL_STOFT = 11		# start time 'offset' - only reported in result
+COL_RFTIME = 8  # one-off finish time by rfid
+COL_CBUNCH = 9  # computed bunch time   -> derived from rftime
+COL_MBUNCH = 10  # manual bunch time     -> manual overrive
+COL_STOFT = 11  # start time 'offset' - only reported in result
 COL_BONUS = 12
 COL_PENALTY = 13
-COL_RFSEEN = 14		# list of tods this rider 'seen' by rfid
+COL_RFSEEN = 14  # list of tods this rider 'seen' by rfid
 
-# listview column nos
+# listview column nos (used for hiding)
 CATCOLUMN = 2
 COMCOLUMN = 3
 INCOLUMN = 4
 LAPCOLUMN = 5
 STARTCOLUMN = 6
+BUNCHCOLUMN = 7
 
 # rider commands
-RIDER_COMMANDS_ORD = [ u'add', u'del', u'que', u'dns', u'otl',
-                       u'wd', u'dnf', u'dsq', u'com', u'ret', u'man',
-                       u'', u'fin']	# then intermediates...
-RIDER_COMMANDS = {u'dns':'Did not start',
-                   u'otl':u'Outside time limit',
-                   u'dnf':u'Did not finish',
-                   u'wd':u'Withdraw',
-                   u'dsq':u'Disqualify',
-                   u'add':u'Add starters',
-                   u'del':u'Remove starters',
-                   u'que':u'Query riders',
-                   u'fin':u'Final places',
-                   u'com':u'Add comment',
-                   u'ret':u'Return to race',
-                   u'man':u'Manual passing',
-                   u'':u'',
-                   }
+RIDER_COMMANDS_ORD = [
+    u'add', u'del', u'que', u'dns', u'otl', u'wd', u'dnf', u'dsq', u'com',
+    u'ret', u'man', u'', u'fin'
+]  # then intermediates...
+RIDER_COMMANDS = {
+    u'dns': u'Did not start',
+    u'otl': u'Outside time limit',
+    u'dnf': u'Did not finish',
+    u'wd': u'Withdraw',
+    u'dsq': u'Disqualify',
+    u'add': u'Add starters',
+    u'del': u'Remove starters',
+    u'que': u'Query riders',
+    u'fin': u'Final places',
+    u'com': u'Add comment',
+    u'ret': u'Return to race',
+    u'man': u'Manual passing',
+    u'': u'',
+}
 
-RESERVED_SOURCES = ['fin',	# finished stage
-                    'reg',	# registered to stage
-                    'start']	# started stage
-				# additional cat finishes added in loadconfig
+RESERVED_SOURCES = [
+    u'fin',  # finished stage
+    u'reg',  # registered to stage
+    u'start'
+]  # started stage
+# additional cat finishes added in loadconfig
 
-DNFCODES = [u'otl', u'hd', u'wd', u'dsq', u'dnf', u'dns']
-GAPTHRESH = tod.tod(u'2.12')	# relax 'bunch' criteria for cross
+DNFCODES = [u'otl', u'wd', u'dsq', u'dnf', u'dns']
+GAPTHRESH = tod.tod(u'2.12')  # relaxed 'bunch' criteria for cross
+MINPASSSTR = u'20.0'
+MINPASSTIME = tod.tod(MINPASSSTR)
 
 # timing keys
 key_announce = u'F4'
 key_armstart = u'F5'
 key_armlap = u'F6'
-key_placesto = u'F7'	# fill places to selected rider
-key_appendplace = u'F8'	# append sepected rider to places
+key_placesto = u'F7'  # fill places to selected rider
+key_appendplace = u'F8'  # append sepected rider to places
 key_armfinish = u'F9'
 key_raceover = u'F10'
 
-# extended fn keys	(ctrl + key)
+# extended fn keys      (ctrl + key)
 key_abort = u'F5'
-key_clearfrom = u'F7'	# clear places on selected rider and all following
-key_clearplace = u'F8'	# clear rider from place list
-key_undo = u'Z'
+key_clearfrom = u'F7'  # clear places on selected rider and all following
+key_clearplace = u'F8'  # clear rider from place list
 
 # config version string
 EVENT_ID = u'crossrace-3.0'
+
 
 def key_bib(x):
     """Sort on bib field of aux row."""
     return strops.riderno_key(x[1])
 
+
 def sort_starters(x, y):
-    """Sort on start list order."""
+    """Sort using seed number, then riderno (MTB style)."""
     if x[2] == y[2]:
-        return cmp(strops.riderno_key(x[1]),
-                   strops.riderno_key(y[1]))
+        return cmp(strops.riderno_key(x[1]), strops.riderno_key(y[1]))
     else:
         if y[2] and not x[2]:
-            return cmp(strops.riderno_key(x[1]),
-                       strops.riderno_key(y[2]))
+            return cmp(strops.riderno_key(x[1]), strops.riderno_key(y[2]))
         elif x[2] and not y[2]:
-            return cmp(strops.riderno_key(x[2]),
-                       strops.riderno_key(y[1]))
+            return cmp(strops.riderno_key(x[2]), strops.riderno_key(y[1]))
         else:
-            return cmp(strops.riderno_key(x[2]),
-                       strops.riderno_key(y[2]))
+            return cmp(strops.riderno_key(x[2]), strops.riderno_key(y[2]))
 
-def sort_bib(x, y):
-    """Rider bib sorter."""
-    return cmp(strops.riderno_key(x[1]),
-               strops.riderno_key(y[1]))
 
 def sort_tally(x, y):
     """Points tally sort using countback struct."""
     if x[0] == y[0]:
         return cmp(y[3], x[3])
+    elif y[0] < x[0]:
+        return -1
     else:
-        return cmp(y[0], x[0])
+        return 1
+
 
 class cross(object):
     """Cross race handler."""
@@ -134,9 +137,9 @@ class cross(object):
             tc.set_visible(visible)
 
     def loadcats(self, cats=u''):
-        self.cats = []	# clear old cat list
+        self.cats = []  # clear old cat list
         catlist = cats.split()
-        if u'AUTO' in catlist:	# ignore any others and re-load from rdb
+        if u'AUTO' in catlist:  # ignore any others and re-load from rdb
             self.cats = self.meet.rdb.listcats()
             self.autocats = True
         else:
@@ -144,9 +147,17 @@ class cross(object):
             for cat in catlist:
                 if cat != u'':
                     cat = cat.upper()
-                    self.cats.append(cat)
-        self.cats.append(u'')	# always include one empty cat
+                    if cat not in [u'CAT', u'SPARE', u'TEAM']:
+                        self.cats.append(cat)
+                    else:
+                        LOG.warning(u'Invalid result category: %r', cat)
+        self.cats.append(u'')  # always include one empty cat
         LOG.debug(u'Result category list updated: %r', self.cats)
+
+    def downtimes(self, show):
+        """Set the downtimes flag"""
+        LOG.debug(u'Set showdowntimes to: %r', show)
+        self.showdowntimes = show
 
     def loadconfig(self):
         """Load event config from disk."""
@@ -154,31 +165,39 @@ class cross(object):
         self.resettimer()
         self.cats = []
 
-        cr = jsonconfig.config({u'event':{u'start':u'',
-                                        u'id':EVENT_ID,
-                                        u'finish':None,
-                                        u'finished':False,
-                                        u'places':u'',
-                                        u'comment':[],
-                                        u'hidecols':[],	# TODO: default hides
-                                        u'categories':[],
-                                        u'intermeds':[],
-                                        u'contests':[],
-                                        u'tallys':[],
-                                        u'lapstart':None,
-                                        u'laplength': None,
-                                        u'minlap':None,
-                                        u'lapfin':None,
-                                        u'curlap':-1,
-                                        u'passlabels': {},
-                                        u'totlaps':None,
-                                        u'sprintlaps':[],
-                                        u'laptimes':[],
-                                        u'clubmode':u'False',
-                                        u'autoexport':False,
-                                        u'gapthresh':None,
-                                        u'startlist':u'',
-                                        u'resultcats':u'False'}})
+        cr = jsonconfig.config({
+            u'event': {
+                u'start': None,
+                u'id': EVENT_ID,
+                u'finish': None,
+                u'finished': False,
+                u'showdowntimes': True,
+                u'showuciids': False,
+                u'places': u'',
+                u'comment': [],
+                u'hidecols': [INCOLUMN],
+                u'categories': [],
+                u'intermeds': [],
+                u'allowspares': False,
+                u'contests': [],
+                u'tallys': [],
+                u'lapstart': None,
+                u'laplength': None,
+                u'dofastestlap': False,
+                u'minlap': MINPASSSTR,
+                u'lapfin': None,
+                u'curlap': -1,
+                u'passlabels': {},
+                u'catonlap': {},
+                u'gapthresh': None,
+                u'totlaps': None,
+                u'passingsource': [],
+                u'laptimes': [],
+                u'clubmode': False,
+                u'startlist': u'',
+                u'autoexport': False,
+            }
+        })
         cr.add_section(u'event')
         cr.add_section(u'riders')
         # sections for commissaire awarded bonus/penalty
@@ -196,7 +215,7 @@ class cross(object):
 
         # load _result_ categories
         catlist = cr.get(u'event', u'categories')
-        if u'AUTO' in catlist:	# ignore any others and re-load from rdb
+        if u'AUTO' in catlist:  # ignore any others and re-load from rdb
             self.cats = self.meet.rdb.listcats()
             self.autocats = True
         else:
@@ -205,20 +224,21 @@ class cross(object):
                 if cat != u'':
                     cat = cat.upper()
                     self.cats.append(cat)
-        self.cats.append(u'')	# always include one empty cat
+        self.cats.append(u'')  # always include one empty cat
 
         # amend reserved sources with any cats
         if len(self.cats) > 1:
             for cat in self.cats:
                 if cat:
-                    srcid = cat.lower() + 'fin'
+                    srcid = cat.lower() + u'fin'
                     RESERVED_SOURCES.append(srcid)
                     self.catplaces[srcid] = cat
 
-        # fake intermed for riders in break
-        #self.intermeds.append(u'brk')
-        #self.intermap[u'brk'] = {u'descr':u'Riders in break', u'places':u''}
         self.passlabels = cr.get(u'event', u'passlabels')
+        self.catonlap = cr.get(u'event', u'catonlap')
+        self.passingsource = []
+        for source in cr.get(u'event', u'passingsource'):
+            self.passingsource.append(source.lower())  # force lower case
 
         # fetch time gap threshold of configured
         ngt = tod.mktod(cr.get(u'event', u'gapthresh'))
@@ -237,6 +257,7 @@ class cross(object):
                 descr = u''
                 places = u''
                 km = None
+                doshow = False
                 abbr = u''
                 if cr.has_option(crkey, u'descr'):
                     descr = cr.get(crkey, u'descr')
@@ -244,16 +265,21 @@ class cross(object):
                     km = strops.confopt_float(cr.get(crkey, u'dist'), None)
                 if cr.has_option(crkey, u'abbr'):
                     abbr = cr.get(crkey, u'abbr')
+                if cr.has_option(crkey, u'show'):
+                    doshow = strops.confopt_bool(cr.get(crkey, u'show'))
                 if cr.has_option(crkey, u'places'):
-                    places = strops.reformat_placelist(
-                                 cr.get(crkey, u'places'))
+                    places = strops.reformat_placelist(cr.get(
+                        crkey, u'places'))
                 if i not in self.intermeds:
-                    LOG.debug(u'Adding inter %r:%s:$r', i, descr, places)
+                    LOG.debug(u'Adding inter %r: %r %r', i, descr, places)
                     self.intermeds.append(i)
-                    self.intermap[i] = {u'descr':descr,
-                                        u'places':places,
-                                        u'abbr':abbr,
-                                        u'dist':km}
+                    self.intermap[i] = {
+                        u'descr': descr,
+                        u'places': places,
+                        u'abbr': abbr,
+                        u'dist': km,
+                        u'show': doshow
+                    }
                 else:
                     LOG.info(u'Ignoring duplicate inter: %r', i)
 
@@ -291,44 +317,45 @@ class cross(object):
                     for bstr in cr.get(crkey, u'bonuses').split():
                         bt = tod.mktod(bstr)
                         if bt is None:
-                            LOG.info(u'Invalid bonus %r in contest %r', bstr, i)
+                            LOG.info(u'Invalid bonus %r in contest %r', bstr,
+                                     i)
                             bt = tod.ZERO
                         bonuses.append(bt)
                 self.contestmap[i][u'bonuses'] = bonuses
                 points = []
                 if cr.has_option(crkey, u'points'):
                     pliststr = cr.get(crkey, u'points').strip()
-                    if pliststr and tally == u'': # no tally for these points!
+                    if pliststr and tally == u'':
                         LOG.error(u'No tally for points in contest %r', i)
-                        tallyset.add(u'')	# add empty placeholder
+                        tallyset.add(u'')  # add empty placeholder
                     for pstr in pliststr.split():
                         pt = 0
                         try:
                             pt = int(pstr)
-                        except:
-                            LOG.info(u'Invalid points %r in contest %r',
-                                     pstr, i)
+                        except Exception:
+                            LOG.info(u'Invalid points %r in contest %r', pstr,
+                                     i)
                         points.append(pt)
                 self.contestmap[i][u'points'] = points
-                allsrc = False		# all riders in source get same pts
+                allsrc = False  # all riders in source get same pts
                 if cr.has_option(crkey, u'all_source'):
                     allsrc = strops.confopt_bool(cr.get(crkey, u'all_source'))
                 self.contestmap[i][u'all_source'] = allsrc
                 self.contestmap[i][u'category'] = 0
-                if cr.has_option(crkey, u'category'):	# for climbs
+                if cr.has_option(crkey, u'category'):  # for climbs
                     self.contestmap[i][u'category'] = strops.confopt_posint(
-                                                    cr.get(crkey, u'category'))
+                        cr.get(crkey, u'category'))
             else:
                 LOG.info(u'Ignoring duplicate contest %r', i)
 
             # check for invalid allsrc
             if self.contestmap[i][u'all_source']:
-                if (len(self.contestmap[i][u'points']) > 1 
-                    or len(self.contestmap[i][u'bonuses']) > 1):
+                if (len(self.contestmap[i][u'points']) > 1
+                        or len(self.contestmap[i][u'bonuses']) > 1):
                     LOG.info(u'Ignoring extra points/bonus for allsrc %r', i)
-     
+
         # load points tally meta data
-        tallylist = cr.get('event', 'tallys')
+        tallylist = cr.get(u'event', u'tallys')
         # append any 'missing' tallys from points data errors
         for i in tallyset:
             if i not in tallylist:
@@ -339,7 +366,7 @@ class cross(object):
             if i not in self.tallys:
                 self.tallys.append(i)
                 self.tallymap[i] = {}
-                self.points[i] = {}	 # redundant, but ok
+                self.points[i] = {}
                 self.pointscb[i] = {}
                 crkey = u'tally_' + i
                 descr = u''
@@ -353,14 +380,18 @@ class cross(object):
             else:
                 LOG.info(u'Ignoring duplicate points tally %r', i)
 
-
         starters = cr.get(u'event', u'startlist').split()
+        if len(starters) == 1 and starters[0] == u'all':
+            starters = strops.riderlist_split(u'all', self.meet.rdb)
+        self.allowspares = strops.confopt_bool(cr.get(u'event',
+                                                      u'allowspares'))
+        onestoft = False
         for r in starters:
             self.addrider(r)
             if cr.has_option(u'riders', r):
                 nr = self.getrider(r)
                 # bib = comment,in,laps,rftod,mbunch,rfseen...
-                ril = cr.get(u'riders', r)	# rider op is vec
+                ril = cr.get(u'riders', r)  # rider op is vec
                 lr = len(ril)
                 if lr > 0:
                     nr[COL_COMMENT] = ril[0]
@@ -374,6 +405,8 @@ class cross(object):
                     nr[COL_MBUNCH] = tod.mktod(ril[4])
                 if lr > 5:
                     nr[COL_STOFT] = tod.mktod(ril[5])
+                    if nr[COL_STOFT] is not None:
+                        onestoft = True
                 if lr > 6:
                     for i in range(6, lr):
                         laptod = tod.mktod(ril[i])
@@ -397,33 +430,51 @@ class cross(object):
         self.lapstart = tod.mktod(cr.get(u'event', u'lapstart'))
         self.lapfin = tod.mktod(cr.get(u'event', u'lapstart'))
         self.minlap = tod.mktod(cr.get(u'event', u'minlap'))
+        if self.minlap is None:
+            self.minlap = MINPASSTIME
+        LOG.debug(u'Minimum lap time: %s', self.minlap.rawtime())
         self.curlap = cr.get(u'event', u'curlap')
         self.totlaps = cr.get(u'event', u'totlaps')
-        self.sprintlaps = cr.get(u'event', u'sprintlaps')
-        self.autoexport = strops.confopt_bool(cr.get(u'event',
-                                                       u'autoexport'))
         self.places = strops.reformat_placelist(cr.get(u'event', u'places'))
-        self.comment = cr.get(u'event', u'comment')	# comments are vec
-        #self.gapfinish = strops.confopt_bool(cr.get(u'event', u'gapfinish'))
-        self.clubmode = strops.confopt_bool(cr.get(u'event', u'clubmode'))
-        self.laplength = strops.confopt_posint(cr.get(u'event', u'laplength'))
+        self.comment = cr.get(u'event', u'comment')
+        self.dofastestlap = strops.confopt_bool(
+            cr.get(u'event', u'dofastestlap'))
+        self.autoexport = strops.confopt_bool(cr.get(u'event', u'autoexport'))
         if strops.confopt_bool(cr.get(u'event', u'finished')):
             self.set_finished()
+        self.showdowntimes = strops.confopt_bool(
+            cr.get(u'event', u'showdowntimes'))
+        self.showuciids = strops.confopt_bool(cr.get(u'event', u'showuciids'))
+        self.clubmode = strops.confopt_bool(cr.get(u'event', u'clubmode'))
+        self.laplength = strops.confopt_posint(cr.get(u'event', u'laplength'))
         self.recalculate()
 
-        for col in cr.get(u'event', u'hidecols'):
+        self.hidecols = cr.get(u'event', u'hidecols')
+        for col in self.hidecols:
             target = strops.confopt_posint(col)
             if target is not None:
                 self.hidecolumn(target)
-        #if self.totlaps is None:	# NO should be config'ble
-                #self.hidecolumn(LAPCOLUMN)
 
-        self.load_cat_starts()
+        # load starts and targets and then handle lap situation
+        self.load_cat_data()
+        for c in self.catstarts:
+            if self.catstarts[c] is not None:
+                onestoft = True
+        if not onestoft:
+            # auto-hide the start column, but don't stick if starts added
+            self.hidecolumn(STARTCOLUMN)
 
-        if self.curlap is not None and self.curlap >= 0:
-            self.lapentry.set_text(unicode(self.curlap))
-        else:
+        if self.targetlaps:
+            self.curlap = -1
             self.lapentry.set_text(u'')
+            self.lapentry.set_sensitive(False)
+        else:
+            if self.curlap is not None and self.curlap >= 0:
+                self.lapentry.set_text(unicode(self.curlap))
+            else:
+                self.lapentry.set_text(u'')
+            self.lapentry.set_sensitive(True)
+
         if self.totlaps is not None:
             self.totlapentry.set_text(unicode(self.totlaps))
 
@@ -453,48 +504,31 @@ class cross(object):
         return ret
 
     def get_startlist(self):
-        """Return a list of all rider numbers 'registered' to event."""
+        """Return a list of all rider numbers registered to event."""
         ret = []
         for r in self.riders:
-            ret.append(r[COL_BIB])
-        return ' '.join(ret)
+            ret.append(r[COL_BIB].decode(u'utf-8'))
+        return u' '.join(ret)
 
     def get_starters(self):
         """Return a list of riders that 'started' the race."""
         ret = []
         for r in self.riders:
-            if r[COL_COMMENT] != 'dns' or r[COL_INRACE]:
-                ret.append(r[COL_BIB])
-        return ' '.join(ret)
+            if r[COL_COMMENT].decode(u'utf-8') != u'dns' or r[COL_INRACE]:
+                ret.append(r[COL_BIB].decode(u'utf-8'))
+        return u' '.join(ret)
 
-    def checkpoint_model(self):
-        """Write the current rider model to an undo buffer."""
-        self.undomod.clear()
-        self.placeundo = self.places
-        for r in self.riders:
-            self.undomod.append(r)
-        self.canundo = True
-
-    def undo_riders(self):
-        """Roll back rider model to last checkpoint."""
-        if self.canundo:
-            self.riders.clear()
-            for r in self.undomod:
-                self.riders.append(r)
-            self.places = self.placeundo
-            self.canundo = False
-          
     def get_catlist(self):
         """Return the ordered list of categories."""
         rvec = []
         for cat in self.cats:
-            if cat != '':
+            if cat != u'':
                 rvec.append(cat)
         return rvec
 
     def ridercat(self, cat):
-        """Return a category from the result for the riders cat."""
-        ret = ''        # default is the 'None' category - uncategorised
+        """Return a result category for the provided rider cat."""
+        ret = u''
         checka = cat.upper()
         if checka in self.cats:
             ret = checka
@@ -515,17 +549,22 @@ class cross(object):
             cw.set(u'event', u'lapstart', self.lapstart.rawtime())
         if self.lapfin is not None:
             cw.set(u'event', u'lapfin', self.lapfin.rawtime())
-        if self.minlap is not None:
-            cw.set(u'event', u'minlap', self.minlap.rawtime())
+        cw.set(u'event', u'showdowntimes', self.showdowntimes)
+        cw.set(u'event', u'showuciids', self.showuciids)
+        cw.set(u'event', u'minlap', self.minlap.rawtime())
         cw.set(u'event', u'gapthresh', self.gapthresh.rawtime())
-        cw.set(u'event', u'finished', self.timerstat == 'finished')
+        cw.set(u'event', u'finished', self.timerstat == u'finished')
         cw.set(u'event', u'places', self.places)
         cw.set(u'event', u'curlap', self.curlap)
+        cw.set(u'event', u'onlap', self.onlap)
         cw.set(u'event', u'totlaps', self.totlaps)
-        cw.set(u'event', u'sprintlaps', self.sprintlaps)
-        cw.set(u'event', u'clubmode', self.clubmode)
-        cw.set(u'event', u'autoexport', self.autoexport)
+        cw.set(u'event', u'allowspares', self.allowspares)
         cw.set(u'event', u'passlabels', self.passlabels)
+        cw.set(u'event', u'catonlap', self.catonlap)
+        cw.set(u'event', u'dofastestlap', self.dofastestlap)
+        cw.set(u'event', u'autoexport', self.autoexport)
+        cw.set(u'event', u'passingsource', self.passingsource)
+        cw.set(u'event', u'clubmode', self.clubmode)
         cw.set(u'event', u'laplength', self.laplength)
         ltout = []
         for lt in self.laptimes:
@@ -539,6 +578,7 @@ class cross(object):
             cw.add_section(crkey)
             cw.set(crkey, u'descr', self.intermap[i][u'descr'])
             cw.set(crkey, u'places', self.intermap[i][u'places'])
+            cw.set(crkey, u'show', self.intermap[i][u'show'])
             if u'dist' in self.intermap[i]:
                 cw.set(crkey, u'dist', self.intermap[i][u'dist'])
             if u'abbr' in self.intermap[i]:
@@ -573,20 +613,18 @@ class cross(object):
             cw.set(crkey, u'keepdnf', self.tallymap[i][u'keepdnf'])
 
         # save riders
-        cw.set(u'event', u'startlist', self.get_startlist())    
+        evtriders = self.get_startlist()
+        if evtriders:
+            cw.set(u'event', u'startlist', self.get_startlist())
+        else:
+            if self.autostartlist is not None:
+                cw.set(u'event', u'startlist', self.autostartlist)
         if self.autocats:
             cw.set(u'event', u'categories', [u'AUTO'])
         else:
             cw.set(u'event', u'categories', self.get_catlist())
         cw.set(u'event', u'comment', self.comment)
-        hides = []
-        idx = 0
-        for c in self.view.get_columns():
-            if not c.get_visible():
-                hides.append(str(idx))
-            idx += 1
-        if len(hides) > 0:
-            cw.set(u'event', u'hidecols', hides)
+        cw.set(u'event', u'hidecols', self.hidecols)
 
         cw.add_section(u'riders')
         # sections for commissaire awarded bonus/penalty
@@ -595,20 +633,22 @@ class cross(object):
         for r in self.riders:
             rt = u''
             if r[COL_RFTIME] is not None:
-                rt = r[COL_RFTIME].rawtime()	# Don't truncate this!
+                rt = r[COL_RFTIME].rawtime()  # Don't truncate
             mb = u''
             if r[COL_MBUNCH] is not None:
-                mb = r[COL_MBUNCH].rawtime(0)	# But bunch is to whole sec
+                mb = r[COL_MBUNCH].rawtime(0)  # But bunch is to whole sec
             sto = u''
             if r[COL_STOFT] is not None:
                 sto = r[COL_STOFT].rawtime()
-            # bib = comment,in,laps,rftod,mbunch,rfseen...
+            # bib = comment,in,laps,rftod,mbunch,stoft,seen...
             bib = r[COL_BIB].decode('utf-8')
-            slice = [r[COL_COMMENT].decode('utf-8'), r[COL_INRACE],
-                     r[COL_LAPS], rt, mb, sto]
+            slice = [
+                r[COL_COMMENT].decode('utf-8'), r[COL_INRACE], r[COL_LAPS], rt,
+                mb, sto
+            ]
             for t in r[COL_RFSEEN]:
                 if t is not None:
-                    slice.append(t.rawtime())	# retain 'precision' here too
+                    slice.append(t.rawtime())  # retain 'precision' here too
             cw.set(u'riders', bib, slice)
             if r[COL_BONUS] is not None:
                 cw.set(u'stagebonus', bib, r[COL_BONUS].rawtime())
@@ -633,8 +673,8 @@ class cross(object):
 
     def set_titlestr(self, titlestr=None):
         """Update the title string label."""
-        if titlestr is None or titlestr == '':
-            titlestr = 'Cyclocross Race'
+        if titlestr is None or titlestr == u'':
+            titlestr = u'Mass Start Road Event'
         self.title_namestr.set_text(titlestr)
 
     def destroy(self):
@@ -643,17 +683,13 @@ class cross(object):
             self.context_menu.destroy()
         self.frame.destroy()
 
-    def get_results(self):
-        """Extract results in flat mode (not yet implemented)."""
-        return []
-
     def points_report(self):
         """Return the points tally report."""
         ret = []
         aux = []
         cnt = 0
         for tally in self.tallys:
-            sec = report.section(u'points')
+            sec = report.section(u'points-' + tally)
             sec.heading = tally.upper() + u' ' + self.tallymap[tally][u'descr']
             sec.units = u'pt'
             tallytot = 0
@@ -661,20 +697,23 @@ class cross(object):
             for bib in self.points[tally]:
                 r = self.getrider(bib)
                 tallytot += self.points[tally][bib]
-                aux.append([self.points[tally][bib], strops.riderno_key(bib),
-                           [None, r[COL_BIB], r[COL_NAMESTR],
-                           strops.truncpad(str(self.pointscb[tally][bib]), 10,
-                                                   elipsis=False),
-                             None, str(self.points[tally][bib])],
-                           self.pointscb[tally][bib]
-                        ])
+                aux.append([
+                    self.points[tally][bib],
+                    strops.riderno_key(bib),
+                    [
+                        None, r[COL_BIB], r[COL_NAMESTR],
+                        strops.truncpad(str(self.pointscb[tally][bib]),
+                                        10,
+                                        ellipsis=False), None,
+                        str(self.points[tally][bib])
+                    ], self.pointscb[tally][bib]
+                ])
             aux.sort(sort_tally)
             for r in aux:
                 sec.lines.append(r[2])
-            sec.lines.append([None, None, None])
-            sec.lines.append([None, None, u'Total Points: '+unicode(tallytot)])
+            LOG.debug(u'Total points for %r: %r', tally, tallytot)
             ret.append(sec)
-        
+
         if len(self.bonuses) > 0:
             sec = report.section(u'bonus')
             sec.heading = u'Stage Bonuses'
@@ -682,27 +721,31 @@ class cross(object):
             aux = []
             for bib in self.bonuses:
                 r = self.getrider(bib)
-                aux.append([self.bonuses[bib], strops.riderno_key(bib),
-                       [None,r[COL_BIB],r[COL_NAMESTR],None,None,
-                        str(int(self.bonuses[bib].truncate(0).timeval))],
-                        0, 0, 0])
+                aux.append([
+                    self.bonuses[bib],
+                    strops.riderno_key(bib),
+                    [
+                        None, r[COL_BIB], r[COL_NAMESTR], None, None,
+                        str(int(self.bonuses[bib].truncate(0).timeval))
+                    ], 0, 0, 0
+                ])
             aux.sort(sort_tally)
             for r in aux:
                 sec.lines.append(r[2])
-            ret.append(sec)            
+            ret.append(sec)
         if len(ret) == 0:
             LOG.warning(u'No data available for points report')
         return ret
 
     def reorder_startlist(self):
         """Reorder riders for a startlist."""
+        self.calcset = False
         aux = []
         cnt = 0
         for r in self.riders:
             aux.append([cnt, r[COL_BIB], r[COL_COMMENT]])
             cnt += 1
         if len(aux) > 1:
-            #aux.sort(key=key_bib)
             aux.sort(sort_starters)
             self.riders.reorder([a[0] for a in aux])
         return cnt
@@ -710,15 +753,56 @@ class cross(object):
     def signon_report(self):
         """Return a signon report."""
         ret = []
-        sec = report.signon_list(u'signon')
         self.reorder_startlist()
-        for r in self.riders:
-            cmt = None
-            if not r[COL_INRACE]:
-                cmt = r[COL_COMMENT].decode('utf-8')
-            sec.lines.append([cmt,r[COL_BIB].decode('utf-8'),
-                                   r[COL_NAMESTR].decode('utf-8')])
-        ret.append(sec)
+        if len(self.cats) > 1:
+            LOG.debug(u'Preparing categorised signon for %r', self.cats)
+            for c in self.cats:
+                c = self.ridercat(c)
+                LOG.debug(u'Preparing signon cat %r', c)
+                if True:
+                    sec = report.signon_list(u'signon')
+                    sec.heading = c
+                    dbr = self.meet.rdb.getrider(c, u'cat')
+                    if dbr is not None:
+                        sec.heading = self.meet.rdb.getvalue(
+                            dbr, riderdb.COL_FIRST)
+                        sec.subheading = self.meet.rdb.getvalue(
+                            dbr, riderdb.COL_LAST)
+                    elif c == u'':
+                        sec.heading = u'Uncategorised Riders'
+                    for r in self.riders:
+                        # primary cat is used for sign-on
+                        cs = r[COL_CAT].decode(u'utf-8')
+                        rcat = self.ridercat(riderdb.primary_cat(cs))
+                        if rcat == c:
+                            cmt = None
+                            if not r[COL_INRACE]:
+                                cmt = r[COL_COMMENT].decode(u'utf-8')
+                            sec.lines.append([
+                                cmt, r[COL_BIB].decode(u'utf-8'),
+                                r[COL_NAMESTR].decode(u'utf-8')
+                            ])
+                    if len(sec.lines) > 0:
+                        if c == u'':
+                            LOG.warning(u'%r uncategorised riders',
+                                        len(sec.lines))
+                        ret.append(sec)
+                        ret.append(report.pagebreak(threshold=0.1))
+                    else:
+                        if c:
+                            LOG.warning(u'No starters for category %r', c)
+        else:
+            LOG.debug(u'Preparing flat signon')
+            sec = report.signon_list(u'signon')
+            for r in self.riders:
+                cmt = None
+                if not r[COL_INRACE]:
+                    cmt = r[COL_COMMENT].decode(u'utf-8')
+                sec.lines.append([
+                    cmt, r[COL_BIB].decode(u'utf-8'),
+                    r[COL_NAMESTR].decode(u'utf-8')
+                ])
+            ret.append(sec)
         return ret
 
     def startlist_report(self):
@@ -729,114 +813,147 @@ class cross(object):
             LOG.debug(u'Preparing categorised startlist for %r', self.cats)
             for c in self.cats:
                 LOG.debug(u'Startlist cat %r', c)
-                if c:
-                    ret.extend(self.startlist_report_gen(c))
-                    ret.append(report.pagebreak())
+                ret.extend(self.startlist_report_gen(c))
         else:
             LOG.debug(u'Preparing flat startlist')
             ret = self.startlist_report_gen()
         return ret
 
-    def load_cat_starts(self):
+    def load_cat_data(self):
+        """Read category start and target data from riderdb."""
         self.catstarts = {}
         self.catlaps = {}
+        onetarget = False
+        onemissing = False
         for c in self.cats:
-            cs = None	# default start offset is None
+            cs = None  # default start offset is None
             ls = None
-            dbr = self.meet.rdb.getrider(c,u'cat')
+            dbr = self.meet.rdb.getrider(c, u'cat')
             if dbr is not None:
-                ct = tod.mktod(self.meet.rdb.getvalue(dbr, riderdb.COL_UCICODE))
+                ct = tod.mktod(self.meet.rdb.getvalue(dbr,
+                                                      riderdb.COL_UCICODE))
                 if ct is not None:
                     cs = ct
-                lt = strops.confopt_posint(self.meet.rdb.getvalue(dbr, riderdb.COL_CAT))
+                lt = strops.confopt_posint(
+                    self.meet.rdb.getvalue(dbr, riderdb.COL_CAT))
                 if lt:
                     ls = lt
+                    onetarget = True
+                else:
+                    onemissing = True
             self.catstarts[c] = cs
             self.catlaps[c] = ls
-    
+        if onetarget:
+            self.targetlaps = True
+            if onemissing:
+                # There's one or more cats without a target, issue warning
+                missing = []
+                for c in self.catlaps:
+                    if self.catlaps[c] is None:
+                        missing.append(repr(c))
+                if missing:
+                    LOG.warning(u'Categories missing target lap count: %s',
+                                u', '.join(missing))
+
     def startlist_report_gen(self, cat=None):
         catname = u''
         subhead = u''
+        footer = u''
+        uncat = False
         if cat is not None:
-            dbr = self.meet.rdb.getrider(cat,u'cat')
+            dbr = self.meet.rdb.getrider(cat, u'cat')
             if dbr is not None:
-                catname = self.meet.rdb.getvalue(dbr,
-                                          riderdb.COL_FIRST)
-                subhead = self.meet.rdb.getvalue(dbr,
-                                          riderdb.COL_LAST)
+                catname = self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST)
+                subhead = self.meet.rdb.getvalue(dbr, riderdb.COL_LAST)
+                footer = self.meet.rdb.getvalue(dbr, riderdb.COL_NOTE)
+            if cat == u'':
+                catname = u'Uncategorised Riders'
+                uncat = True
         else:
-            cat = u''	# match all riders
+            cat = u''  # match all riders
 
-        catcache = {u'':None}
+        catcache = {u'': None}
         if cat == u'':
             for c in self.meet.rdb.listcats(self.series):
                 if c != u'':
                     catnm = c
-                    dbr = self.meet.rdb.getrider(c,u'cat')
+                    dbr = self.meet.rdb.getrider(c, u'cat')
                     if dbr is not None:
-                        catnm = self.meet.rdb.getvalue(dbr,
-                                         riderdb.COL_FIRST)
+                        catnm = self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST)
                     catcache[c] = catnm
         ret = []
         sec = None
-        if len(self.riders) > 36:
-            sec = report.twocol_startlist('startlist')
-        else:
-            sec = report.section('startlist')
+        sec = report.twocol_startlist(u'startlist')
         sec.heading = u'Startlist'
         if catname:
             sec.heading += u': ' + catname
             sec.subheading = subhead
         rcnt = 0
+        # fetch result category for this nominated cat
         cat = self.ridercat(cat)
         for r in self.riders:
-            rcat = r[COL_CAT].decode('utf-8').upper()
-            rcats = [u'']
-            if rcat.strip():
-                rcats = rcat.split()
-            if cat == u'' or cat in rcats:
-                if cat:
-                    rcat = cat
-                else:
-                    rcat = rcats[0]
+            # add rider to startlist if primary cat matches
+            cs = r[COL_CAT].decode(u'utf-8')
+            rcat = self.ridercat(riderdb.primary_cat(cs))
+            if cat == rcat:
                 ucicode = None
-                name = r[COL_NAMESTR].decode('utf-8')
-                dbr = self.meet.rdb.getrider(r[COL_BIB].decode('utf-8'),
-                                             self.series)
-                if dbr is not None:
-                    ucicode = self.meet.rdb.getvalue(dbr,
-                                             riderdb.COL_UCICODE)
-                    # suppress club/team for twocol
-                    name = strops.resname(
-                             self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
-                             self.meet.rdb.getvalue(dbr, riderdb.COL_LAST),
-                             self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB))
+                name = r[COL_NAMESTR].decode(u'utf-8')
+                if self.showuciids:
+                    dbr = self.meet.rdb.getrider(r[COL_BIB].decode(u'utf-8'),
+                                                 self.series)
+                    if dbr is not None:
+                        ucicode = self.meet.rdb.getvalue(
+                            dbr, riderdb.COL_UCICODE)
                 if not ucicode and cat == u'':
-                    if rcat in catcache:
-                        ucicode = catcache[rcat] # try and fill cat
+                    # Rider may have a typo in cat, show the catlist
+                    ucicode = cs
                 comment = u''
                 if not r[COL_INRACE]:
-                    cmt = r[COL_COMMENT].decode('utf-8')
+                    cmt = r[COL_COMMENT].decode(u'utf-8')
                     if cmt == u'dns':
                         comment = cmt
-                riderno = r[COL_BIB].decode('utf-8').translate(
-                                                   strops.INTEGER_UTRANS)
-                sec.lines.append([comment,
-                                  riderno,
-                                  name,
-                                  ucicode])
+                riderno = r[COL_BIB].decode(u'utf-8').translate(
+                    strops.INTEGER_UTRANS)
+                sec.lines.append([comment, riderno, name, ucicode])
+                # Look up pilots
+                if cat in [u'MB', u'WB']:
+                    # lookup pilot
+                    dbr = self.meet.rdb.getrider(r[COL_BIB], u'pilot')
+                    if dbr is not None:
+                        sec.even = True  # force even first column
+                        puci = None
+                        if self.showuciids:
+                            puci = self.meet.rdb.getvalue(
+                                dbr, riderdb.COL_UCICODE)
+                        pnam = strops.listname(
+                            self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
+                            self.meet.rdb.getvalue(dbr, riderdb.COL_LAST),
+                            self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB))
+                        sec.lines.append([u'', u'', pnam, puci])
+
                 rcnt += 1
+        fvc = []
+        if footer:
+            fvc.append(footer)
         if rcnt > 1:
-            sec.footer = u'Total riders: ' + unicode(rcnt)
-        ret.append(sec)
+            fvc.append(u'Total riders: ' + unicode(rcnt))
+        if fvc:
+            sec.footer = u'\t'.join(fvc)
+        if len(sec.lines) > 0:
+            ret.append(sec)
+            if uncat:
+                LOG.warning(u'%r uncategorised riders', len(sec.lines))
+        else:
+            if cat:
+                LOG.warning(u'No starters for category %r', cat)
 
         return ret
 
     def analysis_report(self):
-        """Return the judges (camera) report."""
+        """Return an analysis report."""
+        # TODO: check operation and verify validity
         ret = []
-        self.recalculate()	# fill places and bunch info
-        ## and then re-order by rider number
+        self.recalculate()  # fill places and bunch info
         self.reorder_startlist()
         pthresh = self.meet.timer.photothresh()
         totcount = 0
@@ -848,24 +965,23 @@ class cross(object):
         blt = None
         blrn = None
         llen = self.laplength
-        lcomment = ''
-        if self.timerstat != 'idle':
-            sec = report.judge24rep('analysis')
+        lcomment = u''
+        if self.timerstat != u'idle':
+            sec = report.judge24rep(u'analysis')
             sec.heading = u'Lap Analysis'
-            sec.colheader = ['dist','no','rider','laps','best lap',
-                                '','laps']
+            sec.colheader = [
+                u'dist', u'no', u'rider', u'laps', u'best lap', u'', u'laps'
+            ]
             if self.start is not None:
                 sec.start = self.start
-                # sec.laptimes = self.laptimes	## CHG to HOURS
                 sec.laptimes = [self.start]
                 n = self.start
-                for h in range(1,25):
+                for h in range(1, 25):
                     n += tod.tod(u'1h00:00')
                     sec.laptimes.append(n)
-                    
-                #sec.finish = self.start-tod.tod('0.0001')
+
                 sec.finish = self.finish
-         
+
             first = True
             ft = None
             lt = None
@@ -879,9 +995,9 @@ class cross(object):
                 rblt = None
                 rbltt = None
                 totcount += 1
-                marker = ' '
-                es = ''
-                bs = ''
+                marker = u' '
+                es = u''
+                bs = u''
                 pset = False
                 placed = False
                 timed = False
@@ -892,28 +1008,26 @@ class cross(object):
                     rcat = self.get_ridercat(r[COL_BIB])
                     if rcat in self.catstarts:
                         catstart = self.catstarts[rcat]
-                    #comment = unicode(totcount)
                     bt = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
                     if bt is not None:
                         timed = True
                         fincount += 1
                         # this is going to be the total distance covered
-                        comment = u'{0:0.1f}km'.format(llen * r[COL_LAPS] * 0.001)
+                        comment = u'{0:0.1f}km'.format(llen * r[COL_LAPS] *
+                                                       0.001)
                         if r[COL_PLACE] != '':
-                           #comment = r[COL_PLACE] + '.'
-                           placed = True
-                           pset = True
+                            placed = True
+                            pset = True
 
-                     
                         # find fastest lap @ time
                         for laptim in r[COL_RFSEEN]:
                             if rbltt is not None:
                                 thislap = laptim - rbltt
                                 if thislap > self.minlap:
-                                    if thislap < rbl: # new fastest
+                                    if thislap < rbl:  # new fastest
                                         rbl = thislap
                                         rblt = laptim
-                                    if thislap < bl: # new fastest for event
+                                    if thislap < bl:  # new fastest for event
                                         bl = thislap
                                         blr = r[COL_BIB]
                                         blrn = r[COL_NAMESTR]
@@ -931,33 +1045,37 @@ class cross(object):
 
                     ltimed = timed
                     thisno = strops.bibstr_key(r[riderdb.COL_BIB])
-                    if thisno > 200 and lastno is not None and thisno-lastno != 1:
+                    if thisno > 200 and lastno is not None and thisno - lastno != 1:
                         sec.lines.append([None, None, None])
                     lastno = thisno
-                    sec.lines.append([comment, r[riderdb.COL_BIB],
-                                     r[COL_NAMESTR], str(r[COL_LAPS]),
-                                     bs, es, r[COL_RFSEEN], placed,
-                                     photo, catstart])
+                    sec.lines.append([
+                        comment, r[riderdb.COL_BIB], r[COL_NAMESTR],
+                        str(r[COL_LAPS]), bs, es, r[COL_RFSEEN], placed, photo,
+                        catstart
+                    ])
                 else:
                     comment = r[COL_COMMENT]
-                    if comment == '':
-                        comment = 'dnf'
+                    if comment == u'':
+                        comment = u'dnf'
                     if comment != lcomment:
-                        #sec.lines.append([None, None, None])
                         pass
                     lcomment = comment
-                    if comment == 'dns':
+                    if comment == u'dns':
                         dnscount += 1
                     else:
                         dnfcount += 1
-                    sec.lines.append([comment, r[riderdb.COL_BIB],
-                                     r[COL_NAMESTR], str(r[COL_LAPS]),
-                                     None, None, None, True, False])
+                    sec.lines.append([
+                        comment, r[riderdb.COL_BIB], r[COL_NAMESTR],
+                        str(r[COL_LAPS]), None, None, None, True, False
+                    ])
                 first = False
 
             ret.append(sec)
-            sec = report.bullet_text('analysisstat')
-            sec.lines.append([None, u'Fastest lap: ' + blr + u' ' + bl.rawtime(1) + u' @' + blt.meridiem()])
+            sec = report.bullet_text(u'analysisstat')
+            sec.lines.append([
+                None, u'Fastest lap: ' + blr + u' ' + bl.rawtime(1) + u' @' +
+                blt.meridiem()
+            ])
             #sec.lines.append([None,'Total riders: ' + str(totcount)])
             #sec.lines.append([None,'Did not start: ' + str(dnscount)])
             #sec.lines.append([None,'Did not finish: ' + str(dnfcount)])
@@ -970,167 +1088,30 @@ class cross(object):
         return ret
 
     def camera_report(self):
+        """Return the analysis report in place of the camera report."""
         return self.analysis_report()
-        """Return the judges (camera) report."""
-        ret = []
-        self.recalculate()	# fill places and bunch info
-        pthresh = self.meet.timer.photothresh()
-        totcount = 0
-        dnscount = 0
-        dnfcount = 0
-        fincount = 0
-        lcomment = ''
-        insertgap = True
-        if self.timerstat != 'idle':
-            sec = report.judgerep('judging')
-            #sec = report.section('judging')
-            sec.heading = u'Judges Report'
-            sec.colheader = ['','no','rider','lap','finish',
-                                'rftime','passings']
-            if self.start is not None:
-                sec.start = self.start
-            if self.finish is not None:
-                sec.finish = self.maxfinish+tod.tod(u'0.1')
-                #sec.finish = self.finish
-            sec.laptimes = self.laptimes
-            first = True
-            ft = None
-            lt = None
-            lrf = None
-            lplaced = None
-            ltimed = None
-            lastlap = None
-            for r in self.riders:
-                totcount += 1
-                marker = ' '
-                es = ''
-                bs = ''
-                pset = False
-                placed = False
-                timed = False
-                catstart = None
-                photo = False
-                if r[COL_INRACE]:
-                    thislap = r[COL_LAPS]
-                    rcat = self.get_ridercat(r[COL_BIB])
-                    if rcat in self.catstarts:
-                        catstart = self.catstarts[rcat]
-                    comment = unicode(totcount)
-                    bt = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
-                    if bt is not None:
-                        timed = True
-                        fincount += 1
-                        if r[COL_PLACE] != '':
-                           comment = r[COL_PLACE] + '.'
-                           placed = True
-                           pset = True
-
-                        # format 'elapsed' rftime
-                        if r[COL_RFTIME] is not None:
-                            if not pset and lrf is not None:
-                                if r[COL_RFTIME]-lrf < pthresh:
-                                    photo = True
-                                    if not sec.lines[-1][7]:	# not placed
-                                        #sec.lines[-1][0] = '[pf]__'
-                                        sec.lines[-1][8] = True
-                            if self.start is not None:
-                                es =  (r[COL_RFTIME]-self.start).rawtime(2)
-                            else:
-                                es = r[COL_RFTIME].rawtime(2)
-                            lrf = r[COL_RFTIME]
-                        else:
-                            lrf = None
-
-                        # format 'finish' time
-                        if ft is None:
-                            ft = bt
-                            bs = ft.rawtime(0)
-                        else:
-                            if bt > lt:
-                                # New bunch
-                                #sec.lines.append([None, None, None])
-                                bs = "+" + (bt - ft).rawtime(0)
-                            else:
-                                # Same time
-                                pass
-                        # new lap, on next line
-                        if lastlap and thislap != lastlap:
-                            sec.lines.append([None, None, None])
-                        lastlap = thislap
-                     
-                        lt = bt
-                        # sep placed and unplaced
-                        insertgap = False 
-                        #if lplaced and placed != lplaced:
-                            #sec.lines.append([None, None, None])
-                            #sec.lines.append([None, None,
-                                              #u'Riders not placed on camera.'])
-                            #insertgap = True
-                        lplaced = placed
-                    else:
-                        if r[COL_COMMENT].strip() != '':
-                            comment = r[COL_COMMENT].strip()
-                        else:
-                            comment = u'____'
-
-                    # sep timed and untimed
-                    #if not insertgap and ltimed and ltimed != timed:
-                        #sec.lines.append([None, None, None])
-                        #sec.lines.append([None, None,
-                                          #u'Riders not seen at finish.'])
-                        insertgap = True
-                    ltimed = timed
-                    sec.lines.append([comment, r[riderdb.COL_BIB],
-                                     r[COL_NAMESTR], str(r[COL_LAPS]),
-                                     bs, es, r[COL_RFSEEN], placed,
-                                     photo, catstart])
-                else:
-                    comment = r[COL_COMMENT]
-                    if comment == '':
-                        comment = 'dnf'
-                    if comment != lcomment:
-                        sec.lines.append([None, None, None])
-                    lcomment = comment
-                    if comment == 'dns':
-                        dnscount += 1
-                    else:
-                        dnfcount += 1
-                    sec.lines.append([comment, r[riderdb.COL_BIB],
-                                     r[COL_NAMESTR], str(r[COL_LAPS]),
-                                     None, None, None, True, False])
-                first = False
-
-            ret.append(sec)
-            sec = report.section('judgesummary')
-            sec.lines.append([None,None,'Total riders: ' + str(totcount)])
-            sec.lines.append([None,None,'Did not start: ' + str(dnscount)])
-            sec.lines.append([None,None,'Did not finish: ' + str(dnfcount)])
-            sec.lines.append([None,None,'Finishers: ' + str(fincount)])
-            residual = totcount - (fincount + dnfcount + dnscount)
-            if residual > 0:
-                sec.lines.append([None,None,
-                                  'Unaccounted for: ' + str(residual)])
-            if len(sec.lines) > 0:
-                ret.append(sec)
-        else:
-            # nothing to report...
-            pass
-        return ret
 
     def catresult_report(self):
         """Return a categorised race result report."""
+        LOG.debug(u'Categorised result report')
         self.recalculate()
         ret = []
         ignorenull = False
         if len(self.cats) > 1:
             ignorenull = True
         for cat in self.cats:
-            if ignorenull and not cat:
-                continue	# ignore empty and None cat
+            if not cat and ignorenull:
+                continue
             ret.extend(self.single_catresult(cat))
 
+        # show all intermediates here
+        for i in self.intermeds:
+            im = self.intermap[i]
+            if im[u'places'] and im['show']:
+                ret.extend(self.int_report(i))
+
         if len(self.comment) > 0:
-            s = report.bullet_text('comms')
+            s = report.bullet_text(u'comms')
             s.heading = u'Decisions of the commissaires panel'
             for comment in self.comment:
                 s.lines.append([None, comment])
@@ -1139,23 +1120,21 @@ class cross(object):
 
     def single_catresult(self, cat):
         ret = []
-        catname = cat	# fallback emergency
+        catname = cat  # fallback emergency
         subhead = u''
         distance = None
-        dbr = self.meet.rdb.getrider(cat,u'cat')
+        dbr = self.meet.rdb.getrider(cat, u'cat')
         if dbr is not None:
-            catname = self.meet.rdb.getvalue(dbr,
-                                      riderdb.COL_FIRST) # already decode
-            subhead = self.meet.rdb.getvalue(dbr,
-                                      riderdb.COL_LAST)
-            dist = self.meet.rdb.getvalue(dbr,
-                                      riderdb.COL_REFID)
+            catname = self.meet.rdb.getvalue(
+                dbr, riderdb.COL_FIRST)  # already decode
+            subhead = self.meet.rdb.getvalue(dbr, riderdb.COL_LAST)
+            dist = self.meet.rdb.getvalue(dbr, riderdb.COL_REFID)
             try:
                 distance = float(dist)
             except:
-                LOG.warn(u'Invalid distance: ' + repr(dist)
-                               + u' for cat ' + repr(cat))
-        sec = report.section(cat)
+                LOG.warn(u'Invalid distance: ' + repr(dist) + u' for cat ' +
+                         repr(cat))
+        sec = report.section(u'result-' + cat)
 
         wt = None
         ft = None
@@ -1191,21 +1170,21 @@ class cross(object):
                 pstr = u''
                 tstr = u''
                 dstr = u''
-                cstr = u''		# check for ucicode here !
+                cstr = u''  # check for ucicode here !
                 showdown = False
                 dbr = self.meet.rdb.getrider(bstr, self.series)
                 if dbr is not None:
                     cstr = self.meet.rdb.getvalue(dbr, riderdb.COL_UCICODE)
-                placed = False		# placed at finish
-                timed = False		# timed at finish
+                placed = False  # placed at finish
+                timed = False  # timed at finish
                 if r[COL_INRACE]:
                     psrc = r[COL_PLACE].decode('utf-8')
                     if psrc != u'':
                         placed = True
-                        if lsrc != psrc:	# previous total place differs
+                        if lsrc != psrc:  # previous total place differs
                             lp = unicode(plcnt)
                         else:
-                            pass		# dead heat in cat
+                            pass  # dead heat in cat
                         lsrc = psrc
                     else:
                         lp = u''
@@ -1231,7 +1210,8 @@ class cross(object):
                             #sec.lines.append([None, None, None])
                             if maxlap is not None:
                                 tstr = u'-{0:d} lap{1}'.format(
-                                   maxlap-rlap, strops.plural(maxlap-rlap))
+                                    maxlap - rlap,
+                                    strops.plural(maxlap - rlap))
                             showdown = False
                             ft = None
                     else:
@@ -1242,13 +1222,13 @@ class cross(object):
                                 showdown = True
                         else:
                             showdown = True
- 
+
                     lastlap = rlap
 
                     if bt is not None:
                         if r[COL_RFTIME] or r[COL_MBUNCH]:
-                            fincount += 1 # for accounting, use bunch time
-                        timed = True	# for virtual standing
+                            fincount += 1  # for accounting, use bunch time
+                        timed = True  # for virtual standing
                         #tstr = bt.rawtime(0)
                         # compute elapsed
                         et = bt
@@ -1260,31 +1240,33 @@ class cross(object):
                         if sof is not None:
                             # apply a start offset
                             et = bt - sof
-                        if ft is None:	# lap finish time
+                        if ft is None:  # lap finish time
                             ft = et
                         if wt is None:
-                            wt = et	# winner's time
+                            wt = et  # winner's time
                         #if bt != lt:
                         if not first:
                             if showdown:
                                 dstr = u'+' + (et - ft).rawtime(0)
                             elif self.laplength:
-                                dstr = '{0:0.1f}km'.format(0.001 * rlap * self.laplength)
+                                dstr = '{0:0.1f}km'.format(0.001 * rlap *
+                                                           self.laplength)
                         else:
                             if self.laplength:
-                                dstr = '{0:0.1f}km'.format(0.001 * rlap * self.laplength)
+                                dstr = '{0:0.1f}km'.format(0.001 * rlap *
+                                                           self.laplength)
                             else:
                                 dstr = ft.rawtime(0)
                         first = False
                     lt = bt
                 else:
                     # Non-finishers dns, dnf. hd, dsq
-                    placed = True	# for purpose of listing
+                    placed = True  # for purpose of listing
                     comment = r[COL_COMMENT].decode('utf-8')
                     if comment == u'':
                         comment = u'dnf'
                     if comment != lcomment:
-                        sec.lines.append([None, None, None])# new bunch
+                        sec.lines.append([None, None, None])  # new bunch
                     lcomment = comment
                     # account for special cases
                     if comment == u'dns':
@@ -1312,27 +1294,28 @@ class cross(object):
         ret.append(sec)
         rsec = sec
         # Race metadata / UCI comments
-        sec = report.bullet_text('uci'+cat)
+        sec = report.bullet_text('uci-' + cat)
         if wt is not None:
             #sec.lines.append([None, u"Winner's time: " + wt.rawtime(0)])
             if distance is not None:
-                sec.lines.append([None, u'Average speed of the winner: '
-                                    + wt.speedstr(1000.0*distance)])
-        sec.lines.append([None,
-                          u'Number of starters: '
-                          + unicode(totcount-dnscount)])
+                sec.lines.append([
+                    None, u'Average speed of the winner: ' +
+                    wt.speedstr(1000.0 * distance)
+                ])
+        sec.lines.append(
+            [None, u'Number of starters: ' + unicode(totcount - dnscount)])
         if hdcount > 0:
-            sec.lines.append([None,
-                          u'Riders finishing out of time limits: '
-                          + unicode(hdcount)])
+            sec.lines.append([
+                None,
+                u'Riders finishing out of time limits: ' + unicode(hdcount)
+            ])
         if dnfcount > 0:
-            sec.lines.append([None,
-                          u'Riders abandoning the race: '
-                          + unicode(dnfcount)])
+            sec.lines.append(
+                [None, u'Riders abandoning the race: ' + unicode(dnfcount)])
         residual = totcount - (fincount + dnfcount + dnscount + hdcount)
         if residual > 0:
             LOG.info(u'Unaccounted for: ' + unicode(residual))
-        else:	 # everyone accounted for, change stat if prov
+        else:  # everyone accounted for, change stat if prov
             if self.timerstat in ['running', 'ready', 'armfinish']:
                 rsec.heading = u'Provisional Result'
         ret.append(sec)
@@ -1350,39 +1333,37 @@ class cross(object):
 
     def stat_but_clicked(self, button=None):
         """Deal with a status button click in the main container."""
-        LOG.info('Stat button clicked.')
+        LOG.debug(u'Stat button clicked.')
 
-    def ctrl_change(self, acode='', entry=None):
+    def ctrl_change(self, acode=u'', entry=None):
         """Notify change in action combo."""
-        if acode == 'fin':
+        if acode == u'fin':
             if entry is not None:
                 entry.set_text(self.places)
         elif acode in self.intermeds:
             if entry is not None:
-                entry.set_text(self.intermap[acode]['places'])
+                entry.set_text(self.intermap[acode][u'places'])
         else:
             if entry is not None:
-                entry.set_text('')
+                entry.set_text(u'')
 
-    def race_ctrl(self, acode='', rlist=''):
+    def race_ctrl(self, acode=u'', rlist=u''):
         """Apply the selected action to the provided bib list."""
-        self.checkpoint_model()
         if acode in self.intermeds:
             if acode == u'brk':
-                rlist = strops.reformat_riderlist(rlist)
+                rlist = u' '.join(strops.riderlist_split(rlist))
                 self.intsprint(acode, rlist)
             else:
                 rlist = strops.reformat_placelist(rlist)
                 if self.checkplaces(rlist, dnf=False):
-                    self.intermap[acode]['places'] = rlist
+                    self.intermap[acode][u'places'] = rlist
                     self.recalculate()
                     self.intsprint(acode, rlist)
-                    LOG.info('Intermediate ' + repr(acode) + ' == '
-                                   + repr(rlist))
+                    LOG.info(u'Intermediate %r == %r', acode, rlist)
                 else:
-                    LOG.error('Intermediate ' + repr(acode) + ' not updated.')
+                    LOG.error('Intermediate %r not updated', acode)
             return False
-        elif acode == 'fin':
+        elif acode == u'fin':
             rlist = strops.reformat_placelist(rlist)
             if self.checkplaces(rlist):
                 self.places = rlist
@@ -1390,129 +1371,187 @@ class cross(object):
                 self.finsprint(rlist)
                 return False
             else:
-                LOG.error('Places not updated.')
+                LOG.error(u'Places not updated')
                 return False
-        elif acode == 'dnf':
+        elif acode == u'dnf':
             self.dnfriders(strops.reformat_biblist(rlist))
             return True
-        elif acode == 'dsq':
-            self.dnfriders(strops.reformat_biblist(rlist), 'dsq')
+        elif acode == u'dsq':
+            self.dnfriders(strops.reformat_biblist(rlist), u'dsq')
             return True
-        elif acode == 'hd' or acode == 'otl':
-            self.dnfriders(strops.reformat_biblist(rlist), 'otl')
+        elif acode == u'otl':
+            self.dnfriders(strops.reformat_biblist(rlist), u'otl')
             return True
-        elif acode == 'wd':
-            self.dnfriders(strops.reformat_biblist(rlist), 'wd')
+        elif acode == u'wd':
+            self.dnfriders(strops.reformat_biblist(rlist), u'wd')
             return True
-        elif acode == 'dns':
-            self.dnfriders(strops.reformat_biblist(rlist), 'dns')
+        elif acode == u'dns':
+            self.dnfriders(strops.reformat_biblist(rlist), u'dns')
             return True
-        elif acode == 'ret':
+        elif acode == u'ret':
             self.retriders(strops.reformat_biblist(rlist))
             return True
-        elif acode == 'man':
+        elif acode == u'man':
             # crude hack tool for now
             self.manpassing(strops.reformat_bibserlist(rlist))
             return True
-        elif acode == 'del':
-            rlist = strops.reformat_riderlist(rlist,
-                                              self.meet.rdb, self.series)
-            for bib in rlist.split():
+        elif acode == u'del':
+            rlist = strops.riderlist_split(rlist, self.meet.rdb, self.series)
+            for bib in rlist:
                 self.delrider(bib)
             return True
-        elif acode == 'add':
-            rlist = strops.reformat_riderlist(rlist,
-                                              self.meet.rdb, self.series)
-            for bib in rlist.split():
+        elif acode == u'add':
+            rlist = strops.riderlist_split(rlist, self.meet.rdb, self.series)
+            for bib in rlist:
                 self.addrider(bib)
             return True
-        elif acode == 'que':
+        elif acode == u'que':
             rlist = strops.reformat_biblist(rlist)
-            if rlist != '':
+            if rlist != u'':
                 for bib in rlist.split():
                     self.query_rider(bib)
             return True
-        elif acode == 'com':
+        elif acode == u'com':
             self.add_comment(rlist)
             return True
         else:
-            LOG.error('Ignoring invalid action.')
+            LOG.error(u'Ignoring invalid action %r', acode)
         return False
 
-    def add_comment(self, comment=''):
-        """Append a race comment."""
+    def add_comment(self, comment=u''):
+        """Append a commissaires comment."""
         self.comment.append(comment.strip())
-        LOG.info('Added race comment: ' + repr(comment))
+        LOG.info(u'Added comment: %r', comment)
 
     def query_rider(self, bib=None):
         """List info on selected rider in the scratchpad."""
-        LOG.info('Query rider: ' + repr(bib))
+        LOG.info(u'Query rider: %r', bib)
         r = self.getrider(bib)
         if r is not None:
-            ns = strops.truncpad(r[COL_NAMESTR] + ' ' + r[COL_CAT], 30)
-            bs = ''
+            ns = strops.truncpad(
+                r[COL_NAMESTR].decode(u'utf-8') + u' ' +
+                r[COL_CAT].decode(u'utf-8'), 30)
+            bs = u''
             bt = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
             if bt is not None:
                 bs = bt.timestr(0)
-            ps = r[COL_COMMENT]
+            ps = r[COL_COMMENT].decode(u'utf-8')
             if r[COL_PLACE] != '':
                 ps = strops.rank2ord(r[COL_PLACE])
-            LOG.info(' '.join([bib, ns, bs, ps]))
+            LOG.info(u'%s %s %s %s', bib, ns, bs, ps)
             lt = None
             if len(r[COL_RFSEEN]) > 0:
                 for rft in r[COL_RFSEEN]:
                     nt = rft.truncate(0)
                     ns = rft.timestr(1)
-                    ls = ''
+                    ls = u''
                     if lt is not None:
                         ls = (nt - lt).timestr(0)
-                    LOG.info(' '.join(['\t', ns, ls]))
+                    LOG.info(u'\t%s %s', ns, ls)
                     lt = nt
             if r[COL_RFTIME] is not None:
-                LOG.info(' '.join([' Finish:',
-                                          r[COL_RFTIME].timestr(1)]))
+                LOG.info(u'Finish: %s', r[COL_RFTIME].timestr(1))
         else:
-            LOG.info(bib.ljust(4) + ' ' + 'Not in startlist.')
+            LOG.info(u'%r not in startlist', bib)
 
-    def startlist_gen(self, cat=''):
+    def startlist_gen(self, cat=u''):
         """Generator function to export a startlist."""
         mcat = self.ridercat(cat)
         self.reorder_startlist()
         for r in self.riders:
-            if mcat == '' or mcat in self.ridercat(r[COL_CAT]).upper().split():
-                start = ''
+            cs = r[COL_CAT].decode(u'utf-8')
+            rcat = self.ridercat(riderdb.primary_cat(cs))
+            if mcat == rcat:
+                start = u''
                 if r[COL_STOFT] is not None and r[COL_STOFT] != tod.ZERO:
                     start = r[COL_STOFT].rawtime(0)
-                bib = r[COL_BIB]
+                elif rcat in self.catstarts:
+                    if self.catstarts[rcat] is not None:
+                        start = self.catstarts[rcat].rawtime(0)
+                bib = r[COL_BIB].decode(u'utf-8')
                 series = self.series
-                name = r[COL_NAMESTR]
-                cat = r[COL_CAT]
-                firstxtra = ''
-                lastxtra = ''
-                clubxtra = ''
-                dbr = self.meet.rdb.getrider(r[COL_BIB],self.series)
+                name = r[COL_NAMESTR].decode(u'utf-8')
+                cat = rcat
+                firstxtra = u''
+                lastxtra = u''
+                clubxtra = u''
+                dbr = self.meet.rdb.getrider(bib, self.series)
                 if dbr is not None:
-                    firstxtra = self.meet.rdb.getvalue(dbr,
-                                         riderdb.COL_FIRST).capitalize()
-                    lastxtra = self.meet.rdb.getvalue(dbr, 
-                                         riderdb.COL_LAST).upper()
+                    firstxtra = self.meet.rdb.getvalue(
+                        dbr, riderdb.COL_FIRST).capitalize()
+                    lastxtra = self.meet.rdb.getvalue(
+                        dbr, riderdb.COL_LAST).upper()
                     clubxtra = self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB)
-                yield [start, bib, series, name, cat,
-                       firstxtra, lastxtra, clubxtra]
+                yield [
+                    start, bib, series, name, cat, firstxtra, lastxtra,
+                    clubxtra
+                ]
+
+    def lifexport(self):
+        """Export lif."""
+        self.recalculate()
+        st = tod.ZERO
+        if self.start is not None:
+            st = self.start
+        sno = u'1'
+        if self.meet.mirrorpath:
+            sno = self.meet.mirrorfile
+        rdx = 1
+        odat = [[
+            sno, u'1', u'1', self.meet.subtitle_str, u'', u'', u'', u'', u'',
+            u'', u'', u''
+        ]]
+
+        for r in self.riders:
+            bib = r[COL_BIB].decode(u'utf-8')
+            if r[COL_INRACE]:
+                if r[COL_RFTIME]:
+                    last = u''
+                    first = u''
+                    team = u''
+                    ucicode = u''
+                    dbr = self.meet.rdb.getrider(bib, self.series)
+                    if dbr is not None:
+                        first = self.meet.rdb.getvalue(
+                            dbr, riderdb.COL_FIRST).capitalize()
+                        last = self.meet.rdb.getvalue(
+                            dbr, riderdb.COL_LAST).upper()
+                        team = self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB)
+                        ucicode = self.meet.rdb.getvalue(
+                            dbr, riderdb.COL_UCICODE)
+                    rftime = u'0'
+                    if r[COL_RFTIME] is not None:
+                        rftime = (r[COL_RFTIME] - st).rawtime(2, hoursep=u':')
+                    bunch = u''
+                    if r[COL_CBUNCH] is not None:
+                        bunch = r[COL_CBUNCH].rawtime(0, hoursep=u':')
+                    # rider with time
+                    odat.append([
+                        unicode(rdx), bib, bib, last, first, team, rftime,
+                        ucicode, bunch, u'', u'', u''
+                    ])
+                    rdx += 1
+        return odat
 
     def result_gen(self, cat=''):
         """Generator function to export a final result."""
-        self.recalculate()	# fix up ordering of rows
+        self.recalculate()  # fix up ordering of rows
         mcat = self.ridercat(cat)
         rcount = 0
         lrank = None
         lcrank = None
         for r in self.riders:
-            rcat = self.ridercat(r[COL_CAT]).upper()
-            rcats = rcat.split()
-            if mcat == '' or mcat in rcats:
+            rcat = r[COL_CAT].decode(u'utf-8').upper()
+            rcats = [u'']
+            if rcat.strip():
+                rcats = rcat.split()
+            if mcat == u'' or mcat in rcats:
+                if mcat:
+                    rcat = mcat
+                else:
+                    rcat = rcats[0]
                 rcount += 1
-                bib = r[COL_BIB]
+                bib = r[COL_BIB].decode(u'utf-8')
                 crank = None
                 rank = None
                 bonus = None
@@ -1523,8 +1562,8 @@ class cross(object):
                     sof = None
                     if r[COL_STOFT] is not None:
                         sof = r[COL_STOFT]
-                    elif mcat in self.catstarts:
-                        sof = self.catstarts[mcat]
+                    elif rcat in self.catstarts:
+                        sof = self.catstarts[rcat]
                     if sof is not None and bt is not None:
                         if self.event[u'type'] != u'rhcp':
                             ft = bt - sof
@@ -1534,19 +1573,19 @@ class cross(object):
                             # stage - bonus
                             ft = bt
                             bonus = sof
-
-                if r[COL_PLACE].isdigit():
-                    rank = int(r[COL_PLACE])
-                    if rank != lrank: 
+                plstr = r[COL_PLACE].decode(u'utf-8')
+                if plstr.isdigit():
+                    rank = int(plstr)
+                    if rank != lrank:
                         crank = rcount
                     else:
                         crank = lcrank
                     lcrank = crank
                     lrank = rank
                 else:
-                    crank = r[COL_COMMENT]
+                    crank = r[COL_COMMENT].decode(u'utf-8')
                 if self.event[u'type'] != u'rhcp' and (
-                         bib in self.bonuses or r[COL_BONUS] is not None):
+                        bib in self.bonuses or r[COL_BONUS] is not None):
                     bonus = tod.ZERO
                     if bib in self.bonuses:
                         bonus += self.bonuses[bib]
@@ -1556,20 +1595,31 @@ class cross(object):
                 if r[COL_PENALTY] is not None:
                     penalty = r[COL_PENALTY]
                 if ft is not None:
-                    ft = ft.truncate(0)	# force whole second for bunch times
+                    ft = ft.truncate(0)  # force whole second for bunch times
                 yield [crank, bib, ft, bonus, penalty]
 
     def clear_results(self):
         """Clear all data from event model."""
         self.resetplaces()
-        self.places = ''
-        LOG.debug('Cleared event result.')
+        self.places = u''
+        LOG.debug(u'Clear event result')
+        # scan riders to clear any race info
+        for r in self.riders:
+            r[COL_COMMENT] = u''
+            r[COL_INRACE] = True
+            r[COL_PLACE] = u''
+            r[COL_LAPS] = 0
+            r[COL_RFSEEN] = []
+            r[COL_RFTIME] = None
+            r[COL_CBUNCH] = None
+            r[COL_MBUNCH] = None
+        LOG.debug(u'Clear rider data')
 
     def getrider(self, bib):
         """Return reference to selected rider no."""
         ret = None
         for r in self.riders:
-            if r[COL_BIB] == bib:
+            if r[COL_BIB].decode(u'utf-8') == bib:
                 ret = r
                 break
         return ret
@@ -1583,128 +1633,144 @@ class cross(object):
             i = self.riders.iter_next(i)
         return i
 
-    def delrider(self, bib='', series=''):
+    def delrider(self, bib=u'', series=u''):
         """Remove the specified rider from the model."""
         i = self.getiter(bib)
         if i is not None:
             self.riders.remove(i)
+        self.clear_place(bib)
 
-    def starttime(self, start=None, bib='', series=''):
+    def starttime(self, start=None, bib=u'', series=u''):
         """Adjust start time for the rider."""
         if series == self.series:
             r = self.getrider(bib)
             if r is not None:
                 r[COL_STOFT] = start
 
-    def addrider(self, bib='', series=None):
-        """Add specified rider to race model."""
+    def addrider(self, bib=u'', series=None):
+        """Add specified rider to event model."""
         if series is not None and series != self.series:
-            LOG.debug('Ignoring non-series starter: '
-                            + repr(strops.bibser2bibstr(bib, series)))
+            LOG.debug(u'Ignoring non-series rider: %r',
+                      strops.bibser2bibstr(bib, series))
             return None
-        if bib == '' or self.getrider(bib) is None:
-            nr = [bib, '', '', '', '', True, '', 0, None, None, None, None, 
-                           None, None, []]
+        if bib == u'' or self.getrider(bib) is None:
+            nr = [
+                bib, u'', u'', u'', u'', True, u'', 0, None, None, None, None,
+                None, None, []
+            ]
             dbr = self.meet.rdb.getrider(bib, self.series)
             if dbr is not None:
                 nr[COL_NAMESTR] = strops.listname(
-                      self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
-                      self.meet.rdb.getvalue(dbr, riderdb.COL_LAST),
-                      self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB))
+                    self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
+                    self.meet.rdb.getvalue(dbr, riderdb.COL_LAST),
+                    self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB))
                 nr[COL_SHORTNAME] = strops.listname(
-                      self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
-                      self.meet.rdb.getvalue(dbr, riderdb.COL_LAST))
-## TODO: configure shourtname for teams automatically?
+                    self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
+                    self.meet.rdb.getvalue(dbr, riderdb.COL_LAST))
                 nr[COL_CAT] = self.meet.rdb.getvalue(dbr, riderdb.COL_CAT)
             return self.riders.append(nr)
         else:
             return None
 
     def resettimer(self):
-        """Reset race timer."""
+        """Reset event timer."""
+        LOG.info(u'Reset event to idle')
         self.meet.alttimer.dearm(1)
         self.set_finish()
         self.set_start()
         self.clear_results()
-        self.timerstat = 'idle'
+        self.timerstat = u'idle'
         self.meet.cmd_announce(u'timerstat', u'idle')
-        uiutil.buttonchg(self.meet.stat_but, uiutil.bg_none, 'Idle')
+        self.meet.stat_but.buttonchg(uiutil.bg_none, u'Idle')
         self.meet.stat_but.set_sensitive(True)
         self.curlap = -1
+        self.onlap = 1
+        self.lapentry.set_text(u'')
+        self.laptimes = []
         self.live_announce = True
-        
+
     def armstart(self):
         """Process an armstart request."""
-        if self.timerstat == 'idle':
-            self.timerstat = 'armstart'
+        if self.timerstat == u'idle':
+            self.timerstat = u'armstart'
             self.meet.cmd_announce(u'timerstat', u'armstart')
-            self.meet.cmd_announce(u'timerstat', u'armstart')
-            uiutil.buttonchg(self.meet.stat_but,
-                             uiutil.bg_armint, 'Arm Start')
-        elif self.timerstat == 'armstart':
-            self.timerstat = 'idle'
+            self.meet.stat_but.buttonchg(uiutil.bg_armint, u'Arm Start')
+            self.resetcatonlaps()
+        elif self.timerstat == u'armstart':
+            self.timerstat = u'idle'
             self.meet.cmd_announce(u'timerstat', u'idle')
-            uiutil.buttonchg(self.meet.stat_but, uiutil.bg_none, 'Idle') 
-        elif self.timerstat == 'ready':
-            self.set_running()
+            self.meet.stat_but.buttonchg(uiutil.bg_none, u'Idle')
+
+    def resetcatonlaps(self):
+        onechange = False
+        for cat in self.catlaps:  # for each category with a defined target
+            target = self.catlaps[cat]
+            if target:
+                self.catonlap[cat] = 0
+                onechange = True
+        if onechange:
+            self.announcecatlap()
 
     def armfinish(self):
         """Process an armfinish request."""
-        if self.timerstat in ['ready', 'running', 'finished']:
-            if self.curlap and self.totlaps and self.curlap < self.totlaps:
-                # assume lap was not armed
+        if self.timerstat in [u'running', u'finished']:
+            if self.finish is None and self.curlap:
+                # No finish passing yet
                 self.armlap()
             elif self.totlaps == 0:
-                self.armlap()	# unbound lap count
-            self.timerstat = 'armfinish'
+                # Unbound lap count
+                self.armlap()
+            self.timerstat = u'armfinish'
             self.meet.cmd_announce(u'timerstat', u'armfinish')
-            uiutil.buttonchg(self.meet.stat_but,
-                             uiutil.bg_armfin, 'Arm Finish')
+            self.meet.stat_but.buttonchg(uiutil.bg_armfin, u'Arm Finish')
             self.meet.stat_but.set_sensitive(True)
             self.meet.alttimer.armlock(True)
             self.meet.alttimer.arm(1)
-        elif self.timerstat == 'armfinish':
+        elif self.timerstat == u'armfinish':
             self.meet.alttimer.dearm(1)
-            self.timerstat = 'running'
+            self.timerstat = u'running'
             self.meet.cmd_announce(u'timerstat', u'running')
-            uiutil.buttonchg(self.meet.stat_but,
-                             uiutil.bg_armstart, 'Running')
+            self.meet.stat_but.buttonchg(uiutil.bg_armstart, u'Running')
 
     def last_rftime(self):
         """Find the last rider with a RFID finish time set."""
         ret = None
         for r in self.riders:
             if r[COL_RFTIME] is not None:
-                ret = r[COL_BIB]
+                ret = r[COL_BIB].decode(u'utf-8')
         return ret
-        
-    def armlap(self):
-        ## announce text handling...
+
+    def armlap(self, data=None):
+        if self.targetlaps:
+            LOG.info(u'Event laps disabled')
+            return False
+
+        LOG.info(u'Arming lap')
         if self.curlap is None or self.curlap < 0:
-            self.curlap = 0	# manual override lap counts
-        self.scratch_tot = 0
+            self.curlap = 0  # manual override lap counts
         self.scratch_map = {}
         self.scratch_ord = []
         titlestr = self.title_namestr.get_text()
         if self.live_announce:
-            self.meet.announce_clear()
-        if self.timerstat in ['idle', 'armstart', 'armfinish']:
+            self.meet.cmd_announce(u'clear', u'all')
+        if self.timerstat in [u'idle', u'armstart', u'armfinish']:
             self.meet.cmd_announce(u'finstr', self.meet.get_short_name())
-            if self.timerstat in ['idle', 'armstart']:
-                self.reannounce_times()	# otherwise not called
-                self.meet.announce_title(titlestr)	# enforce
-                return True	# no arm till event underway	(messy)
+            if self.timerstat in [u'idle', u'armstart']:
+                self.reannounce_times()  # otherwise not called
+                self.meet.cmd_announce(u'title', titlestr)  # enforce
+                return True  # no arm till event underway
         if self.curlap <= 0 or self.lapfin is not None:
-            self.curlap += 1	# increment
-            
+            self.curlap += 1  # increment
+
             if self.totlaps and self.curlap > self.totlaps:
-                LOG.info('Too many laps.')
+                LOG.info(u'Too many laps')
                 self.curlap = self.totlaps
 
             # sanity check onlap
             # once arm lap is done, curlap and onlap _should_ be same
             if self.onlap != self.curlap:
-                LOG.info('Cur/On lap mismatch - fixed.')
+                LOG.info(u'Cur/On lap mismatch %r/%r fixed', self.curlap,
+                         self.onlap)
                 self.onlap = self.curlap
                 self.meet.cmd_announce(u'onlap', unicode(self.onlap))
 
@@ -1713,64 +1779,63 @@ class cross(object):
 
         # Write lap time fields
         lapstr = None
-        if self.timerstat not in ['armfinish', 'finished']:
+        if self.timerstat not in [u'armfinish', u'finished']:
+            self.meet.cmd_announce(u'bunches', u'laps')
             self.meet.cmd_announce(u'finstr', None)
             ## Step 1: lap time handling
             if self.lapfin:
                 # roll over to lap start
                 self.lapstart = self.lapfin
-            elif self.lapstart:# assume still waiting for same lap
+            elif self.lapstart:  # assume still waiting for same lap
                 pass
-            else:		# at start?
+            else:  # at start?
                 self.lapstart = self.start
             if self.totlaps is not None:
                 if self.totlaps > 0:
-                    lapstr = (u'Lap ' +  unicode(self.curlap)
-                                  + u'/' + unicode(self.totlaps))
-                else:	# 0 flags unknown total
+                    lapstr = (u'Lap ' + unicode(self.onlap) + u'/' +
+                              unicode(self.totlaps))
+                else:  # 0 flags unknown total
                     lapstr = u''
                     passkey = unicode(self.curlap)
                     if passkey in self.passlabels:
                         lapstr = u'At ' + self.passlabels[passkey]
-                    lapstr = (u'Lap ' +  unicode(self.curlap))
+                    else:
+                        lapstr = (u'Lap ' + unicode(self.onlap))
                 self.totlapentry.set_text(unicode(self.totlaps))
                 self.meet.cmd_announce(u'laplbl', lapstr)
-                if self.curlap in self.sprintlaps:
-                    self.meet.cmd_announce(u'laptype',u'SPRINT')
-                else:
-                    self.meet.cmd_announce(u'laptype',None)
+                self.meet.cmd_announce(u'laptype', None)
             else:
                 # make sure something is displayed in this path
                 self.meet.cmd_announce(u'laplbl', None)
                 self.meet.cmd_announce(u'finstr', self.meet.get_short_name())
             self.lapfin = None
+        else:
+            self.meet.cmd_announce(u'bunches', u'final')
         if self.live_announce:
             if lapstr:
-                self.meet.announce_title(titlestr + ' ' + lapstr)
+                self.meet.cmd_announce(u'title', titlestr + u' ' + lapstr)
             else:
-                self.meet.announce_title(titlestr)	# enforce
+                self.meet.cmd_announce(u'title', titlestr)
         self.reannounce_times()
-        return None
+        # in case of idle/delay
+        return False
 
     def key_event(self, widget, event):
         """Handle global key presses in event."""
         if event.type == gtk.gdk.KEY_PRESS:
-            key = gtk.gdk.keyval_name(event.keyval) or 'None'
+            key = gtk.gdk.keyval_name(event.keyval) or u'None'
             if event.state & gtk.gdk.CONTROL_MASK:
-                if key == key_abort:    # override ctrl+f5
+                if key == key_abort:  # override ctrl+f5
                     self.resettimer()
                     return True
-                elif key == key_announce: # re-send current announce vars
+                elif key == key_announce:  # re-send current announce vars
                     self.reannounce_times()
                     return True
-                elif key == key_clearfrom: # clear all places from selected
+                elif key == key_clearfrom:  # clear all places from selected
                     self.clear_places_from_selection()
                     return True
-                elif key == key_clearplace: # clear selected rider from places
+                elif key == key_clearplace:  # clear selected rider from places
                     self.clear_selected_place()
-                    return True	
-                elif key.upper() == key_undo:	# Undo model change if possible
-                    self.undo_riders()
                     return True
             if key[0] == 'F':
                 if key == key_announce:
@@ -1792,17 +1857,24 @@ class cross(object):
         sv = sel.get_selected()
         if sv is not None:
             i = sv[1]
-            selbib = self.riders.get_value(i, COL_BIB)
+            selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
             selpath = self.riders.get_path(i)
-            LOG.info(u'Confirmed next place: '
-                           + repr(selbib) + u'/' + repr(selpath))
-            oplaces = self.places.split()
-            if selbib in oplaces:
-                oplaces.remove(selbib)
-            oplaces.append(selbib)
-            self.checkpoint_model()
-            self.places = ' '.join(oplaces)
-            # recalculate in this path
+            LOG.info(u'Confirmed next place: %r/%r', selbib, selpath)
+            LOG.debug(u'Old places: %r', self.places)
+            nplaces = []
+            # remove selected rider from places
+            for placegroup in self.places.split():
+                gv = placegroup.split(u'-')
+                try:
+                    gv.remove(selbib)
+                except Exception:
+                    pass
+                if gv:
+                    nplaces.append(u'-'.join(gv))
+            # append selected rider to places and recalc
+            nplaces.append(selbib)
+            self.places = u' '.join(nplaces)
+            LOG.debug(u'New places: %r', self.places)
             self.recalculate()
             # advance selection
             j = self.riders.iter_next(i)
@@ -1812,16 +1884,32 @@ class cross(object):
 
     def fill_places_to_selected(self):
         """Update places to match ordering up to selected rider."""
+        if u'-' in self.places:
+            LOG.warning(u'Dead heat in result, places not updated')
+            return False
         sel = self.view.get_selection()
         sv = sel.get_selected()
         if sv is not None:
             # fill places and recalculate
             i = sv[1]
-            selbib = self.riders.get_value(i, COL_BIB)
+            selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
             selpath = self.riders.get_path(i)
-            LOG.info(u'Confirmed places to: '
-                           + repr(selbib) + u'/' + repr(selpath))
-            self.fill_places_to(selbib)
+            LOG.info(u'Confirm places to: %r/%r', selbib, selpath)
+            LOG.debug(u'Old places: %r', self.places)
+            oplaces = self.places.split()
+            nplaces = []
+            for r in self.riders:
+                rbib = r[COL_BIB].decode(u'utf-8')
+                if rbib in oplaces:
+                    oplaces.remove(rbib)  # strip out DNFed riders
+                if r[COL_INRACE]:
+                    nplaces.append(rbib)  # add to new list
+                if rbib == selbib:  # break after to get sel rider
+                    break
+            nplaces.extend(oplaces)
+            self.places = u' '.join(nplaces)
+            LOG.debug(u'New places: %r', self.places)
+            self.recalculate()
             # advance selection
             j = self.riders.iter_next(i)
             if j is not None:
@@ -1830,157 +1918,187 @@ class cross(object):
 
     def clear_places_from_selection(self):
         """Clear all places from riders following the current selection."""
-        if self.places.find('-') > 0:
-            LOG.warn('Clear place with dead heat not implemented.')
-            return
         sel = self.view.get_selection().get_selected()
         if sel is not None:
             i = sel[1]
-            selbib = self.riders.get_value(i, COL_BIB)
+            selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
             selpath = self.riders.get_path(i)
-            LOG.info(u'Cleared places from: '
-                           + repr(selbib) + u'/' + repr(selpath))
-            oplaces = self.places.split()
+            LOG.info(u'Clear places from: %r/%r', selbib, selpath)
+            LOG.debug(u'Old places: %r', self.places)
             nplaces = []
-            for p in oplaces:
-                if p == selbib:
+            found = False
+            for placegroup in self.places.split():
+                newgroup = []
+                for r in placegroup.split(u'-'):
+                    if r == selbib:
+                        found = True
+                        break
+                    newgroup.append(r)
+                if newgroup:
+                    nplaces.append(u'-'.join(newgroup))
+                if found:
                     break
-                nplaces.append(p)
-            self.checkpoint_model()
-            self.places = ' '.join(nplaces)
-            # recalculate in this path
+            self.places = u' '.join(nplaces)
+            LOG.debug(u'New places: %r', self.places)
             self.recalculate()
+
+    def clear_place(self, bib):
+        LOG.debug(u'Old places: %r', self.places)
+        nplaces = []
+        for placegroup in self.places.split():
+            gv = placegroup.split(u'-')
+            try:
+                gv.remove(bib)
+            except Exception:
+                pass
+            if gv:
+                nplaces.append(u'-'.join(gv))
+        self.places = u' '.join(nplaces)
+        LOG.debug(u'New places: %r', self.places)
 
     def clear_selected_place(self):
         """Remove the selected rider from places."""
-        if self.places.find('-') > 0:
-            LOG.warn('Clear place with dead heat not implemented.')
-            return
-
         sel = self.view.get_selection().get_selected()
         if sel is not None:
             i = sel[1]
-            selbib = self.riders.get_value(i, COL_BIB)
+            selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
             selpath = self.riders.get_path(i)
-            LOG.info(u'Cleared rider from places: '
-                           + repr(selbib) + u'/' + repr(selpath))
-            oplaces = self.places.split()
-            if selbib in oplaces:
-                oplaces.remove(selbib)
-            self.checkpoint_model()
-            self.places = ' '.join(oplaces)
-            # recalculate in this path
+            LOG.info(u'Clear rider from places: %r/%r', selbib, selpath)
+            self.clear_place(selbib)
             self.recalculate()
 
-    def setriderval(self, bib, rank, bunch):
-        """Override rider result from LIF data."""
-        if u'-' in self.places:
-            LOG.debug(u'Dead heat in places: LIF data rejected.')
-            return None
-
-        r = self.getrider(bib)
-        if r is not None:
-            # first: set the rider's manual bunch time
-            r[COL_MBUNCH] = bunch
-            oldplaces = self.places.split()
-            if bib in oldplaces:
-                oldplaces.remove(bib)
-            oldplaces.insert(rank-1, bib)
-            self.places = u' '.join(oldplaces)
-            self.__dorecalc = True
-        
-    def dnfriders(self, biblist='', code='dnf'):
-        """Remove each rider from the race with supplied code."""
+    def dnfriders(self, biblist=u'', code=u'dnf'):
+        """Remove each rider from the event with supplied code."""
         recalc = False
         for bib in biblist.split():
             r = self.getrider(bib)
             if r is not None:
-                if code != 'wd':
+                if code != u'wd':
                     r[COL_INRACE] = False
                 r[COL_COMMENT] = code
                 recalc = True
-                LOG.info('Rider ' + str(bib) 
-                               + ' did not finish with code: ' + code)
+                LOG.info('Rider %r did not finish with code: %r', bib, code)
             else:
-                LOG.warn('Unregistered Rider ' + str(bib) + ' unchanged.')
+                LOG.warning('Unregistered Rider %r unchanged', bib)
         if recalc:
             self.recalculate()
         return False
 
-    def manpassing(self, biblist=''):
+    def manpassing(self, biblist=u''):
         """Register a manual passing, preserving order."""
         for bib in biblist.split():
-            # NOTE: All bibs are sent into trigger interface so that 
-            #       timing master will propagate to slaves, race module
-            #       will process as if timing came from attached decoder.
-            rno,rser = strops.bibstr2bibser(bib)
-            if not rser:	# allow series manual override
+            rno, rser = strops.bibstr2bibser(bib)
+            if not rser:  # allow series manual override
                 rser = self.series
-            bibstr = strops.bibser2bibstr(rno,rser)
-            self.meet.timer.trig(refid=u'riderno:'+bibstr)
-            LOG.debug(u'Manual Passing: ' + bibstr)
+            bibstr = strops.bibser2bibstr(rno, rser)
+            t = tod.now()
+            t.chan = u'MAN'
+            t.refid = u'riderno:' + bibstr
+            self.meet._timercb(t)
+            LOG.debug(u'Manual passing: %r', bibstr)
 
-    def retriders(self, biblist=''):
-        """Return all listed riders to the race."""
+    def retriders(self, biblist=u''):
+        """Return all listed riders to the event."""
         recalc = False
         for bib in biblist.split():
             r = self.getrider(bib)
             if r is not None:
                 r[COL_INRACE] = True
-                r[COL_COMMENT] = ''
+                r[COL_COMMENT] = u''
                 recalc = True
-                LOG.info('Rider ' + str(bib) 
-                               + ' returned to race.')
+                LOG.info(u'Rider %r returned to event', bib)
             else:
-                LOG.warn('Unregistered Rider ' + str(bib) + ' unchanged.')
+                LOG.warning(u'Unregistered rider %r unchanged', bib)
         if recalc:
             self.recalculate()
         return False
-  
-    def shutdown(self, win=None, msg='Race Sutdown'):
+
+    def shutdown(self, win=None, msg=u'Race Sutdown'):
         """Close event."""
-        LOG.debug('Event shutdown: ' + msg)
+        LOG.debug(u'Event shutdown: %r', msg)
         if not self.readonly:
             self.saveconfig()
         self.winopen = False
 
     def starttrig(self, e):
         """Process a 'start' trigger signal."""
-        self.meet.cmd_announce(u'decodertrig', e.rawtime())
-        LOG.info(u'Trigger: ' + e.rawtime(2))
-        if self.timerstat == 'armstart':
+        LOG.info(u'Trigger: %s', e.rawtime(2))
+        if self.timerstat == u'armstart':
             self.set_start(e)
-            glib.idle_add(self.armlap)	# run it anyhow
+            self.resetcatonlaps()
+            glib.idle_add(self.armlap)  # always arm first lap in cross
         return False
 
     def set_lap_finish(self, e):
         """Write lap time into model and emit changed state."""
         self.laptimes.append(e)
         self.lapfin = e
-        self.onlap += 1	# increment rider onlap
-        self.meet.cmd_announce(u'onlap',unicode(self.onlap))
-        self.meet.cmd_announce(u'laptype',None)
+        self.onlap += 1
+        self.meet.cmd_announce(u'onlap', unicode(self.onlap))
+        self.meet.cmd_announce(u'laptype', None)
         self.reannounce_times()
 
     def timertrig(self, e):
         """Record timer message from alttimer."""
-        self.meet.announce_timer(e, self.meet.alttimer)
-        if self.timerstat == 'armfinish':
-            LOG.info(u'Bunch Trigger: ' + e.rawtime(0))
+        if self.timerstat == u'armfinish':
+            LOG.info(u'Bunch Trigger: %s', e.rawtime(0))
 
-    def rfidstat(self, e):
-        """Handle RFID status message."""
-        LOG.info(u'Decoder ' + e.source + u': ' + e.refid)
-        return False
+    def catstarted(self, cat):
+        """Return true if category is considered started."""
+        ret = False
+        if self.start is not None:
+            stof = tod.ZERO
+            if cat in self.catstarts:
+                stof = self.catstarts[cat]
+            st = self.start + stof
+            nt = tod.now()
+            if st < nt:
+                LOG.debug(u'Cat %r has started', cat)
+                ret = True
+            else:
+                LOG.debug(u'Cat %r has not yet started: %s < %s', cat,
+                          nt.rawtime(1), st.rawtime(1))
+        return ret
+
+    def announcecatlap(self, acat=None):
+        """Emit a category lap scoreboard message."""
+        for cat in self.cats:
+            if cat == acat or (acat is None and cat):
+                if cat in self.catonlap:
+                    count = self.catonlap[cat]
+                    onlap = count
+                    if self.catstarted(cat):
+                        onlap += 1
+                    target = None
+                    togo = None
+                    if cat in self.catlaps:
+                        target = self.catlaps[cat]
+                    if target is not None and count is not None and count < target:
+                        prompt = cat.upper()
+                        dbr = self.meet.rdb.getrider(cat, u'cat')
+                        if dbr is not None:
+                            prompt = self.meet.rdb.getvalue(
+                                dbr, riderdb.COL_CLUB)
+                        self.meet.cmd_announce(
+                            u'catlap', u'\x1f'.join([
+                                cat, prompt,
+                                unicode(onlap),
+                                unicode(target),
+                                unicode(target - onlap)
+                            ]))
+                        LOG.debug(u'Cat %r %r: %r/%r, %r to go', cat, prompt,
+                                  onlap, target, target - onlap)
+                    else:
+                        LOG.debug(u'No data for %r cat lap', cat)
 
     def rfidtrig(self, e):
         """Process rfid event."""
         # bounce message onto announcer: HACK
         self.meet.announce_timer(e, self.meet.timer)
 
-        if e.refid in ['', '255']:	# got a trigger
+        if e.refid in ['', '255']:  # got a trigger
             return self.starttrig(e)
-        elif e.chan == u'STS':	# status message
+        elif e.chan == u'STS':  # status message
             return self.rfidstat(e)
 
         # else assume this is a passing
@@ -1999,19 +2117,16 @@ class cross(object):
         # at this point should always have a valid source rider vector
         lr = self.getrider(bib)
         if lr is None:
-            if self.clubmode and self.timerstat in [u'running',u'armfinish']:
+            if self.clubmode and self.timerstat in [u'running', u'armfinish']:
                 self.addrider(bib)
                 lr = self.getrider(bib)
-                LOG.warn(u'Added new starter: ' + bib
-                              + u' @ ' + e.rawtime(2))
+                LOG.warn(u'Added new starter: ' + bib + u' @ ' + e.rawtime(2))
             else:
-                LOG.warn('Ignoring non starter: ' + bib
-                              + ' @ ' + e.rawtime(2))
+                LOG.warn('Ignoring non starter: ' + bib + ' @ ' + e.rawtime(2))
                 return False
 
         if not lr[COL_INRACE]:
-            LOG.warn('Withdrawn rider: ' + lr[COL_BIB]
-                          + ' @ ' + e.rawtime(2))
+            LOG.warn('Withdrawn rider: ' + lr[COL_BIB] + ' @ ' + e.rawtime(2))
             # but continue anyway just in case it was not correct?
         else:
             LOG.info('Saw: ' + bib + ' @ ' + e.rawtime(2))
@@ -2034,9 +2149,10 @@ class cross(object):
 
         # should first test lap time
         # fail this test for now: 24h rollover fail, et will be < mineelap
-        if len(lr[COL_RFSEEN]) == 0 and st < mineelap: # this is the minelap check
-            LOG.info(u'Ignored early first pass: '
-                              + bib + ' lt: ' + st.rawtime(2))
+        if len(lr[COL_RFSEEN]
+               ) == 0 and st < mineelap:  # this is the minelap check
+            LOG.info(u'Ignored early first pass: ' + bib + ' lt: ' +
+                     st.rawtime(2))
             return False
         else:
             if self.minlap is not None:
@@ -2044,8 +2160,8 @@ class cross(object):
                     # allow for overflow
                     lastlap = e - lr[COL_RFSEEN][-1]
                     if lastlap < self.minlap:
-                        LOG.info(u'Ignored short lap: '
-                              + bib + ' ' + lastlap.rawtime(2))
+                        LOG.info(u'Ignored short lap: ' + bib + ' ' +
+                                 lastlap.rawtime(2))
                         return False
 
         lr[COL_RFSEEN].append(e)
@@ -2053,7 +2169,7 @@ class cross(object):
         if rcat in self.catlaps and self.catlaps[rcat]:
             targetlap = self.catlaps[rcat]
             if lr[COL_LAPS] >= targetlap - 1:
-                catfinish = True	# arm just this rider
+                catfinish = True  # arm just this rider
 
         if self.timerstat == 'armfinish' or catfinish:
             # in finish mode, all passings are considered on the finish 'lap'
@@ -2062,36 +2178,36 @@ class cross(object):
                 # if necessary later in recalc.
                 self.set_finish(e)
                 # send a flush command to SCB for snappy output
-                self.meet.cmd_announce(u'redraw',u'timer')
+                self.meet.cmd_announce(u'redraw', u'timer')
             if lr[COL_RFTIME] is None:
                 if lr[COL_COMMENT] != 'wd':
-                    lr[COL_RFTIME] = e	# saves the 'finish' time
+                    lr[COL_RFTIME] = e  # saves the 'finish' time
                     self.__dorecalc = True
                     if lr[COL_INRACE]:
-                        lr[COL_LAPS] += 1	# increment only in cross
+                        lr[COL_LAPS] += 1  # increment only in cross
                         if self.lapfin is None:
                             self.set_lap_finish(e)
                         self.announce_rider('', bib, lr[COL_NAMESTR],
-                                        lr[COL_CAT], e)
+                                            lr[COL_CAT], e)
             else:
                 # log this case, but is it required in main log?
-                LOG.info('Duplicate finish rider ' + bib
-                                  + ' @ ' + e.rawtime(2))
+                LOG.info('Duplicate finish rider ' + bib + ' @ ' +
+                         e.rawtime(2))
         elif self.timerstat in ['running']:
-            self.__dorecalc = True	# cleared in timeout, from same thread
+            self.__dorecalc = True  # cleared in timeout, from same thread
             if lr[COL_INRACE]:
                 onlap = False
                 if self.lapfin is None:
                     # lap finish armed, the first rider with laps == curlap-1
                     # will be considered the leader, otherwise they are dropped
-                    if lr[COL_LAPS] == self.curlap-1:
+                    if lr[COL_LAPS] == self.curlap - 1:
                         self.set_lap_finish(e)
                         # send a flush command to SCB for snappy output
-                        self.meet.cmd_announce(u'redraw',u'timer')
+                        self.meet.cmd_announce(u'redraw', u'timer')
                         lr[COL_LAPS] = self.curlap
                         onlap = True
                     else:
-                        lr[COL_LAPS] += 1 # increment anyone inconsistent
+                        lr[COL_LAPS] += 1  # increment anyone inconsistent
                 else:
                     # all riders after lap leader are incremented
                     if lr[COL_LAPS] < self.curlap:
@@ -2104,17 +2220,17 @@ class cross(object):
                             self.armlap()
                             self.set_lap_finish(e)
                             # send a flush command to SCB for snappy output
-                            self.meet.cmd_announce(u'redraw',u'timer')
-                            lr[COL_LAPS] += 1	# update lap to next
-                            onlap = True	# leader is always onlap
+                            self.meet.cmd_announce(u'redraw', u'timer')
+                            lr[COL_LAPS] += 1  # update lap to next
+                            onlap = True  # leader is always onlap
                         else:
                             # just increment lap count
                             lr[COL_LAPS] += 1
                 ## announce only riders on the current lap
                 if onlap:
-                    self.announce_rider('', bib, lr[COL_NAMESTR],
-                                            lr[COL_CAT], e)
-        return False	# called from glib_idle_add
+                    self.announce_rider('', bib, lr[COL_NAMESTR], lr[COL_CAT],
+                                        e)
+        return False  # called from glib_idle_add
 
     def announce_rider(self, place, bib, namestr, cat, rftime):
         """Log a rider in the lap and emit to announce."""
@@ -2122,8 +2238,9 @@ class cross(object):
             self.scratch_map[bib] = rftime
             self.scratch_ord.append(bib)
         if self.live_announce:
-            glib.idle_add(self.meet.announce_rider, [place,bib,namestr,
-                                     cat,rftime.rawtime()])
+            glib.idle_add(self.meet.announce_rider,
+                          [place, bib, namestr, cat,
+                           rftime.rawtime()])
 
     def lapentry_activate_cb(self, entry, data=None):
         """Transfer lap entry string into model if possible."""
@@ -2140,7 +2257,7 @@ class cross(object):
         """Transfer total lap entry string into model if possible."""
         try:
             nt = entry.get_text().decode('utf-8')
-            if nt:	# not empty
+            if nt:  # not empty
                 self.totlaps = int(entry.get_text().decode('utf-8'))
             else:
                 self.totlaps = None
@@ -2163,7 +2280,7 @@ class cross(object):
             self.meet.announce_title(titlestr + ': Final Result')
         else:
             self.meet.announce_title(titlestr + ': Provisional')
-        self.meet.cmd_announce(u'bunches',u'final')
+        self.meet.cmd_announce(u'bunches', u'final')
         placeset = set()
         idx = 0
         st = tod.tod('0')
@@ -2180,8 +2297,7 @@ class cross(object):
                     placeset.add(bib)
                     r = self.getrider(bib)
                     if r is not None:
-                        ft = self.vbunch(r[COL_CBUNCH],
-                                         r[COL_MBUNCH])
+                        ft = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
                         fs = ''
                         if ft is not None:
                             # temp -> just use the no-blob style to correct
@@ -2190,23 +2306,21 @@ class cross(object):
                                 wt = ft
                             lb = ft
                         if scrollcnt < 5:
-                            scrollmsg += (u' ' +
-                                         r[COL_PLACE] + u'. ' 
-                                         + r[COL_SHORTNAME].decode('utf-8')
-                                         + u' ')
+                            scrollmsg += (u' ' + r[COL_PLACE] + u'. ' +
+                                          r[COL_SHORTNAME].decode('utf-8') +
+                                          u' ')
                             scrollcnt += 1
-                        glib.idle_add(self.meet.announce_rider,
-                                                 [r[COL_PLACE]+'.',
-                                                 bib,
-                                                 r[COL_NAMESTR],
-                                                 r[COL_CAT], fs])
+                        glib.idle_add(self.meet.announce_rider, [
+                            r[COL_PLACE] + '.', bib, r[COL_NAMESTR],
+                            r[COL_CAT], fs
+                        ])
                     idx += 1
-        self.meet.cmd_announce(u'scrollmsg',scrollmsg)
+        self.meet.cmd_announce(u'scrollmsg', scrollmsg)
         if wt is not None:
             if self.start:
-                self.meet.cmd_announce(u'start',self.start.rawtime())
+                self.meet.cmd_announce(u'start', self.start.rawtime())
             if self.finish:
-                self.meet.cmd_announce(u'finish',self.finish.rawtime())
+                self.meet.cmd_announce(u'finish', self.finish.rawtime())
             else:
                 LOG.info('No valid times available.')
             # set winner's time
@@ -2217,8 +2331,8 @@ class cross(object):
         """Return report sections for the named intermed."""
         ret = []
         if acode not in self.intermeds:
-            LOG.debug('Attempt to read non-existent intermediate: '
-                              + repr(acode))
+            LOG.debug('Attempt to read non-existent intermediate: ' +
+                      repr(acode))
             return ret
         descr = acode
         if self.intermap[acode]['descr']:
@@ -2234,16 +2348,18 @@ class cross(object):
                     placeset.add(bib)
                     r = self.getrider(bib)
                     if r is not None:
-                        lines.append([str(curplace)+'.',bib,r[COL_NAMESTR],
-                                                 r[COL_CAT], None, None])
+                        lines.append([
+                            str(curplace) + '.', bib, r[COL_NAMESTR],
+                            r[COL_CAT], None, None
+                        ])
                     idx += 1
                 else:
                     LOG.warn('Duplicate no. = ' + str(bib) + ' in places.')
         if len(lines) > 0:
-            sec = report.section(u'inter'+acode)
+            sec = report.section(u'inter' + acode)
             sec.heading = descr
             sec.lines = lines
-            ret.append(sec) 
+            ret.append(sec)
         return ret
 
     def intsprint(self, acode='', places=''):
@@ -2251,8 +2367,8 @@ class cross(object):
 
         ## TODO : Fix offset time calcs - too many off by ones
         if acode not in self.intermeds:
-            LOG.debug('Attempt to display non-existent intermediate: '
-                              + repr(acode))
+            LOG.debug('Attempt to display non-existent intermediate: ' +
+                      repr(acode))
             return
         descr = acode
         if self.intermap[acode]['descr']:
@@ -2271,23 +2387,19 @@ class cross(object):
                     placeset.add(bib)
                     r = self.getrider(bib)
                     if r is not None:
-                        scrollmsg += (u' ' +
-                                     str(curplace) + u'. ' 
-                                     + r[COL_SHORTNAME].decode('utf-8')
-                                     + u' ')
+                        scrollmsg += (u' ' + str(curplace) + u'. ' +
+                                      r[COL_SHORTNAME].decode('utf-8') + u' ')
                         rank = u''
                         if acode != u'brk':
-                            rank = str(curplace)+'.'
-                        glib.idle_add(self.meet.announce_rider,
-                                                [rank,
-                                                 bib,
-                                                 r[COL_NAMESTR],
-                                                 r[COL_CAT], ''])
+                            rank = str(curplace) + '.'
+                        glib.idle_add(
+                            self.meet.announce_rider,
+                            [rank, bib, r[COL_NAMESTR], r[COL_CAT], ''])
                     idx += 1
                 else:
                     LOG.warn('Duplicate no. = ' + str(bib) + ' in places.')
         if acode != u'brk':
-            self.meet.cmd_announce(u'scrollmsg',scrollmsg)
+            self.meet.cmd_announce(u'scrollmsg', scrollmsg)
         glib.timeout_add_seconds(25, self.reannounce_lap)
 
     def todempty(self, val):
@@ -2304,8 +2416,10 @@ class cross(object):
         self.meet.cmd_announce(u'lapstart', self.todempty(self.lapstart))
         self.meet.cmd_announce(u'lapfin', self.todempty(self.lapfin))
         totlaps = None
-        if self.totlaps:	 #may be zero, but don't show that case
+        if self.totlaps:  #may be zero, but don't show that case
             totlaps = unicode(self.totlaps)
+
+
 ## announce the onlap and curlap?
         curlap = None
         if self.curlap is not None:
@@ -2313,8 +2427,8 @@ class cross(object):
         onlap = None
         if self.onlap is not None:
             onlap = unicode(self.onlap)
-        self.meet.cmd_announce(u'onlap',unicode(onlap))
-        self.meet.cmd_announce(u'curlap',unicode(curlap))
+        self.meet.cmd_announce(u'onlap', unicode(onlap))
+        self.meet.cmd_announce(u'curlap', unicode(curlap))
         self.meet.cmd_announce(u'totlaps', totlaps)
         return False
 
@@ -2331,9 +2445,10 @@ class cross(object):
         for bib in self.scratch_ord:
             r = self.getrider(bib)
             if r is not None:
-                glib.idle_add(self.meet.announce_rider,
-                                        ['',bib,r[COL_NAMESTR],r[COL_CAT],
-                                         self.scratch_map[bib].rawtime()])
+                glib.idle_add(self.meet.announce_rider, [
+                    '', bib, r[COL_NAMESTR], r[COL_CAT],
+                    self.scratch_map[bib].rawtime()
+                ])
         self.live_announce = True
         return False
 
@@ -2345,7 +2460,7 @@ class cross(object):
             self.__dorecalc = False
             self.recalculate()
             if self.autoexport:
-                glib.idle_add(self.meet.menu_data_results_cb,None);
+                glib.idle_add(self.meet.menu_data_results_cb, None)
         et = self.get_elapsed()
         if et is not None:
             self.elaplbl.set_text(et.rawtime(0))
@@ -2366,9 +2481,9 @@ class cross(object):
             self.onestart = True
             self.meet.cmd_announce(u'start', self.start.rawtime())
             self.last_scratch = self.start
-            self.curlap = -1	# reset lap count at start
-            self.onlap = 1	# leaders are 'onlap'
-            self.meet.cmd_announce(u'onlap',unicode(self.onlap))
+            self.curlap = -1  # reset lap count at start
+            self.onlap = 1  # leaders are 'onlap'
+            self.meet.cmd_announce(u'onlap', unicode(self.onlap))
             if self.finish is None:
                 self.set_running()
 
@@ -2386,11 +2501,11 @@ class cross(object):
             if self.start is None:
                 self.set_start('0')
             else:
-                elap = self.finish-self.start
+                elap = self.finish - self.start
                 dval = self.meet.get_distance()
                 if dval is not None:
                     self.meet.cmd_announce(u'average',
-                                           elap.rawspeed(1000.0*dval))
+                                           elap.rawspeed(1000.0 * dval))
 
     def get_elapsed(self):
         """Hack mode - always returns time from start."""
@@ -2398,13 +2513,6 @@ class cross(object):
         if self.start is not None and self.timerstat != 'finished':
             ret = (tod.now() - self.start).truncate(0)
         return ret
-
-    def set_ready(self):
-        """Update event status to ready to go."""
-        # MOD Apr 2013: No need for ready now that minlap is provided.
-        self.timerstat = 'ready'
-        self.meet.cmd_announce(u'timerstat', u'ready')
-        uiutil.buttonchg(self.meet.stat_but, uiutil.bg_armint, 'Ready')
 
     def set_running(self):
         """Update event status to running."""
@@ -2430,33 +2538,32 @@ class cross(object):
         for r in self.riders:
             if r[COL_INRACE] and r[COL_PLACE] != '':
                 if lplace == r[COL_PLACE] and r[COL_PLACE] != '':
-                    nplaces += '-' + r[COL_BIB] # dead heat riders
+                    nplaces += '-' + r[COL_BIB]  # dead heat riders
                 else:
                     nplaces += ' ' + r[COL_BIB]
                     lplace = r[COL_PLACE]
         self.places = strops.reformat_placelist(nplaces)
-        self.meet.action_combo.set_active(10)	# 'fin'
+        self.meet.action_combo.set_active(10)  # 'fin'
         self.meet.action_entry.set_text(self.places)
-        
+
     def fill_places_to(self, bib=None):
         """Fill in finish places up to the nominated bib."""
         if self.places.find('-') > 0:
             LOG.warn('Fill places with dead heat not yet implemented.')
             return
-        oplaces = self.places.split()	# only patch if no dead heats
+        oplaces = self.places.split()  # only patch if no dead heats
         nplaces = []
         for r in self.riders:
             if r[COL_INRACE]:
                 if r[COL_BIB] in oplaces:
-                    oplaces.remove(r[COL_BIB])	# remove from old list
-                nplaces.append(r[COL_BIB])      # add to new list
+                    oplaces.remove(r[COL_BIB])  # remove from old list
+                nplaces.append(r[COL_BIB])  # add to new list
             else:
                 if r[COL_BIB] in oplaces:
-                    oplaces.remove(r[COL_BIB])	# strip out DNFed riders
-            if r[COL_BIB] == bib:		# break after to get sel rider
+                    oplaces.remove(r[COL_BIB])  # strip out DNFed riders
+            if r[COL_BIB] == bib:  # break after to get sel rider
                 break
         nplaces.extend(oplaces)
-        self.checkpoint_model()
         self.places = ' '.join(nplaces)
         self.__dorecalc = True
 
@@ -2491,21 +2598,21 @@ class cross(object):
         """Clear places off all riders."""
         for r in self.riders:
             r[COL_PLACE] = ''
-        self.bonuses = {}	# bonuses are global to stage
-        for c in self.tallys:	# points are grouped by tally
+        self.bonuses = {}  # bonuses are global to stage
+        for c in self.tallys:  # points are grouped by tally
             self.points[c] = {}
             self.pointscb[c] = {}
-            
+
     def sortrough(self, x, y):
         # aux cols: ind, bib, in, place, rftime, laps, lastpass
         #             0    1   2      3       4     5         6
-        if x[2] != y[2]:		# in the race?
+        if x[2] != y[2]:  # in the race?
             if x[2]:
                 return -1
             else:
                 return 1
         else:
-            if x[3] != y[3]:		# places not same?
+            if x[3] != y[3]:  # places not same?
                 if y[3] == '':
                     return -1
                 elif x[3] == '':
@@ -2515,9 +2622,9 @@ class cross(object):
                 else:
                     return 1
             else:
-                if x[5] == y[5]:	# same lap count?
-                    if x[4] == y[4]:	# same finish time?
-                        return cmp(x[6], y[6])	# fall back to last pass
+                if x[5] == y[5]:  # same lap count?
+                    if x[4] == y[4]:  # same finish time?
+                        return cmp(x[6], y[6])  # fall back to last pass
                     else:
                         if y[4] is None:
                             return -1
@@ -2538,14 +2645,14 @@ class cross(object):
     def sortvbunch(self, x, y):
         # aux cols: ind, bib, in, place, vbunch, comment, laps
         #             0    1   2      3       4        5     6
-        if x[2] != y[2]:		# IN compares differently,
-            if x[2]:			# return in rider first
+        if x[2] != y[2]:  # IN compares differently,
+            if x[2]:  # return in rider first
                 return -1
             else:
                 return 1
         else:
-            if x[2]:			# in the race...
-                if x[3] != y[3]:		# places not same?
+            if x[2]:  # in the race...
+                if x[3] != y[3]:  # places not same?
                     if y[3] == '':
                         return -1
                     elif x[3] == '':
@@ -2555,8 +2662,8 @@ class cross(object):
                     else:
                         return 1
                 else:
-                    if x[6] == y[6]:	# same laps?
-                        if x[4] == y[4]:	# same time?
+                    if x[6] == y[6]:  # same laps?
+                        if x[4] == y[4]:  # same time?
                             return 0
                         else:
                             if y[4] is None:
@@ -2568,13 +2675,13 @@ class cross(object):
                             else:
                                 return 1
                     else:
-                        return cmp(y[6], x[6])	# descend
-            else:			# not in the race
+                        return cmp(y[6], x[6])  # descend
+            else:  # not in the race
                 if x[5] != y[5]:
-                    return strops.cmp_dnf(x[5], y[5]) # sort by code
+                    return strops.cmp_dnf(x[5], y[5])  # sort by code
                 else:
-                    return cmp(strops.riderno_key(x[1]), 
-                               strops.riderno_key(y[1])) # sort on no
+                    return cmp(strops.riderno_key(x[1]),
+                               strops.riderno_key(y[1]))  # sort on no
         return 0
 
     def vbunch(self, cbunch=None, mbunch=None):
@@ -2649,7 +2756,7 @@ class cross(object):
         # NOTE: times don't cascade in cyclocross
         new_text = new_text.strip()
         dorecalc = False
-        if new_text == '':	# user request to clear RFTIME?
+        if new_text == '':  # user request to clear RFTIME?
             self.riders[path][COL_RFTIME] = None
             self.riders[path][COL_MBUNCH] = None
             self.riders[path][COL_CBUNCH] = None
@@ -2661,11 +2768,11 @@ class cross(object):
 
             # assign new bunch time
             nmb = None
-            if u'+' in new_text:	# assume a down time
-                oft = tod.ZERO 
+            if u'+' in new_text:  # assume a down time
+                oft = tod.ZERO
                 if self.winbunch is not None:
                     oft = self.winbunch
-                nmb = tod.mktod(new_text.replace(u'+',''))
+                nmb = tod.mktod(new_text.replace(u'+', ''))
                 if nmb is not None:
                     nmb += oft
             else:
@@ -2675,7 +2782,7 @@ class cross(object):
                 dorecalc = True
         if dorecalc:
             self.recalculate()
-    
+
     def checkplaces(self, rlist='', dnf=True):
         """Check the proposed places against current race model."""
         ret = True
@@ -2707,7 +2814,7 @@ class cross(object):
         """Recalculator, acquires lock and then continues."""
         if not self.recalclock.acquire(False):
             LOG.warn('Recalculate already in progress.')
-            return None	# allow only one entry
+            return None  # allow only one entry
         try:
             self.__recalc()
         finally:
@@ -2715,7 +2822,7 @@ class cross(object):
 
     def get_ridercat(self, bib):
         """Return the primary category for the specified rider."""
-        ret = None	# unknown
+        ret = None  # unknown
         r = self.getrider(bib)
         if r is not None:
             rcat = r[COL_CAT].decode('utf-8').upper().split()
@@ -2737,20 +2844,20 @@ class cross(object):
             for bib in placegroup.split('-'):
                 if self.get_ridercat(bib) == cat:
                     cg.append(bib)
-            if len(cg) > 0:	# >= one cat rider in this group 
+            if len(cg) > 0:  # >= one cat rider in this group
                 pgroups.append(u'-'.join(cg))
 
         #for r in self.result_gen(cat):
-            #if type(r[0]) is not int:
-                #pgroups.append(u'-'.join(ng))
-                #break
-            #if lp != r[0]:	# new place group
-                #if len(ng) > 0:
-                    #pgroups.append(u'-'.join(ng))
-                #ng = []
-            #ng.append(r[1]) # same place group
-            #lp = r[0]
-            
+        #if type(r[0]) is not int:
+        #pgroups.append(u'-'.join(ng))
+        #break
+        #if lp != r[0]:     # new place group
+        #if len(ng) > 0:
+        #pgroups.append(u'-'.join(ng))
+        #ng = []
+        #ng.append(r[1]) # same place group
+        #lp = r[0]
+
         ret = u' '.join(pgroups)
         LOG.debug('Cat ' + repr(cat) + ' finish: ' + repr(ret))
         return ret
@@ -2773,21 +2880,21 @@ class cross(object):
                         idx += 1
                         r[COL_PLACE] = str(curplace)
                     else:
-                        LOG.warn('DNF Rider ' + str(bib)
-                                       + ' in finish places.')
+                        LOG.warn('DNF Rider ' + str(bib) +
+                                 ' in finish places.')
                 else:
                     LOG.warn('Duplicate no. = ' + str(bib) +
-                                   ' in finish places.')
+                             ' in finish places.')
 
     def assign_places(self, contest):
         """Transfer points and bonuses into the named contest."""
         # fetch context meta infos
         src = self.contestmap[contest]['source']
         if src not in RESERVED_SOURCES and src not in self.intermeds:
-            LOG.info('Invalid intermediate source: ' + repr(src)
-                           + ' in contest: ' + repr(contest))
+            LOG.info('Invalid intermediate source: ' + repr(src) +
+                     ' in contest: ' + repr(contest))
             return
-        countbackwinner = False	# for stage finish only track winner in cb
+        countbackwinner = False  # for stage finish only track winner in cb
         category = self.contestmap[contest]['category']
         tally = self.contestmap[contest]['tally']
         bonuses = self.contestmap[contest]['bonuses']
@@ -2803,13 +2910,13 @@ class cross(object):
         placestr = ''
         if src == 'fin':
             placestr = self.places
-            if tally != u'climb':	# really only for sprints/crits
+            if tally != u'climb':  # really only for sprints/crits
                 countbackwinner = True
         elif src == 'reg':
             placestr = self.get_startlist()
         elif src == 'start':
             placestr = self.get_starters()
-        elif src in self.catplaces: # ERROR -> cat climb tally needs type?
+        elif src in self.catplaces:  # ERROR -> cat climb tally needs type?
             placestr = self.get_cat_placesr(self.catplaces[src])
             countbackwinner = True
         else:
@@ -2826,10 +2933,10 @@ class cross(object):
                         self.addrider(bib)
                         r = self.getrider(bib)
                     idx += 1
-                    if allsrc:	# all listed places get same pts/bonus..
+                    if allsrc:  # all listed places get same pts/bonus..
                         if allbonus is not tod.ZERO:
                             if bib in self.bonuses:
-                                self.bonuses[bib] += allbonus 
+                                self.bonuses[bib] += allbonus
                             else:
                                 self.bonuses[bib] = allbonus
                         if tally and tally in self.points and allpts != 0:
@@ -2837,34 +2944,39 @@ class cross(object):
                                 self.points[tally][bib] += allpts
                             else:
                                 self.points[tally][bib] = allpts
-                                self.pointscb[tally][bib] = strops.countback()
+                                self.pointscb[tally][
+                                    bib] = countback.countback()
                             # No countback for all_source entries
-                    else:	# points/bonus as per config
-                        if len(bonuses) >= curplace:	# bonus is vector
+                    else:  # points/bonus as per config
+                        if len(bonuses) >= curplace:  # bonus is vector
                             if bib in self.bonuses:
-                                self.bonuses[bib] += bonuses[curplace-1]
+                                self.bonuses[bib] += bonuses[curplace - 1]
                             else:
-                                self.bonuses[bib] = bonuses[curplace-1]
+                                self.bonuses[bib] = bonuses[curplace - 1]
                         if tally and tally in self.points:
-                            if len(points) >= curplace: # points vector
+                            if len(points) >= curplace:  # points vector
                                 if bib in self.points[tally]:
-                                    self.points[tally][bib] += points[curplace-1]
+                                    self.points[tally][bib] += points[curplace
+                                                                      - 1]
                                 else:
-                                    self.points[tally][bib] = points[curplace-1]
+                                    self.points[tally][bib] = points[curplace -
+                                                                     1]
                             if bib not in self.pointscb[tally]:
-                                self.pointscb[tally][bib] = strops.countback()
-                            if countbackwinner:	# stage finish
-                                if curplace == 1:	# only track winner at finish
+                                self.pointscb[tally][
+                                    bib] = countback.countback()
+                            if countbackwinner:  # stage finish
+                                if curplace == 1:  # only track winner at finish
                                     self.pointscb[tally][bib][0] += 1
-                            else:			# intermediate/other
-                                if tally == u'climb': # climbs countback on category winners only
+                            else:  # intermediate/other
+                                if tally == u'climb':  # climbs countback on category winners only
                                     if curplace == 1:
-                                        self.pointscb[tally][bib][category] += 1
+                                        self.pointscb[tally][bib][
+                                            category] += 1
                                 else:
                                     self.pointscb[tally][bib][curplace] += 1
                 else:
-                    LOG.warn('Duplicate no. = ' + str(bib) + ' in '
-                                    + repr(contest) + ' places.')
+                    LOG.warn('Duplicate no. = ' + str(bib) + ' in ' +
+                             repr(contest) + ' places.')
 
     def __recalc(self):
         """Internal 'protected' recalculate function."""
@@ -2881,12 +2993,14 @@ class cross(object):
         auxtbl = []
         idx = 0
         for r in self.riders:
-            lastpass = tod.ZERO	# earliest?
+            lastpass = tod.ZERO  # earliest?
             if len(r[COL_RFSEEN]) > 0:
                 lastpass = r[COL_RFSEEN][-1]
             # aux cols: ind, bib, in, place, rftime, laps, last passing
-            auxtbl.append([idx, r[COL_BIB], r[COL_INRACE], r[COL_PLACE],
-                           r[COL_RFTIME], r[COL_LAPS], lastpass])
+            auxtbl.append([
+                idx, r[COL_BIB], r[COL_INRACE], r[COL_PLACE], r[COL_RFTIME],
+                r[COL_LAPS], lastpass
+            ])
             idx += 1
         if len(auxtbl) > 1:
             auxtbl.sort(self.sortrough)
@@ -2896,9 +3010,9 @@ class cross(object):
         #            At this point all riders are assumed to be in finish order
         self.maxfinish = tod.ZERO
         racefinish = None
-        ft = None	# the finish or first bunch time
-        lt = None	# the rftime of last competitor across line
-        bt = None	# the 'current' bunch time
+        ft = None  # the finish or first bunch time
+        lt = None  # the rftime of last competitor across line
+        bt = None  # the 'current' bunch time
         if self.start is not None:
             for r in self.riders:
                 lastpass = r[COL_RFTIME]
@@ -2906,18 +3020,18 @@ class cross(object):
                     lastpass = r[COL_RFSEEN][-1]
                 if r[COL_INRACE]:
                     if r[COL_MBUNCH] is not None:
-                        bt = r[COL_MBUNCH]	# override with manual bunch
+                        bt = r[COL_MBUNCH]  # override with manual bunch
                         r[COL_CBUNCH] = bt
                     elif lastpass is not None:
                         # establish elapsed, but allow subsequent override
                         if lastpass > self.maxfinish:
                             self.maxfinish = lastpass
                         et = lastpass - self.start
-    
+
                         # establish bunch time
                         if ft is None and r[COL_RFTIME] is not None:
-                            racefinish = r[COL_RFTIME] # save race finish
-                            ft = et.truncate(0)	# compute first time
+                            racefinish = r[COL_RFTIME]  # save race finish
+                            ft = et.truncate(0)  # compute first time
                             bt = ft
                         else:
                             # bunches are slightly different in 'cross
@@ -2933,9 +3047,10 @@ class cross(object):
                     else:
                         # empty rftime with non-empty rank implies no time gap
                         if r[COL_PLACE] != '':
-                            r[COL_CBUNCH] = bt	# use current bunch time
-                        else: r[COL_CBUNCH] = None
-                
+                            r[COL_CBUNCH] = bt  # use current bunch time
+                        else:
+                            r[COL_CBUNCH] = None
+
         # if racefinish defined, call set finish
         if racefinish:
             self.set_finish(racefinish)
@@ -2946,9 +3061,11 @@ class cross(object):
         idx = 0
         for r in self.riders:
             # aux cols: ind, bib, in, place, vbunch
-            auxtbl.append([idx, r[COL_BIB], r[COL_INRACE], r[COL_PLACE],
-                           self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH]),
-                           r[COL_COMMENT], r[COL_LAPS]])
+            auxtbl.append([
+                idx, r[COL_BIB], r[COL_INRACE], r[COL_PLACE],
+                self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH]), r[COL_COMMENT],
+                r[COL_LAPS]
+            ])
             idx += 1
         if len(auxtbl) > 1:
             auxtbl.sort(self.sortvbunch)
@@ -2982,7 +3099,7 @@ class cross(object):
         else:
             self.racestat = u'prerace'
         LOG.debug(u'Race status: ' + self.racestat)
-        return False	# allow idle add
+        return False  # allow idle add
 
     def new_start_trigger(self, rfid):
         """Collect a RFID trigger signal and apply it to the model."""
@@ -2992,7 +3109,7 @@ class cross(object):
                 st = rfid - et
                 self.set_start(st)
                 self.newstartdlg.response(1)
-                self.newstartdlg = None	# try to ignore the 'up' impulse
+                self.newstartdlg = None  # try to ignore the 'up' impulse
             else:
                 LOG.warn('Invalid elapsed time: Start not updated.')
         return False
@@ -3029,7 +3146,7 @@ class cross(object):
 
         response = dlg.run()
         self.newstartdlg = None
-        if response == 1:       # id 1 set in glade for "Apply"
+        if response == 1:  # id 1 set in glade for "Apply"
             LOG.info('Start time updated: ' + self.start.rawtime(2))
         else:
             LOG.info('Set elapsed time cancelled.')
@@ -3038,8 +3155,8 @@ class cross(object):
 
     def time_context_menu(self, widget, event, data=None):
         """Popup menu for result list."""
-        self.context_menu.popup(None, None, None, event.button,
-                                event.time, selpath)
+        self.context_menu.popup(None, None, None, event.button, event.time,
+                                selpath)
 
     def treerow_selected(self, treeview, path, view_column, data=None):
         """Select row, use to confirm places to."""
@@ -3054,8 +3171,8 @@ class cross(object):
                 path, col, cellx, celly = pathinfo
                 treeview.grab_focus()
                 treeview.set_cursor(path, col, 0)
-                self.context_menu.popup(None, None, None,
-                                        event.button, event.time)
+                self.context_menu.popup(None, None, None, event.button,
+                                        event.time)
                 return True
         return False
 
@@ -3079,18 +3196,13 @@ class cross(object):
                 btx = bt.rawtime()
             if pt:
                 ptx = pt.rawtime()
-            tvec = uiutil.edit_times_dlg(self.meet.window,
-                                         stx, ftx, btx, ptx,
-                                         True, True) # enable bon+pen
+            tvec = uiutil.edit_times_dlg(self.meet.window, stx, ftx, btx, ptx,
+                                         True, True)  # enable bon+pen
             if len(tvec) > 4 and tvec[0] == 1:
-                self.riders.set_value(sel[1], COL_STOFT,
-                                              tod.mktod(tvec[1]))
-                self.riders.set_value(sel[1], COL_RFTIME,
-                                              tod.mktod(tvec[2]))
-                self.riders.set_value(sel[1], COL_BONUS,
-                                              tod.mktod(tvec[3]))
-                self.riders.set_value(sel[1], COL_PENALTY,
-                                              tod.mktod(tvec[4]))
+                self.riders.set_value(sel[1], COL_STOFT, tod.mktod(tvec[1]))
+                self.riders.set_value(sel[1], COL_RFTIME, tod.mktod(tvec[2]))
+                self.riders.set_value(sel[1], COL_BONUS, tod.mktod(tvec[3]))
+                self.riders.set_value(sel[1], COL_PENALTY, tod.mktod(tvec[4]))
                 bib = self.riders.get_value(sel[1], COL_BIB)
                 nst = u'-'
                 st = self.riders.get_value(sel[1], COL_STOFT)
@@ -3100,10 +3212,8 @@ class cross(object):
                 ft = self.riders.get_value(sel[1], COL_RFTIME)
                 if ft:
                     nft = ft.rawtime(2)
-                LOG.info(u'Adjusted rider ' + bib + u' - Start: '
-                  + nst
-                  + u' Raw Finish: '
-                  + nft)
+                LOG.info(u'Adjusted rider ' + bib + u' - Start: ' + nst +
+                         u' Raw Finish: ' + nft)
                 self.recalculate()
 
     def rms_context_clear_activate_cb(self, menuitem, data=None):
@@ -3151,8 +3261,7 @@ class cross(object):
         self.finish = None
         self.maxfinish = None
         self.autoexport = False
-        self.laplength = None
-        self.winbunch = None	# bunch time of winner (overall race time)
+        self.winbunch = None  # bunch time of winner (overall race time)
         self.winopen = True
         self.timerstat = 'idle'
         self.racestat = u'prerace'
@@ -3161,24 +3270,25 @@ class cross(object):
         self.laptimes = []
         self.comment = []
         self.cats = []
-        self.catlaps = {}	# cache of cat lap counts
-        self.catstarts = {}	# cache of cat start times
+        self.catlaps = {}  # cache of cat lap counts
+        self.catstarts = {}  # cache of cat start times
         self.catplaces = {}
         self.autocats = False
         self.bonuses = {}
         self.points = {}
         self.pointscb = {}
-        self.clubmode = False	# auto add starters on passings?
+        self.laplength = None
+        self.clubmode = False
         self.gapthresh = GAPTHRESH
         self.passlabels = {}
 
         # intermediates
-        self.intermeds = []	# sorted list of intermediate keys
-        self.intermap = {}	# map of intermediate keys to results
-        self.contests = []	# sorted list of contests
-        self.contestmap = {}	# map of contest keys
-        self.tallys = []	# sorted list of points tallys
-        self.tallymap = {}	# map of tally keys
+        self.intermeds = []  # sorted list of intermediate keys
+        self.intermap = {}  # map of intermediate keys to results
+        self.contests = []  # sorted list of contests
+        self.contestmap = {}  # map of contest keys
+        self.tallys = []  # sorted list of points tallys
+        self.tallymap = {}  # map of tally keys
 
         # Scratch pad status variables - check if needed?
         self.last_scratch = None
@@ -3191,9 +3301,9 @@ class cross(object):
         self.totlaps = None
         self.lapstart = None
         self.lapfin = None
-        self.lapmap = {}	# temp lap tracker
-        self.minlap = None	# minimum lap/elap time if relevant
- 
+        self.lapmap = {}  # temp lap tracker
+        self.minlap = None  # minimum lap/elap time if relevant
+
         # lap tracking
         self.scratch_map = {}
         self.scratch_ord = []
@@ -3203,44 +3313,26 @@ class cross(object):
         self.newstartent = None
         self.newstartdlg = None
 
-        self.riders = gtk.ListStore(gobject.TYPE_STRING, # BIB = 0
-                                    gobject.TYPE_STRING, # NAMESTR = 1
-                                    gobject.TYPE_STRING, # NAMESTR = 1
-                                    gobject.TYPE_STRING, # CAT = 2
-                                    gobject.TYPE_STRING, # COMMENT = 3
-                                    gobject.TYPE_BOOLEAN, # INRACE = 4
-                                    gobject.TYPE_STRING,  # PLACE = 5
-                                    gobject.TYPE_INT,  # LAP COUNT = 6
-                                    gobject.TYPE_PYOBJECT, # RFTIME = 7
-                                    gobject.TYPE_PYOBJECT, # CBUNCH = 8
-                                    gobject.TYPE_PYOBJECT, # MBUNCH = 9
-                                    gobject.TYPE_PYOBJECT, # STOFT = 10
-                                    gobject.TYPE_PYOBJECT, # BONUS = 11
-                                    gobject.TYPE_PYOBJECT, # PENALTY = 12
-                                    gobject.TYPE_PYOBJECT) # RFSEEN = 13
-        self.undomod = gtk.ListStore(gobject.TYPE_STRING, # BIB = 0
-                                    gobject.TYPE_STRING, # NAMESTR = 1
-                                    gobject.TYPE_STRING, # NAMESTR = 1
-                                    gobject.TYPE_STRING, # CAT = 2
-                                    gobject.TYPE_STRING, # COMMENT = 3
-                                    gobject.TYPE_BOOLEAN, # INRACE = 4
-                                    gobject.TYPE_STRING,  # PLACE = 5
-                                    gobject.TYPE_INT,  # LAP COUNT = 6
-                                    gobject.TYPE_PYOBJECT, # RFTIME = 7
-                                    gobject.TYPE_PYOBJECT, # CBUNCH = 8
-                                    gobject.TYPE_PYOBJECT, # MBUNCH = 9
-                                    gobject.TYPE_PYOBJECT, # STOFT = 10
-                                    gobject.TYPE_PYOBJECT, # BONUS = 11
-                                    gobject.TYPE_PYOBJECT, # PENALTY = 12
-                                    gobject.TYPE_PYOBJECT) # RFSEEN = 13
-        self.canundo = False
-        self.placeundo = None
+        self.riders = gtk.ListStore(
+            gobject.TYPE_STRING,  # BIB = 0
+            gobject.TYPE_STRING,  # NAMESTR = 1
+            gobject.TYPE_STRING,  # NAMESTR = 1
+            gobject.TYPE_STRING,  # CAT = 2
+            gobject.TYPE_STRING,  # COMMENT = 3
+            gobject.TYPE_BOOLEAN,  # INRACE = 4
+            gobject.TYPE_STRING,  # PLACE = 5
+            gobject.TYPE_INT,  # LAP COUNT = 6
+            gobject.TYPE_PYOBJECT,  # RFTIME = 7
+            gobject.TYPE_PYOBJECT,  # CBUNCH = 8
+            gobject.TYPE_PYOBJECT,  # MBUNCH = 9
+            gobject.TYPE_PYOBJECT,  # STOFT = 10
+            gobject.TYPE_PYOBJECT,  # BONUS = 11
+            gobject.TYPE_PYOBJECT,  # PENALTY = 12
+            gobject.TYPE_PYOBJECT)  # RFSEEN = 13
 
-        # !! does this need a builder? perhaps make directly...
         b = gtk.Builder()
         b.add_from_file(os.path.join(metarace.UI_PATH, 'rms.ui'))
 
-        # !! destroy??
         self.frame = b.get_object('race_vbox')
         self.frame.connect('destroy', self.shutdown)
 
@@ -3260,19 +3352,23 @@ class cross(object):
         t.show()
         self.view = t
         uiutil.mkviewcoltxt(t, 'No.', COL_BIB, calign=1.0)
-        uiutil.mkviewcoltxt(t, 'Rider', COL_NAMESTR, expand=True,maxwidth=500)
+        uiutil.mkviewcoltxt(t, 'Rider', COL_NAMESTR, expand=True, maxwidth=500)
         uiutil.mkviewcoltxt(t, 'Cat', COL_CAT)
-        uiutil.mkviewcoltxt(t, 'Com', COL_COMMENT,
-                                cb=self.editcol_cb)
+        uiutil.mkviewcoltxt(t, 'Com', COL_COMMENT, cb=self.editcol_cb)
         uiutil.mkviewcolbool(t, 'In', COL_INRACE, width=50)
-				# too dangerous!
-                                #cb=self.cr_inrace_toggled, width=50)
+        # too dangerous!
+        #cb=self.cr_inrace_toggled, width=50)
         uiutil.mkviewcoltxt(t, 'Lap', COL_LAPS, width=40, cb=self.editlap_cb)
-        uiutil.mkviewcoltod(t, 'Start', cb=self.showstart_cb, width=50,
-                                editcb=self.editstart_cb)
-        uiutil.mkviewcoltod(t, 'Bunch', cb=self.showbunch_cb,
-                                editcb=self.editbunch_cb,
-                                width=50)
+        uiutil.mkviewcoltod(t,
+                            'Start',
+                            cb=self.showstart_cb,
+                            width=50,
+                            editcb=self.editstart_cb)
+        uiutil.mkviewcoltod(t,
+                            'Bunch',
+                            cb=self.showbunch_cb,
+                            editcb=self.editbunch_cb,
+                            width=50)
         uiutil.mkviewcoltxt(t, 'Place', COL_PLACE, calign=0.5, width=50)
         b.get_object('race_result_win').add(t)
         self.context_menu = None

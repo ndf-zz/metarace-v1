@@ -1,4 +1,3 @@
-
 """Rider name database helper object.
 
 This module provides a simple object helper for manipulating the
@@ -25,25 +24,27 @@ COL_FIRST = 1
 COL_LAST = 2
 COL_CLUB = 3
 COL_CAT = 4
-COL_STATE = 5	## origin
+COL_STATE = 5  ## origin
 COL_DOB = 6
 COL_GENDER = 7
-COL_NATION = 8	# UCI Nationality as per 1.1.033
+COL_NATION = 8  # UCI Nationality as per 1.1.033
 COL_EXPIRE = 9
 COL_PARA = 10
-COL_UCI = 11 # UCI ID as string
+COL_UCI = 11  # UCI ID as string
 
-THISYEAR = datetime.date.today().year	# today returns local date
+THISYEAR = datetime.date.today().year  # today returns local date
+
 
 def get_ioc_codes():
     """Load and return a map of IOC codes->Countries."""
     iocmap = {}
-    with open (metarace.default_file(u'IOC_Codes.csv'), 'rb') as f:
+    with open(metarace.default_file(u'IOC_Codes.csv'), 'rb') as f:
         cr = ucsv.UnicodeReader(f)
         for r in cr:
             if len(r) > 1 and u'CODE' not in r[0].upper():
                 iocmap[r[0]] = r[1]
     return iocmap
+
 
 def bgswitch(gender):
     ret = u'B'
@@ -51,7 +52,8 @@ def bgswitch(gender):
         ret = u'G'
     return ret
 
-def dob2lcat(gender,dob,reg=u'opn',para=None,year=None):
+
+def dob2lcat(gender, dob, reg=u'opn', para=None, year=None):
     """Return license category."""
     ty = THISYEAR
     if year is not None:
@@ -59,8 +61,8 @@ def dob2lcat(gender,dob,reg=u'opn',para=None,year=None):
     lcat = u'U/C'
     if u'mas' in reg.lower():
         reg = u'mas'
-    elif reg.lower()==u'n/c':
-        return u'N/C'   # non-racing membership
+    elif reg.lower() == u'n/c':
+        return u'N/C'  # non-racing membership
     else:
         reg = u'opn'
     yob = dob.split(u'-')[0]
@@ -87,7 +89,7 @@ def dob2lcat(gender,dob,reg=u'opn',para=None,year=None):
         elif gender != u'W' and age < 23:
             lcat = gender + u'23'
         else:
-            if reg == u'mas':   # Masters license
+            if reg == u'mas':  # Masters license
                 mcat = u''
                 # determine age cat
                 if age < 35:
@@ -117,8 +119,10 @@ def dob2lcat(gender,dob,reg=u'opn',para=None,year=None):
         lcat = None
     return lcat
 
+
 def search_name(namestr):
-    return namestr.strip().lower().encode(u'ascii',u'ignore')
+    return namestr.strip().lower().encode(u'ascii', u'ignore')
+
 
 class namebank(object):
     """Namebank storage and search module.
@@ -137,6 +141,7 @@ class namebank(object):
     name index).
 
     """
+
     def __init__(self):
         """Constructor."""
         self.__open = False
@@ -146,10 +151,10 @@ class namebank(object):
     def open(self):
         """(Re)Open the namebank database files."""
         self.close()
-        self.__nb = shelve.open(os.path.join(metarace.DEFAULTS_PATH,
-                                             u'namebank'))
-        self.__ind = shelve.open(os.path.join(metarace.DEFAULTS_PATH,
-                                              u'nameindx'))
+        self.__nb = shelve.open(
+            os.path.join(metarace.DEFAULTS_PATH, u'namebank'))
+        self.__ind = shelve.open(
+            os.path.join(metarace.DEFAULTS_PATH, u'nameindx'))
         self.__open = True
 
     def close(self):
@@ -191,7 +196,7 @@ class namebank(object):
 
         return ret
 
-    def search(self, first=u'', last=u'',dob=None):
+    def search(self, first=u'', last=u'', dob=None):
         """Return a set of matching rider ids from the namebank."""
 
         # reformat search strings
@@ -211,16 +216,16 @@ class namebank(object):
                 doc = self.__nb[r][COL_DOB]
                 fn = self.__nb[r][COL_FIRST]
                 if search_name(fn).find(fs) == 0:
-                    fset.add(r)	# mark r in first name set
+                    fset.add(r)  # mark r in first name set
         else:
-            fset = cset		# 'empty' first matches all
+            fset = cset  # 'empty' first matches all
         lset = set()
         if len(last) > 0:
             for r in cset:
                 doc = self.__nb[r][COL_DOB]
                 ln = self.__nb[r][COL_LAST]
                 if search_name(ln).find(ls) == 0:
-                    lset.add(r)	# mark r in last name set
+                    lset.add(r)  # mark r in last name set
         else:
             lset = cset
 
@@ -230,7 +235,7 @@ class namebank(object):
     def __iter__(self):
         """Iterate over all namebank records."""
         for key in self.__nb:
-            yield(self.__nb[key])
+            yield (self.__nb[key])
 
     def __len__(self):
         """Called to implement the built-in function len()."""

@@ -1,4 +1,3 @@
-
 """Event 'database' and utilities."""
 
 import gtk
@@ -11,24 +10,35 @@ import os
 import metarace
 from metarace import uiutil
 from metarace import strops
-from metarace import ucsv	# replace with csv in >= 3
+from metarace import ucsv  # replace with csv in >= 3
 
 LOG = logging.getLogger(u'metarace.eventdb')
 LOG.setLevel(logging.DEBUG)
 
 # Note: These are for the trackmeet module, roadmeet re-defines race types
-defracetypes=[u'sprint', u'keirin',		# sprint types
-	u'flying 200', u'flying lap',		# flying TTs
-	u'indiv tt', u'indiv pursuit',		# timed events
-	u'pursuit race',			# indiv tt with places
-	u'points', u'madison', u'omnium',	# point score types
-	u'classification',			# final classification
-	u'hour',				# UCI hour record
-	u'competition', u'break',		# 
-	u'break',				# break/non-race
-	u'sprint round', u'sprint final',	# special 2-up sprint models
-	u'scratch', u'motorpace', u'handicap',
-	u'elimination', u'race',		# generic races
+defracetypes = [
+    u'sprint',
+    u'keirin',  # sprint types
+    u'flying 200',
+    u'flying lap',  # flying TTs
+    u'indiv tt',
+    u'indiv pursuit',  # timed events
+    u'pursuit race',  # indiv tt with places
+    u'points',
+    u'madison',
+    u'omnium',  # point score types
+    u'classification',  # final classification
+    u'hour',  # UCI hour record
+    u'competition',
+    u'break',  # 
+    u'break',  # break/non-race
+    u'sprint round',
+    u'sprint final',  # special 2-up sprint models
+    u'scratch',
+    u'motorpace',
+    u'handicap',
+    u'elimination',
+    u'race',  # generic races
 ]
 
 # View-Model column constants
@@ -37,91 +47,99 @@ COL_INFO = 1
 COL_TYPE = 2
 
 # default event values (if not empty string)
-EVENT_DEFAULTS = {u'evid':None,	# empty not allowed
-	u'resu':True,
-	u'inde':False,
-	u'prin':False,
-	u'dirt':False,
-	u'plac':None,
-	u'laps':None,
+EVENT_DEFAULTS = {
+    u'evid': None,  # empty not allowed
+    u'resu': True,
+    u'inde': False,
+    u'prin': False,
+    u'dirt': False,
+    u'plac': None,
+    u'laps': None,
 }
 
 # event column heading and key mappings
-EVENT_COLUMNS = {	
-	u'evid':	u"EvID",
-	u'refe':	u"Reference Number",
-	u'pref':	u"Prefix",
-	u'info':	u"Information",
-	u'seri':	u"Series",
-	u'type':	u"Type Handler",
-	u'star':	u"Starters",
-	u'depe':	u"Depends On Events",
-	u'resu':	u"Result Include?",
-	u'inde':	u"Index Include?",
-	u'prin':	u"Printed Program Include?",
-	u'plac':	u"Placeholder Count",
-	u'sess':	u"Session",
-	u'laps':	u"Laps Count",
-	u'dist':	u"Distance String",
-	u'prog':	u"Progression Rules String",
-	u'reco':	u"Record String",
-	u'dirt':	u"Dirty?",
-	u'evov':	u"EVOverride"
+EVENT_COLUMNS = {
+    u'evid': u"EvID",
+    u'refe': u"Reference Number",
+    u'pref': u"Prefix",
+    u'info': u"Information",
+    u'seri': u"Series",
+    u'type': u"Type Handler",
+    u'star': u"Starters",
+    u'depe': u"Depends On Events",
+    u'resu': u"Result Include?",
+    u'inde': u"Index Include?",
+    u'prin': u"Printed Program Include?",
+    u'plac': u"Placeholder Count",
+    u'sess': u"Session",
+    u'laps': u"Laps Count",
+    u'dist': u"Distance String",
+    u'prog': u"Progression Rules String",
+    u'reco': u"Record String",
+    u'dirt': u"Dirty?",
+    u'evov': u"EVOverride"
 }
 # for any non-strings, types as listed
 EVENT_COLUMN_CONVERTERS = {
-	u'resu':strops.confopt_bool,
-	u'inde':strops.confopt_bool,
-	u'prin':strops.confopt_bool,
-	u'dirt':strops.confopt_bool,
-	u'plac':strops.confopt_posint,
-	u'laps':strops.confopt_posint,
+    u'resu': strops.confopt_bool,
+    u'inde': strops.confopt_bool,
+    u'prin': strops.confopt_bool,
+    u'dirt': strops.confopt_bool,
+    u'plac': strops.confopt_posint,
+    u'laps': strops.confopt_posint,
 }
 
 DEFAULT_COLUMN_ORDER = [
-	u'evid', u'refe',
-        u'pref', u'info', u'seri', u'type',
-        u'star', u'depe',
-	u'resu', u'inde', u'prin', u'plac',
-	u'sess', u'laps', u'dist', u'prog', 
-        u'evov', u'reco',
-        u'dirt'
+    u'evid', u'refe', u'pref', u'info', u'seri', u'type', u'star', u'depe',
+    u'resu', u'inde', u'prin', u'plac', u'sess', u'laps', u'dist', u'prog',
+    u'evov', u'reco', u'dirt'
 ]
+
 
 def colkey(colstr=u''):
     return colstr[0:4].lower()
+
 
 def get_header(coldump=DEFAULT_COLUMN_ORDER):
     """Return a header row."""
     return [EVENT_COLUMNS[c] for c in coldump]
 
+
 class event(object):
     """Emulate dict, but use default values."""
+
     def get_row(self, coldump=DEFAULT_COLUMN_ORDER):
         """Return a row ready to export."""
         return [unicode(self[c]) for c in coldump]
+
     def event_info(self):
         """Return a concatenated and stripped event information string."""
-        return u' '.join([self[u'pref'],self[u'info']]).strip()
+        return u' '.join([self[u'pref'], self[u'info']]).strip()
+
     def event_type(self):
         """Return event type string."""
         return self[u'type'].capitalize()
+
     def set_notify(self, callback=None):
         """Set or clear the notify callback for the event."""
         if callback is not None:
             self.__notify = callback
         else:
             self.__notify = self.__def_notify
+
     def get_value(self, key):
         """Alternate value fetch."""
         return self.__getitem__(key)
+
     def set_value(self, key, value):
         """Update a value without triggering notify."""
         key = colkey(key)
         self.__store[key] = value
+
     def notify(self):
         """Forced notify."""
         self.__notify(self.__store[u'evid'])
+
     def __init__(self, evid=None, notify=None, cols={}):
         self.__store = dict(cols)
         self.__notify = self.__def_notify
@@ -129,8 +147,10 @@ class event(object):
             self.__store[u'evid'] = evid
         if notify is not None:
             self.__notify = notify
+
     def __len__(self):
         return len(self.__store)
+
     def __getitem__(self, key):
         """Use a default value id, but don't save it."""
         key = colkey(key)
@@ -140,26 +160,34 @@ class event(object):
             return EVENT_DEFAULTS[key]
         else:
             return u''
+
     def __setitem__(self, key, value):
         key = colkey(key)
         self.__store[key] = value
         self.__notify(self.__store[u'evid'])
+
     def __delitem__(self, key):
         key = colkey(key)
-        del(self.__store[key])
+        del (self.__store[key])
         self.__notify(self.__store[u'evid'])
+
     def __iter__(self):
         return self.__store.iterkeys()
+
     def iterkeys(self):
         return self.__store.iterkeys()
+
     def __contains__(self, item):
         key = colkey(item)
         return key in self.__store
+
     def __def_notify(self, data=None):
         pass
 
+
 class eventdb(object):
     """Event database."""
+
     def add_empty(self, gotorow=False, evno=None):
         """Add a new empty row to the event model."""
         if evno is None:
@@ -167,7 +195,7 @@ class eventdb(object):
         nev = event(evid=evno, notify=self.__notify)
         self.__store[evno] = nev
         self.__index.append(evno)
-        self.__notify(None)	# NOTE: Triggers delete cb on each row!!
+        self.__notify(None)  # NOTE: Triggers delete cb on each row!!
         return nev
 
     def clear(self):
@@ -180,13 +208,13 @@ class eventdb(object):
     def change_evno(self, oldevent, newevent):
         """Attempt to change the event id."""
         if oldevent not in self:
-            LOG.error(u'Unknown old event %r' , oldevent)
+            LOG.error(u'Unknown old event %r', oldevent)
             return False
 
         if newevent in self:
             LOG.error(u'New event %r already exists', newevent)
             return False
- 
+
         oktochg = True
         if self.__evno_change_cb is not None:
             oktochg = self.__evno_change_cb(oldevent, newevent)
@@ -200,7 +228,7 @@ class eventdb(object):
                 cnt += 1
             if cnt < len(self.__index):
                 self.__index[cnt] = newevent
-            del(self.__store[oldevent])
+            del (self.__store[oldevent])
             self.__store[newevent] = ref
             LOG.warning(u'Updated event %r to %r', oldevent, newevent)
             return True
@@ -211,24 +239,24 @@ class eventdb(object):
         evno = newevent[u'evid']
         if evno not in self.__index:
             newevent.set_notify(self.__notify)
-            self.__store[evno]=newevent
+            self.__store[evno] = newevent
             self.__index.append(evno)
         else:
             LOG.warning(u'Duplicate event id %r ignored', evno)
 
     def __loadrow(self, r, colspec):
         nev = event()
-        for i in range(0,len(colspec)):
-            if len(r) > i:	# column data in row
+        for i in range(0, len(colspec)):
+            if len(r) > i:  # column data in row
                 val = r[i].translate(strops.PRINT_UTRANS)
                 key = colspec[i]
                 if key in EVENT_COLUMN_CONVERTERS:
                     val = EVENT_COLUMN_CONVERTERS[key](val)
-                nev[key]=val
+                nev[key] = val
         if u'evid' not in colspec:  # assigned None in init
             evno = self.nextevno()
             LOG.info(u'Event without id assigned %r', evno)
-            nev[u'evid']=evno
+            nev[u'evid'] = evno
         self.add_event(nev)
 
     def load(self, csvfile=None):
@@ -239,10 +267,10 @@ class eventdb(object):
         LOG.debug(u'Loading events from %r', csvfile)
         with open(csvfile, 'rb') as f:
             cr = ucsv.UnicodeReader(f)
-            incols = None	# no header
+            incols = None  # no header
             for r in cr:
-                if len(r) > 0:	# got a data row
-                    if incols is not None:	# already got col header
+                if len(r) > 0:  # got a data row
+                    if incols is not None:  # already got col header
                         self.__loadrow(r, incols)
                     else:
                         # determine input column structure
@@ -251,18 +279,18 @@ class eventdb(object):
                             for col in r:
                                 incols.append(colkey(col))
                         else:
-                            incols = DEFAULT_COLUMN_ORDER # assume full
+                            incols = DEFAULT_COLUMN_ORDER  # assume full
                             self.__loadrow(r, incols)
         self.__notify(None)
 
     def save(self, csvfile=None):
         """Save current model content to supplied CSV file."""
-        if self.view is not None:	# reorder according to view
+        if self.view is not None:  # reorder according to view
             if len(self.__index) == len(self.__viewmodel):
                 newindex = []
                 for r in self.__viewmodel:
                     newindex.append(r[COL_EVNO])
-                self.__index = newindex	# but leave reordering in model!
+                self.__index = newindex  # but leave reordering in model!
             else:
                 LOG.info(u'View out of sync, dumping whole index')
 
@@ -315,17 +343,16 @@ class eventdb(object):
                 sep = u': '
             evno = evt[u'evid']
             msg = (u'Delete event ' + evno + sep + ifstr + u'?')
- 
+
         dlg = gtk.MessageDialog(self.__viewparent,
                                 gtk.DIALOG_DESTROY_WITH_PARENT,
-                                gtk.MESSAGE_QUESTION, 
-                                gtk.BUTTONS_YES_NO, msg)
+                                gtk.MESSAGE_QUESTION, gtk.BUTTONS_YES_NO, msg)
         ret = dlg.run()
         dlg.destroy()
         if ret == gtk.RESPONSE_YES:
             for evt in elist:
                 LOG.debug(u'Deleting event %r', evt)
-                del(self[evt])
+                del (self[evt])
             self.__notify(None)
 
     def set_result_cb(self, cb=None, data=None):
@@ -438,11 +465,11 @@ class eventdb(object):
             ne = uiutil.mktextentry(prompt, rof, tbl)
             ne.set_text(unicode(ref[i]))
             #if i == u'evid':
-                #ne.set_sensitive(False)
+            #ne.set_sensitive(False)
             entmap[i] = ne
             rof += 1
         response = dlg.run()
-        if response == 1:       # id 1 set in glade for "Apply"
+        if response == 1:  # id 1 set in glade for "Apply"
             LOG.info(u'Updating event')
             do_notify = False
 
@@ -454,16 +481,16 @@ class eventdb(object):
 
             for i in DEFAULT_COLUMN_ORDER:
                 if i == u'evid':
-                    continue	# ignore change for now
+                    continue  # ignore change for now
                 nv = entmap[i].get_text().decode('utf-8', 'ignore')
                 if i in EVENT_COLUMN_CONVERTERS:
                     nv = EVENT_COLUMN_CONVERTERS[i](nv)
                 ov = ref[i]
                 if ov != nv:
-                    ref.set_value(i, nv)	# update without notify
+                    ref.set_value(i, nv)  # update without notify
                     do_notify = True
             if do_notify:
-                ref.notify()	# notify here if required
+                ref.notify()  # notify here if required
         else:
             LOG.info(u'Edit event cancelled')
         dlg.destroy()
@@ -498,9 +525,10 @@ class eventdb(object):
     def mkview(self, parentwin=None):
         """Create and return view object for the model."""
         if self.__viewmodel is None:
-            self.__viewmodel = gtk.ListStore(
-                 gobject.TYPE_STRING, gobject.TYPE_STRING, gobject.TYPE_STRING)
-        self.__notify(None)	# trigger reload
+            self.__viewmodel = gtk.ListStore(gobject.TYPE_STRING,
+                                             gobject.TYPE_STRING,
+                                             gobject.TYPE_STRING)
+        self.__notify(None)  # trigger reload
         if self.view is not None:
             return self.view
         self.__viewparent = parentwin
@@ -514,8 +542,7 @@ class eventdb(object):
         uiutil.mkviewcoltxt(v, 'Info', COL_INFO, expand=True)
         uiutil.mkviewcoltxt(v, 'Type', COL_TYPE, expand=True)
         self.view = v
-        self.view.connect('button-press-event',
-                           self.__view_button_cb)
+        self.view.connect('button-press-event', self.__view_button_cb)
         self.mkpopup()
         return self.view
 
@@ -543,9 +570,9 @@ class eventdb(object):
         """Return reference to the row one after current selection."""
         ret = None
         if ref is not None:
-            path = self.__index.index(ref[u'evid'])+1
+            path = self.__index.index(ref[u'evid']) + 1
             if path >= 0 and path < len(self.__index):
-                ret = self[self.__index[path]]	# check reference
+                ret = self[self.__index[path]]  # check reference
                 if self.view:
                     self.__view_gotorow(path)
         return ret
@@ -554,9 +581,9 @@ class eventdb(object):
         """Return reference to the row one after current selection."""
         ret = None
         if ref is not None:
-            path = self.__index.index(ref[u'evid'])-1
+            path = self.__index.index(ref[u'evid']) - 1
             if path >= 0 and path < len(self.__index):
-                ret = self[self.__index[path]]	# check reference
+                ret = self[self.__index[path]]  # check reference
                 if self.view:
                     self.__view_gotorow(path)
         return ret
@@ -568,26 +595,32 @@ class eventdb(object):
 
     def __len__(self):
         return len(self.__store)
+
     def __getitem__(self, key):
         return self.__store[key]
+
     def __setitem__(self, key, value):
-        self.__store[key] = value	# no change to key
+        self.__store[key] = value  # no change to key
         self.__notify(key)
+
     def __delitem__(self, key):
         self.__index.remove(key)
-        del(self.__store[key])
+        del (self.__store[key])
+
     def __iter__(self):
         for r in self.__index:
             yield self.__store[r]
+
     def iterkeys(self):
         return self.__index.__iter__()
+
     def __contains__(self, item):
         return item in self.__store
 
     def __def_notify(self, data=None):
         """Notify view/model of changes in db."""
         if self.__viewmodel is not None:
-            if data is None:	# re-build whole model
+            if data is None:  # re-build whole model
                 self.__repopulate_viewmodel()
             else:
                 try:
@@ -604,7 +637,7 @@ class eventdb(object):
         for e in self.__index:
             nr = [e, self[e].event_info(), self[e].event_type()]
             self.__viewmodel.append(nr)
-    
+
     def __init__(self, racetypes=None):
         """Constructor for the event db."""
         self.__index = []
@@ -627,4 +660,3 @@ class eventdb(object):
             self.racetypes = racetypes
         else:
             self.racetypes = defracetypes
-

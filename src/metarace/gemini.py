@@ -1,4 +1,3 @@
-
 """Gemini (numeric) scoreboard sender.
 
  Output information to a pair of numeric, 9 character Gemini boards.
@@ -73,15 +72,17 @@ TCMDS = (u'EXIT', u'PORT', u'MSG')
 # Character encoding
 ENCODING = u'ascii'
 
+
 class scbport(object):
     """Scoreboard communication port object."""
+
     def __init__(self, port=u'/dev/ttyUSB1'):
         self.__s = serial.Serial(port, 9600, rtscts=0, timeout=0.2)
         self.running = True
 
     def sendall(self, buf):
         """Send all of buf to port."""
-        self.__s.write(buf.encode(ENCODING,u'ignore'))
+        self.__s.write(buf.encode(ENCODING, u'ignore'))
 
     def close(self):
         """Shutdown socket object."""
@@ -91,9 +92,11 @@ class scbport(object):
         except:
             pass
 
+
 GEMHEAD = unichr(unt4.SOH) + unichr(unt4.DC4)
 GEMHOME = unichr(unt4.STX) + unichr(unt4.HOME)
 GEMFOOT = unichr(unt4.EOT)
+
 
 class gemini(threading.Thread):
     """Gemini sender thread."""
@@ -113,17 +116,12 @@ class gemini(threading.Thread):
         msg0 = msg
         if msg1 is None:
             msg1 = msg
-        nmsg = (GEMHEAD		# front straight
-                   + mtype + u'0' + charoff
-                   + GEMHOME
-                   + msg0
-                   + GEMFOOT 
-                   + GEMHEAD		# back straight
-                   + mtype + u'0' + charoff
-                   + GEMHOME
-                   + unichr(unt4.LF)	# line 2
-                   + msg1
-                   + GEMFOOT)
+        nmsg = (
+            GEMHEAD  # front straight
+            + mtype + u'0' + charoff + GEMHOME + msg0 + GEMFOOT +
+            GEMHEAD  # back straight
+            + mtype + u'0' + charoff + GEMHOME + unichr(unt4.LF)  # line 2
+            + msg1 + GEMFOOT)
         if nmsg != self.lmsg:
             self.write(nmsg)
             self.lmsg = nmsg
@@ -138,28 +136,25 @@ class gemini(threading.Thread):
         self.time1 = u''
 
     def show_lap(self):
-        self.lmsg = u''	# always write out lap to allow redraw
+        self.lmsg = u''  # always write out lap to allow redraw
         lstr = strops.truncpad(self.lap, 3, u'r')
-        msg = (lstr + unichr(unt4.STX) + lstr[0:2] + u':' + lstr[2]
-                    + lstr[0] + u':' + lstr[1:3] + u'.  ')
+        msg = (lstr + unichr(unt4.STX) + lstr[0:2] + u':' + lstr[2] + lstr[0] +
+               u':' + lstr[1:3] + u'.  ')
         self.send_msg(msg)
-     
+
     def show_brt(self):
-        msg = (strops.truncpad(self.bib, 3)
-               + unichr(unt4.STX)
-               + strops.truncpad(str(self.rank),1)
-               + u'  '	# the 'h:' padding
-               + self.time.rjust(5))
+        msg = (
+            strops.truncpad(self.bib, 3) + unichr(unt4.STX) +
+            strops.truncpad(str(self.rank), 1) + u'  '  # the 'h:' padding
+            + self.time.rjust(5))
         self.send_msg(msg)
 
     def show_dual(self):
-        line0 = (strops.truncpad(self.bib, 3)
-               + unichr(unt4.STX)
-               + strops.truncpad(self.time, 12, u'r', ellipsis=False))
-        line1 = (strops.truncpad(self.bib1, 3)
-               + unichr(unt4.STX)
-               + strops.truncpad(self.time1, 12, u'r', ellipsis=False))
-        self.send_msg(line0, u'R', u'3', msg1=line1)	# xxx-5:02.6-x
+        line0 = (strops.truncpad(self.bib, 3) + unichr(unt4.STX) +
+                 strops.truncpad(self.time, 12, u'r', ellipsis=False))
+        line1 = (strops.truncpad(self.bib1, 3) + unichr(unt4.STX) +
+                 strops.truncpad(self.time1, 12, u'r', ellipsis=False))
+        self.send_msg(line0, u'R', u'3', msg1=line1)  # xxx-5:02.6-x
 
     def set_rank(self, rank):
         if rank.isdigit() and len(rank) <= 1:
@@ -167,7 +162,7 @@ class gemini(threading.Thread):
         else:
             self.rank = u''
 
-    def set_bib(self, bib, lane=False):	# True/1/something -> lane 1
+    def set_bib(self, bib, lane=False):  # True/1/something -> lane 1
         if lane:
             self.bib1 = bib
         else:
@@ -180,10 +175,11 @@ class gemini(threading.Thread):
             self.time = time
 
     def show_clock(self):
-        msg = (u'   '	# bib padding
-               + unichr(unt4.STX)
-               + strops.truncpad(self.time, 12, u'r', ellipsis=False))
-        self.send_msg(msg, u'R')		# -2:34:56xxxx
+        msg = (
+            u'   '  # bib padding
+            + unichr(unt4.STX) +
+            strops.truncpad(self.time, 12, u'r', ellipsis=False))
+        self.send_msg(msg, u'R')  # -2:34:56xxxx
 
     def rtick(self, ttod, places=3):
         """Convenience wrapper on set time/show runtime."""
@@ -206,14 +202,13 @@ class gemini(threading.Thread):
         self.show_lap()
 
     def show_runtime(self):
-        msg = (strops.truncpad(self.bib, 3)
-               + unichr(unt4.STX)
-               + strops.truncpad(self.time, 12, u'r', ellipsis=False))
-        self.send_msg(msg, u'R', u'2')	# xxx-5:02.6-x
+        msg = (strops.truncpad(self.bib, 3) + unichr(unt4.STX) +
+               strops.truncpad(self.time, 12, u'r', ellipsis=False))
+        self.send_msg(msg, u'R', u'2')  # xxx-5:02.6-x
 
     def __init__(self, port=None):
         """Constructor."""
-        threading.Thread.__init__(self) 
+        threading.Thread.__init__(self)
         self.name = u'gemini'
         self.port = None
         self.ignore = False
@@ -250,7 +245,7 @@ class gemini(threading.Thread):
                 self.queue.get_nowait()
                 self.queue.task_done()
         except Queue.Empty:
-            pass 
+            pass
         self.queue.put_nowait((u'PORT', port))
 
     def set_ignore(self, ignval=False):

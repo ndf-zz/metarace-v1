@@ -1,4 +1,3 @@
-
 """Time of Day types and functions.
 
 Time of Day (tod) records are used to compute net times,
@@ -47,17 +46,21 @@ QUANT_3PLACES = decimal.Decimal(u'0.001')
 QUANT_2PLACES = decimal.Decimal(u'0.01')
 QUANT_1PLACE = decimal.Decimal(u'0.1')
 QUANT_0PLACES = decimal.Decimal(u'1')
-QUANT = [QUANT_0PLACES, QUANT_1PLACE, QUANT_2PLACES,
-         QUANT_3PLACES, QUANT_4PLACES, QUANT_5PLACES]
+QUANT = [
+    QUANT_0PLACES, QUANT_1PLACE, QUANT_2PLACES, QUANT_3PLACES, QUANT_4PLACES,
+    QUANT_5PLACES
+]
 QUANT_FW = [2, 4, 5, 6, 7, 8]
 QUANT_TWID = [8, 10, 11, 12, 13, 14]
 QUANT_PAD = [u'     ', u'   ', u'  ', u' ', u'', u'']
 QUANT_OPAD = [u'    ', u'  ', u' ', u'', u'', u'']
 MILL = decimal.Decimal(1000000)
 
+
 def now(index=u'', chan=u'CLK', refid=u'', source=u'host'):
     """Return a tod set to the current local time."""
     return tod(_now2dec(), index, chan, refid, source)
+
 
 def mkagg(timeval=u''):
     """Return agg for given timeval or None."""
@@ -66,9 +69,9 @@ def mkagg(timeval=u''):
         try:
             ret = agg(timeval)
         except Exception as e:
-            LOG.debug(u'mkagg() %s: %s', 
-                      e.__class__.__name__, e)
+            LOG.debug(u'mkagg() %s: %s', e.__class__.__name__, e)
     return ret
+
 
 def mktod(timeval=u''):
     """Return tod for given timeval or None."""
@@ -77,27 +80,29 @@ def mktod(timeval=u''):
         try:
             ret = tod(timeval)
         except Exception as e:
-            LOG.debug(u'mktod() %s: %s', 
-                      e.__class__.__name__, e)
+            LOG.debug(u'mktod() %s: %s', e.__class__.__name__, e)
     return ret
+
 
 def _now2dec():
     """Create a decimal timevalue for the current local time."""
     dv = datetime.now()
-    ret = (dv.microsecond/MILL).quantize(QUANT_4PLACES)
+    ret = (dv.microsecond / MILL).quantize(QUANT_4PLACES)
     ret += 3600 * dv.hour + 60 * dv.minute + dv.second
     return ret
-    
+
+
 def _dec2hm(dectod=None):
     """Return truncated time string in hours and minutes."""
     strtod = None
     if dectod is not None:
-        if dectod >= 3600:	# 'HH:MM'
-            strtod = u'{0}:{1:02}'.format(int(dectod)//3600,
-                (int(dectod)%3600)//60)
-        else:			# 'M'
-            strtod = u'{0}'.format(int(dectod)//60)
+        if dectod >= 3600:  # 'HH:MM'
+            strtod = u'{0}:{1:02}'.format(
+                int(dectod) // 3600, (int(dectod) % 3600) // 60)
+        else:  # 'M'
+            strtod = u'{0}'.format(int(dectod) // 60)
     return strtod
+
 
 def _dec2str(dectod=None, places=4, zeros=False, hoursep=u'h', minsep=u':'):
     """Return formatted string for given tod decimal value.
@@ -116,26 +121,22 @@ def _dec2str(dectod=None, places=4, zeros=False, hoursep=u'h', minsep=u':'):
         if dv < 0:
             dv = dv.copy_negate()
             sign = u'-'
-        if zeros or dv >= 3600:	# '-HhMM:SS.dcmz'
+        if zeros or dv >= 3600:  # '-HhMM:SS.dcmz'
             fmt = u'{0}{1}{2}{3:02}{4}{5:0{6}}'
-            if zeros:	# '-00h00:0S.dcmz'
+            if zeros:  # '-00h00:0S.dcmz'
                 fmt = u'{0}{1:02}{2}{3:02}{4}{5:0{6}}'
             strtod = fmt.format(sign,
-                                int(dv)//3600,
-                                hoursep,
-                                (int(dv)%3600)//60,
-                                minsep,
-                                dv%60,
+                                int(dv) // 3600, hoursep,
+                                (int(dv) % 3600) // 60, minsep, dv % 60,
                                 QUANT_FW[places])
-        elif dv >= 60:	# '-M:SS.dcmz'
+        elif dv >= 60:  # '-M:SS.dcmz'
             strtod = u'{0}{1}{2}{3:0{4}}'.format(sign,
-                         int(dv)//60,
-                         minsep,
-                         dv%60,
-                         QUANT_FW[places])
-        else: 		# '-S.dcmz'
+                                                 int(dv) // 60, minsep,
+                                                 dv % 60, QUANT_FW[places])
+        else:  # '-S.dcmz'
             strtod = u'{0}{1}'.format(sign, dv)
     return strtod
+
 
 def _str2dec(timestr=u''):
     """Return decimal for given string.
@@ -147,24 +148,27 @@ def _str2dec(timestr=u''):
     	-H:MM'SS"dcmz		Chronelec
     	-H-MM-SS.dcmz		Keypad entry
     """
-    dectod=None
-    timestr=timestr.strip()	# assumes string
+    dectod = None
+    timestr = timestr.strip()  # assumes string
     if timestr == u'now':
         dectod = _now2dec()
     else:
-        m = re.match(r'^(-?)(?:(?:(\d+)[h:-])?(\d{1,2})[:\'-])?(\d{1,2}(?:[\.\"]\d+)?)$',
-                     timestr, flags=re.UNICODE)
+        m = re.match(
+            r'^(-?)(?:(?:(\d+)[h:-])?(\d{1,2})[:\'-])?(\d{1,2}(?:[\.\"]\d+)?)$',
+            timestr,
+            flags=re.UNICODE)
         if m is not None:
             dectod = decimal.Decimal(m.group(4).replace(u'"', u'.'))
             dectod += decimal.Decimal(m.group(3) or 0) * 60
             dectod += decimal.Decimal(m.group(2) or 0) * 3600
-            if m.group(1):	# negative sign
+            if m.group(1):  # negative sign
                 dectod = dectod.copy_negate()
         else:
             dectod = decimal.Decimal(timestr)
-            LOG.debug(u'_str2dec() Decimal conversion %s => %s',
-                      timestr, dectod)
+            LOG.debug(u'_str2dec() Decimal conversion %s => %s', timestr,
+                      dectod)
     return dectod
+
 
 def _tv2dec(timeval):
     """Convert the provided value into a decimal timeval for tod/agg."""
@@ -183,10 +187,16 @@ def _tv2dec(timeval):
         ret = decimal.Decimal(timeval)
     return ret
 
+
 class tod(object):
     """A class for representing time of day, net time and RFID events."""
-    def __init__(self, timeval=0, index=u'', chan=u'TOD',
-                       refid=u'', source=u'host'):
+
+    def __init__(self,
+                 timeval=0,
+                 index=u'',
+                 chan=u'TOD',
+                 refid=u'',
+                 source=u'host'):
         self.index = index
         self.chan = chan
         self.refid = refid
@@ -202,24 +212,28 @@ class tod(object):
     def __unicode__(self):
         """Return a normalised tod string."""
         return u'{0: >5} {1: <3} {2} {3} {4}'.format(self.index, self.chan,
-                self.timestr(4), self.refid, self.source)
+                                                     self.timestr(4),
+                                                     self.refid, self.source)
 
     def __repr__(self):
         """Return object representation string."""
         return "{5}({0}, {1}, {2}, {3}, {4})".format(repr(self.timeval),
-                   repr(self.index), repr(self.chan),
-                   repr(self.refid), repr(self.source),
-                   self.__class__.__name__)
+                                                     repr(self.index),
+                                                     repr(self.chan),
+                                                     repr(self.refid),
+                                                     repr(self.source),
+                                                     self.__class__.__name__)
 
     def truncate(self, places=4):
         """Return a new truncated time value."""
-        return self.__class__(timeval=self.timeval.quantize(QUANT[places],
-                rounding=decimal.ROUND_FLOOR), chan=u'TRUNC')
+        return self.__class__(timeval=self.timeval.quantize(
+            QUANT[places], rounding=decimal.ROUND_FLOOR),
+                              chan=u'TRUNC')
 
     def as_hours(self, places=0):
         """Return decimal value in hours, truncated to the desired places."""
         return (self.timeval / 3600).quantize(QUANT[places],
-                                            rounding=decimal.ROUND_FLOOR)
+                                              rounding=decimal.ROUND_FLOOR)
 
     def as_minutes(self, places=0):
         """Return decimal value in minutes, truncated to the desired places."""
@@ -233,16 +247,16 @@ class tod(object):
 
     def timestr(self, places=4, zeros=False, hoursep=u'h', minsep=u':'):
         """Return time string component of the tod, whitespace padded."""
-        return u'{0: >{1}}{2}'.format(_dec2str(self.timeval, places, zeros,
-                                             hoursep, minsep),
+        return u'{0: >{1}}{2}'.format(
+            _dec2str(self.timeval, places, zeros, hoursep, minsep),
             QUANT_TWID[places], QUANT_PAD[places])
 
     def omstr(self, places=3, zeros=False, hoursep=u':', minsep=u':'):
         """Return a 12 digit 'omega' style time string."""
         if places > 3:
-            places = 3		# Hack to clamp to 12 dig
-        return u'{0: >{1}}{2}'.format(_dec2str(self.timeval, places, zeros,
-                                             hoursep, minsep),
+            places = 3  # Hack to clamp to 12 dig
+        return u'{0: >{1}}{2}'.format(
+            _dec2str(self.timeval, places, zeros, hoursep, minsep),
             QUANT_TWID[places], QUANT_OPAD[places])
 
     def meridiem(self, mstr=None, secs=True):
@@ -262,7 +276,7 @@ class tod(object):
         if mstr is not None:
             med = mstr
         tv = tv % 43200
-        if tv < 3600: # 12am/12pm
+        if tv < 3600:  # 12am/12pm
             tv += 43200
         if secs:
             ret = _dec2str(tv, 0, hoursep=u':', minsep=u':') + med
@@ -324,7 +338,7 @@ class tod(object):
 
     def __sub__(self, other):
         """Compute time of day subtraction and return a NET tod object."""
-        if type(other) is not tod: # Subclass must override this method
+        if type(other) is not tod:  # Subclass must override this method
             return NotImplemented
         if self.timeval >= other.timeval:
             oft = self.timeval - other.timeval
@@ -334,9 +348,9 @@ class tod(object):
 
     def __add__(self, other):
         """Compute time of day addition and return a new tod object."""
-        if type(other) is not tod: # Subclass must override this method
+        if type(other) is not tod:  # Subclass must override this method
             return NotImplemented
-        return tod(timeval=(self.timeval + other.timeval)%86400, chan=u'SUM')
+        return tod(timeval=(self.timeval + other.timeval) % 86400, chan=u'SUM')
 
     def __pos__(self):
         """Unary + operation."""
@@ -346,10 +360,16 @@ class tod(object):
         """Unary absolute value."""
         return self.__class__(self.timeval.copy_abs(), chan=u'ABS')
 
+
 class agg(tod):
     """Aggregate time type."""
-    def __init__(self, timeval=0, index=u'', chan=u'AGG',
-                       refid=u'', source=u'host'):
+
+    def __init__(self,
+                 timeval=0,
+                 index=u'',
+                 chan=u'AGG',
+                 refid=u'',
+                 source=u'host'):
         self.index = index
         self.chan = chan
         self.refid = refid
@@ -359,18 +379,18 @@ class agg(tod):
     def __add__(self, other):
         """Compute addition and return aggregate."""
         if isinstance(other, tod):
-            return agg(timeval=self.timeval+other.timeval, chan=u'AGG')
+            return agg(timeval=self.timeval + other.timeval, chan=u'AGG')
         elif isinstance(other, (int, decimal.Decimal)):
-            return agg(timeval=self.timeval+other, chan=u'AGG')
+            return agg(timeval=self.timeval + other, chan=u'AGG')
         else:
             return NotImplemented
 
     def __sub__(self, other):
         """Compute subtraction and return aggregate."""
         if isinstance(other, tod):
-            return agg(timeval=self.timeval-other.timeval, chan=u'AGG')
+            return agg(timeval=self.timeval - other.timeval, chan=u'AGG')
         elif isinstance(other, (int, decimal.Decimal)):
-            return agg(timeval=self.timeval-other, chan=u'AGG')
+            return agg(timeval=self.timeval - other, chan=u'AGG')
         else:
             return NotImplemented
 
@@ -378,27 +398,28 @@ class agg(tod):
         """Unary - operation."""
         return self.__class__(self.timeval.copy_negate(), chan=u'AGG')
 
+
 # TOD 'constants'
 ZERO = tod()
 ONE = tod(u'1.0')
 MINUTE = tod(u'1:00')
-MAX = tod(u'23h59:59.9999')	# largest val possible for tod
-MAXELAP = tod(u'23h30:00')	# max displayed elapsed time
+MAX = tod(u'23h59:59.9999')  # largest val possible for tod
+MAXELAP = tod(u'23h30:00')  # max displayed elapsed time
 
 # Fake times for special cases
 # these are unused tods that sort correctly when compared
 FAKETIMES = {
- u'catch':tod(ZERO, chan=u'catch'),
- u'w/o':tod(ZERO, chan=u'w/o'),
- u'max':tod(MAX, chan=u'max'),
- u'ntr':tod(MAX, chan=u'ntr'),
- u'caught':tod(MAX, chan=u'caught'),
- u'rel':tod(MAX, chan=u'rel'),
- u'abort':tod(MAX, chan=u'abort'),
- u'otl':tod(MAX, chan=u'otl'),
- u'dnf':tod(MAX, chan=u'dnf'),
- u'dns':tod(MAX, chan=u'dns'),
- u'dsq':tod(MAX, chan=u'dsq'),
+    u'catch': tod(ZERO, chan=u'catch'),
+    u'w/o': tod(ZERO, chan=u'w/o'),
+    u'max': tod(MAX, chan=u'max'),
+    u'ntr': tod(MAX, chan=u'ntr'),
+    u'caught': tod(MAX, chan=u'caught'),
+    u'rel': tod(MAX, chan=u'rel'),
+    u'abort': tod(MAX, chan=u'abort'),
+    u'otl': tod(MAX, chan=u'otl'),
+    u'dnf': tod(MAX, chan=u'dnf'),
+    u'dns': tod(MAX, chan=u'dns'),
+    u'dsq': tod(MAX, chan=u'dsq'),
 }
 extra = decimal.Decimal(u'0.00001')
 cof = decimal.Decimal(u'0.00001')
@@ -406,8 +427,10 @@ for c in [u'ntr', u'caught', u'rel', u'abort', u'otl', u'dnf', u'dns', u'dsq']:
     FAKETIMES[c].timeval += cof
     cof += extra
 
+
 class todlist(object):
     """ToD list helper class for managing splits and ranks."""
+
     def __init__(self, lbl=u''):
         self.__label = lbl
         self.__store = []
@@ -441,7 +464,6 @@ class todlist(object):
             lsec = lt[1]
             count += 1
         return ret
-
         """Return current 0-based rank for given bib."""
         ret = None
         i = 0
@@ -466,7 +488,7 @@ class todlist(object):
         i = 0
         while i < len(self.__store):
             if (self.__store[i][0].refid == bib
-                  and self.__store[i][0].index == series):
+                    and self.__store[i][0].index == series):
                 del self.__store[i]
             else:
                 i += 1
@@ -476,9 +498,9 @@ class todlist(object):
         """Insert primary tod and secondary tod into ordered list."""
         ret = None
         trunc = True
-        if pri in FAKETIMES: # re-assign a coded 'finish'
+        if pri in FAKETIMES:  # re-assign a coded 'finish'
             pri = FAKETIMES[pri]
-            trunc = False	# retain precision for primary comparison
+            trunc = False  # retain precision for primary comparison
 
         if isinstance(pri, tod):
             if bib is None:
@@ -488,20 +510,18 @@ class todlist(object):
             if trunc:
                 pri = pri.truncate(prec)
                 sec = sec.truncate(prec)
-            rt0 = tod(pri, chan=self.__label,
-                       refid=bib, index=series)
-            rt1 = tod(sec, chan=self.__label,
-                       refid=bib, index=series)
+            rt0 = tod(pri, chan=self.__label, refid=bib, index=series)
+            rt1 = tod(sec, chan=self.__label, refid=bib, index=series)
             last = None
             i = 0
             found = False
             for lt in self.__store:
-                if rt0 < lt[0]:	# primary time is faster, insert ok
+                if rt0 < lt[0]:  # primary time is faster, insert ok
                     self.__store.insert(i, [rt0, rt1])
                     found = True
                     break
-                elif rt0 == lt[0]: # primary same, compare on secondary
-                    if rt1 < lt[1]: # secondary time faster - insert ok
+                elif rt0 == lt[0]:  # primary same, compare on secondary
+                    if rt1 < lt[1]:  # secondary time faster - insert ok
                         self.__store.insert(i, [rt0, rt1])
                         found = True
                         break

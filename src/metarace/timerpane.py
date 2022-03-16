@@ -1,4 +1,3 @@
-
 """Lane timer module."""
 
 import gtk
@@ -13,21 +12,23 @@ LOG = logging.getLogger(u'metarace.timerpane')
 LOG.setLevel(logging.DEBUG)
 
 FIELDWIDTH = u'00h00:00.0000'
-ARMTEXT =    u'       0.0   '
+ARMTEXT = u'       0.0   '
+
 
 class timerpane(object):
+
     def setrider(self, bib=None, ser=None):
         """Set bib for timer."""
         if bib is not None:
             self.bibent.set_text(bib)
             if ser is not None:
                 self.serent.set_text(ser)
-            self.bibent.activate()	# and chain events
+            self.bibent.activate()  # and chain events
 
     def grab_focus(self, data=None):
         """Steal focus into bib entry."""
         self.bibent.grab_focus()
-        return False	# allow addition to idle_add or delay
+        return False  # allow addition to idle_add or delay
 
     def getrider(self):
         """Return bib loaded into timer."""
@@ -74,16 +75,16 @@ class timerpane(object):
             if split >= 0 and split < len(self.splitlbls):
                 self.split = split
             else:
-                LOG.warning(u'Requested split %r not in range %r', 
-                              split, self.splitlbls)
+                LOG.warning(u'Requested split %r not in range %r', split,
+                            self.splitlbls)
         elif isinstance(split, basestring):
             if split in self.splitlbls:
                 self.split = self.splitlbls.index(split)
             else:
-                LOG.warning(u'Requested split %r not found %r', 
-                              split, self.splitlbls)
+                LOG.warning(u'Requested split %r not found %r', split,
+                            self.splitlbls)
         else:
-            self.split = -1	# disable label
+            self.split = -1  # disable label
 
         # update label to match current split
         if self.split >= 0 and self.split < len(self.splitlbls):
@@ -93,7 +94,7 @@ class timerpane(object):
 
     def on_halflap(self):
         """Return true is current split pointer is a half-lap."""
-        return self.split%2 == 0
+        return self.split % 2 == 0
 
     def lap_up(self):
         """Increment the split point to the next whole lap."""
@@ -127,10 +128,10 @@ class timerpane(object):
         if inter >= 0 and inter < len(self.splitlbls):
             ret = self.splitlbls[inter]
         return ret
-        
+
     def intermed(self, inttod, recov=4):
         """Trigger an intermediate time."""
-        nt = inttod-self.starttod
+        nt = inttod - self.starttod
         if self.on_halflap():
             # reduce recover time on half laps
             recov = 2
@@ -144,7 +145,7 @@ class timerpane(object):
 
     def difftime(self, dt):
         """Overwrite split time with a difference time."""
-        dstr = (u'+'+dt.rawtime(2)+u' ').rjust(12)
+        dstr = (u'+' + dt.rawtime(2) + u' ').rjust(12)
         self.set_time(dstr)
 
     def getsplit(self, inter):
@@ -162,7 +163,7 @@ class timerpane(object):
         #       a dummy sid for event distance
         self.finishtod = fintod
         self.ls.set_text(u'Finish')
-        self.set_time((self.finishtod-self.starttod).timestr(3))
+        self.set_time((self.finishtod - self.starttod).timestr(3))
         self.tofinish()
 
     def tofinish(self, status=u'finish'):
@@ -191,13 +192,13 @@ class timerpane(object):
         """Trigger start on timer."""
         self.starttod = starttod
         self.set_split(0)
-	self.torunning()
+        self.torunning()
 
     def toload(self, bib=None):
         """Load timer."""
         self.status = u'load'
         self.starttod = None
-        self.recovtod = tod.tod(0)	# timeval is manipulated
+        self.recovtod = tod.tod(0)  # timeval is manipulated
         self.finishtod = None
         self.set_time()
         self.splits = {}
@@ -205,12 +206,12 @@ class timerpane(object):
         if bib is not None:
             self.setrider(bib)
         self.b.buttonchg(uiutil.bg_none, u'Ready')
-     
+
     def toarmstart(self):
         """Set state to armstart."""
-	self.status = u'armstart'
+        self.status = u'armstart'
         self.set_split()
-	self.set_time(ARMTEXT)
+        self.set_time(ARMTEXT)
         self.b.buttonchg(uiutil.bg_armstart, u'Start Armed')
 
     def disable(self):
@@ -234,8 +235,8 @@ class timerpane(object):
         self.starttod = None
         self.recovtod = tod.tod(0)
         self.finishtod = None
-	self.split = -1		# next expected passing
-        self.splits = {}	# map of split ids to split data
+        self.split = -1  # next expected passing
+        self.splits = {}  # map of split ids to split data
         self.set_split()
         self.set_time()
         self.b.buttonchg(uiutil.bg_none, u'Idle')
@@ -253,7 +254,7 @@ class timerpane(object):
 
         # Bib and name label
         h = gtk.HBox(False, 5)
-	l = gtk.Label(u'Rider #:')
+        l = gtk.Label(u'Rider #:')
         l.show()
         h.pack_start(l, False)
         self.bibent = gtk.Entry(6)
@@ -298,6 +299,5 @@ class timerpane(object):
         v.show()
         s.add(v)
         self.frame = s
-	self.splitlbls = []	# ordered set of split ids
+        self.splitlbls = []  # ordered set of split ids
         self.toidle()
-

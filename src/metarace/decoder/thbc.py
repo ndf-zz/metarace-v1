@@ -1,4 +1,3 @@
-
 """Tag Heuer/Chronelec Decoder Interface."""
 
 # For connections to multiple decoders, use thcbhub
@@ -28,12 +27,12 @@ STOPCMD = ESCAPE + b'\x13\x5c'
 REPEATCMD = ESCAPE + b'\x12'
 ACKCMD = ESCAPE + b'\x11'
 
-STATCMD = ESCAPE + b'\x05'	# fetch status
-CHKCMD = ESCAPE + b'\x06'	# UNKNOWN
-STARTCMD = ESCAPE + b'\x07'	# start decoder
-SETCMD = ESCAPE + b'\x08'	# set configuration
-IPCMD = ESCAPE + b'\x09'	# set IP configuration
-QUECMD = ESCAPE + b'\x10'	# fetch configuration
+STATCMD = ESCAPE + b'\x05'  # fetch status
+CHKCMD = ESCAPE + b'\x06'  # UNKNOWN
+STARTCMD = ESCAPE + b'\x07'  # start decoder
+SETCMD = ESCAPE + b'\x08'  # set configuration
+IPCMD = ESCAPE + b'\x09'  # set IP configuration
+QUECMD = ESCAPE + b'\x10'  # fetch configuration
 
 STALVL = ESCAPE + b'\x1e'
 BOXLVL = ESCAPE + b'\x1f'
@@ -70,40 +69,44 @@ CONFIG_TONE_BXX = 23
 CONFIG_ACTIVE_LOOP = 14
 CONFIG_SPARE = 25
 CONFIG_FLAGS = {
-	CONFIG_TOD: u'Time of Day',
-	CONFIG_GPS: u'GPS Sync',
-	CONFIG_TZ_HOUR: u'Timezone Hour',
-	CONFIG_TZ_MIN: u'Timezone Min',
-	CONFIG_485: u'Distant rs485',
-	CONFIG_FIBRE: u'Distant Fibre',
-	CONFIG_PRINT: u'Serial Print',
-	CONFIG_MAX: u'Detect Max',
-	CONFIG_PROT: u'Protocol',
-	CONFIG_PULSE: u'Sync Pulse',
-	CONFIG_PULSEINT: u'Sync Interval',
-	CONFIG_CELLSYNC: u'CELL Sync',
-	CONFIG_CELLTOD_HOUR: u'CELL Sync Hour',
-	CONFIG_CELLTOD_MIN: u'CELL Sync Min',
-        CONFIG_TONE_STA: u'STA Tone',
-        CONFIG_TONE_BOX: u'BOX Tone',
-        CONFIG_TONE_MAN: u'MAN Tone',
-        CONFIG_TONE_CEL: u'CEL Tone',
-        CONFIG_TONE_BXX: u'BXX Tone',
-        CONFIG_ACTIVE_LOOP: u'Active Loop',
-        CONFIG_SPARE: u'[spare]'
+    CONFIG_TOD: u'Time of Day',
+    CONFIG_GPS: u'GPS Sync',
+    CONFIG_TZ_HOUR: u'Timezone Hour',
+    CONFIG_TZ_MIN: u'Timezone Min',
+    CONFIG_485: u'Distant rs485',
+    CONFIG_FIBRE: u'Distant Fibre',
+    CONFIG_PRINT: u'Serial Print',
+    CONFIG_MAX: u'Detect Max',
+    CONFIG_PROT: u'Protocol',
+    CONFIG_PULSE: u'Sync Pulse',
+    CONFIG_PULSEINT: u'Sync Interval',
+    CONFIG_CELLSYNC: u'CELL Sync',
+    CONFIG_CELLTOD_HOUR: u'CELL Sync Hour',
+    CONFIG_CELLTOD_MIN: u'CELL Sync Min',
+    CONFIG_TONE_STA: u'STA Tone',
+    CONFIG_TONE_BOX: u'BOX Tone',
+    CONFIG_TONE_MAN: u'MAN Tone',
+    CONFIG_TONE_CEL: u'CEL Tone',
+    CONFIG_TONE_BXX: u'BXX Tone',
+    CONFIG_ACTIVE_LOOP: u'Active Loop',
+    CONFIG_SPARE: u'[spare]'
 }
 DEFAULT_IPCFG = {
-  u'IP':u'192.168.0.10',
-  u'Netmask':u'255.255.255.0',
-  u'Gateway':u'0.0.0.0',
-  u'Host':u'192.168.0.255'	# default is broadcast :/
+    u'IP': u'192.168.0.10',
+    u'Netmask': u'255.255.255.0',
+    u'Gateway': u'0.0.0.0',
+    u'Host': u'192.168.0.255'  # default is broadcast :/
 }
 DEFPORT = u'/dev/ttyS0'
 
 # Initialise crc algorithm for CRC-16/MCRF4XX
-crc_alg = crc_algorithms.Crc(width=16, poly=0x1021,
-                              reflect_in=True, xor_in=0xffff,
-                              reflect_out=True, xor_out=0x0000)
+crc_alg = crc_algorithms.Crc(width=16,
+                             poly=0x1021,
+                             reflect_in=True,
+                             xor_in=0xffff,
+                             reflect_out=True,
+                             xor_out=0x0000)
+
 
 def thbc_sum(msgstr=b''):
     """Return sum of character values as decimal string."""
@@ -113,33 +116,38 @@ def thbc_sum(msgstr=b''):
         #ret = ret + ch	# py3
     return '{0:04d}'.format(ret)
 
+
 def thbc_crc(msgstr='123456789'):
     """Return CRC-16/MCRF4XX on input string."""
     return crc_alg.table_driven(msgstr)
 
+
 def val2hexval(val):
     """Convert int to decimal digit equivalent hex byte."""
     ret = 0x00
-    ret |= ((val//10)&0x0f)<<4	# msd	97 -> 0x90
-    ret |= (val%10)&0x0f	# lsd   97 -> 0x07
+    ret |= ((val // 10) & 0x0f) << 4  # msd	97 -> 0x90
+    ret |= (val % 10) & 0x0f  # lsd   97 -> 0x07
     return ret
+
 
 def hexval2val(hexval):
     """Unconvert a decimal digit equivalent hex byte to int."""
-    ret = 10*(hexval>>4)	# tens 0x97 -> 90
-    ret += hexval&0x0f		# ones 0x97 ->  7
+    ret = 10 * (hexval >> 4)  # tens 0x97 -> 90
+    ret += hexval & 0x0f  # ones 0x97 ->  7
     return ret
+
 
 class thbc(decoder):
     """Tag Heuer / Chronelec thread object class."""
+
     def __init__(self):
         decoder.__init__(self)
-        self.unitno = u''		# fetched on reload
-        self._decoderconfig = {}	# fetched on reload
-        self._decoderipconfig = {}	# fetched on reload
+        self.unitno = u''  # fetched on reload
+        self._decoderconfig = {}  # fetched on reload
+        self._decoderipconfig = {}  # fetched on reload
         self._io = None
         self._cksumerr = 0
-        self._rdbuf = b''		# bytestring read buffer
+        self._rdbuf = b''  # bytestring read buffer
 
     # API overrides
     def status(self):
@@ -207,7 +215,7 @@ class thbc(decoder):
 
     def _ipcfg(self, data=None):
         """Alter the attached decoder's IP address."""
-        ipcfg = sysconf.get(u'thbc',u'ipconfig')
+        ipcfg = sysconf.get(u'thbc', u'ipconfig')
         cmd = b'\x09\x09'
         for i in [u'IP', u'Netmask', u'Gateway', u'Host']:
             if i not in ipcfg:
@@ -219,9 +227,9 @@ class thbc(decoder):
     def _sane(self, data=None):
         """Check decoder config against system settings."""
         doconf = False
-        if self.unitno:	# set if config message parsed ok
-            if sysconf.has_option(u'thbc',u'decoderconfig'):
-                oconf = sysconf.get(u'thbc',u'decoderconfig')
+        if self.unitno:  # set if config message parsed ok
+            if sysconf.has_option(u'thbc', u'decoderconfig'):
+                oconf = sysconf.get(u'thbc', u'decoderconfig')
                 for flag in self._decoderconfig:
                     key = CONFIG_FLAGS[flag]
                     if key in oconf:
@@ -236,40 +244,46 @@ class thbc(decoder):
             self._set_config()
 
         # force decoder levels
-        if sysconf.has_option(u'thbc',u'levels'):
-            lvl = sysconf.get(u'thbc',u'levels')
+        if sysconf.has_option(u'thbc', u'levels'):
+            lvl = sysconf.get(u'thbc', u'levels')
             self._setlvl(box=lvl[0], sta=lvl[1])
 
     def _v3_cmd(self, cmdstr=b''):
         """Pack and send a v3 command: Note does not queue."""
         crc = thbc_crc(cmdstr)
-        crcstr = chr(crc>>8) + chr(crc&0xff)	# Py2 
+        crcstr = chr(crc >> 8) + chr(crc & 0xff)  # Py2
         self._write(ESCAPE + cmdstr + crcstr + b'>')
 
     def _serialise_config(self):
         """Convert current decoder setting into a config string"""
         obuf = bytearray(CONFIG_LEN)
         # fill in level bytes
-        obuf[CONFIG_SPARE] = 0x13	# will be fixed by subsequent levelset
-        obuf[CONFIG_SPARE+1] = 0x15
+        obuf[CONFIG_SPARE] = 0x13  # will be fixed by subsequent levelset
+        obuf[CONFIG_SPARE + 1] = 0x15
 
         # fill in tone values
-	for opt in [CONFIG_TONE_STA, CONFIG_TONE_BOX, CONFIG_TONE_MAN,
-                     CONFIG_TONE_CEL, CONFIG_TONE_BXX]:
+        for opt in [
+                CONFIG_TONE_STA, CONFIG_TONE_BOX, CONFIG_TONE_MAN,
+                CONFIG_TONE_CEL, CONFIG_TONE_BXX
+        ]:
             if opt in self._decoderconfig:
-                obuf[opt] = val2hexval(self._decoderconfig[opt]//100) # xx00
-                obuf[opt+1] = val2hexval(self._decoderconfig[opt]%100) # 00xx
+                obuf[opt] = val2hexval(self._decoderconfig[opt] // 100)  # xx00
+                obuf[opt + 1] = val2hexval(self._decoderconfig[opt] %
+                                           100)  # 00xx
 
         # fill in single byte values
-        for opt in [CONFIG_TZ_HOUR, CONFIG_TZ_MIN, CONFIG_PROT,
-                    CONFIG_PULSEINT, CONFIG_CELLTOD_HOUR, CONFIG_CELLTOD_MIN]:
+        for opt in [
+                CONFIG_TZ_HOUR, CONFIG_TZ_MIN, CONFIG_PROT, CONFIG_PULSEINT,
+                CONFIG_CELLTOD_HOUR, CONFIG_CELLTOD_MIN
+        ]:
             if opt in self._decoderconfig:
-                obuf[opt] = val2hexval(self._decoderconfig[opt]%100) # ??
+                obuf[opt] = val2hexval(self._decoderconfig[opt] % 100)  # ??
 
         # fill in flags
-	for opt in [CONFIG_TOD, CONFIG_GPS, CONFIG_485, CONFIG_FIBRE,
-	            CONFIG_PRINT, CONFIG_MAX, CONFIG_PULSE,
-                    CONFIG_CELLSYNC, CONFIG_ACTIVE_LOOP]:
+        for opt in [
+                CONFIG_TOD, CONFIG_GPS, CONFIG_485, CONFIG_FIBRE, CONFIG_PRINT,
+                CONFIG_MAX, CONFIG_PULSE, CONFIG_CELLSYNC, CONFIG_ACTIVE_LOOP
+        ]:
             if opt in self._decoderconfig:
                 if self._decoderconfig[opt]:
                     obuf[opt] = 0x01
@@ -286,13 +300,13 @@ class thbc(decoder):
         if timestruct is None:
             timestruct = time.localtime()
         LOG.debug(u'Set date on decoder: %s',
-                  time.strftime('%Y-%m-%d',timestruct))
+                  time.strftime('%Y-%m-%d', timestruct))
         cmd = bytearray(5)
         cmd[0] = 0x0a
         cmd[1] = 0x0a
-        cmd[2] = 0xff&timestruct[2]		# day
-        cmd[3] = 0xff&timestruct[1]		# month
-        cmd[4] = 0xff&(timestruct[0]-2000)	# year, after 2000
+        cmd[2] = 0xff & timestruct[2]  # day
+        cmd[3] = 0xff & timestruct[1]  # month
+        cmd[4] = 0xff & (timestruct[0] - 2000)  # year, after 2000
         self._v3_cmd(bytes(cmd))
 
     def _setlvl(self, box=u'10', sta=u'10'):
@@ -305,9 +319,9 @@ class thbc(decoder):
         """Return a set time command string for the provided time of day."""
         body = bytearray(4)
         s = int(t.timeval)
-        body[0] = s//3600	# hours
-        body[1] = (s//60)%60	# minutes
-        body[2] = s%60		# seconds
+        body[0] = s // 3600  # hours
+        body[1] = (s // 60) % 60  # minutes
+        body[2] = s % 60  # seconds
         body[3] = 0x74
         return SETTIME + bytes(body)
 
@@ -315,28 +329,34 @@ class thbc(decoder):
         # decoder configuration message.
         ibuf = bytearray(msg)
         self._decoderconfig = {}
-        for flag in sorted(CONFIG_FLAGS):	# import all
+        for flag in sorted(CONFIG_FLAGS):  # import all
             # tone values
-            if flag in [CONFIG_TONE_STA, CONFIG_TONE_BOX, CONFIG_TONE_MAN,
-                     CONFIG_TONE_CEL, CONFIG_TONE_BXX]:
-                self._decoderconfig[flag] = 100*hexval2val(ibuf[flag])
-                self._decoderconfig[flag] += hexval2val(ibuf[flag+1])
+            if flag in [
+                    CONFIG_TONE_STA, CONFIG_TONE_BOX, CONFIG_TONE_MAN,
+                    CONFIG_TONE_CEL, CONFIG_TONE_BXX
+            ]:
+                self._decoderconfig[flag] = 100 * hexval2val(ibuf[flag])
+                self._decoderconfig[flag] += hexval2val(ibuf[flag + 1])
 
             # single byte values
-            elif flag in [CONFIG_TZ_HOUR, CONFIG_TZ_MIN, CONFIG_PROT,
-                    CONFIG_PULSEINT, CONFIG_CELLTOD_HOUR, CONFIG_CELLTOD_MIN]:
+            elif flag in [
+                    CONFIG_TZ_HOUR, CONFIG_TZ_MIN, CONFIG_PROT,
+                    CONFIG_PULSEINT, CONFIG_CELLTOD_HOUR, CONFIG_CELLTOD_MIN
+            ]:
                 self._decoderconfig[flag] = hexval2val(ibuf[flag])
 
             # 'booleans'
-            elif flag in [CONFIG_TOD, CONFIG_GPS, CONFIG_485, CONFIG_FIBRE,
-                    CONFIG_PRINT, CONFIG_MAX, CONFIG_PULSE,
-                    CONFIG_CELLSYNC, CONFIG_ACTIVE_LOOP]:
+            elif flag in [
+                    CONFIG_TOD, CONFIG_GPS, CONFIG_485, CONFIG_FIBRE,
+                    CONFIG_PRINT, CONFIG_MAX, CONFIG_PULSE, CONFIG_CELLSYNC,
+                    CONFIG_ACTIVE_LOOP
+            ]:
                 self._decoderconfig[flag] = bool(ibuf[flag])
 
         self.unitno = u''
         for c in msg[43:47]:
-            self.unitno += unichr(ord(c)+ord('0'))	# py2 :/
-        stalvl = hex(ord(msg[25]))	# ? question this
+            self.unitno += unichr(ord(c) + ord('0'))  # py2 :/
+        stalvl = hex(ord(msg[25]))  # ? question this
         boxlvl = hex(ord(msg[26]))
         LOG.info(u'%r connected', self.unitno)
 
@@ -353,26 +373,29 @@ class thbc(decoder):
         """Return tod object from timing msg or None."""
         ret = None
         if len(msg) > 4:
-            if msg[0] == PASSSTART:	# RFID message
+            if msg[0] == PASSSTART:  # RFID message
                 idx = msg.find(b'>')
-                if idx == 37:		# Valid length
+                if idx == 37:  # Valid length
                     data = msg[1:33]
                     msum = msg[33:37]
                     tsum = thbc_sum(data)
-                    if tsum == msum:	# Valid 'sum'
+                    if tsum == msum:  # Valid 'sum'
                         pvec = data.decode(THBC_ENCODING).split()
                         istr = pvec[3] + u':' + pvec[5]
                         rstr = pvec[1].lstrip(u'0')
-                        if pvec[5] == u'3': # LOW BATTERY ALERT
+                        if pvec[5] == u'3':  # LOW BATTERY ALERT
                             LOG.warning(u'Low battery on %r', rstr)
-                        ret = tod.tod(pvec[2], index=istr, chan=pvec[0],
-                                      refid=rstr, source=self.unitno)
+                        ret = tod.tod(pvec[2],
+                                      index=istr,
+                                      chan=pvec[0],
+                                      refid=rstr,
+                                      source=self.unitno)
                         if ack:
-                            self._write(ACKCMD)	# Acknowledge if ok
+                            self._write(ACKCMD)  # Acknowledge if ok
                         self._cksumerr = 0
                     else:
-                        LOG.warning(u'Invalid checksum: %r != %r: %r',
-                                    tsum, msum, msg)
+                        LOG.warning(u'Invalid checksum: %r != %r: %r', tsum,
+                                    msum, msg)
                         self._cksumerr += 1
                         if self._cksumerr > 3:
                             # assume error on decoder, so acknowledge and
@@ -384,19 +407,19 @@ class thbc(decoder):
                                 self._write(ACKCMD)
                 else:
                     LOG.debug(u'Invalid message: %r', msg)
-            elif msg[0] == STATSTART:	# Status message
+            elif msg[0] == STATSTART:  # Status message
                 data = msg[1:22]
                 pvec = data.decode(THBC_ENCODING).split()
                 if len(pvec) == 5:
-                    LOG.info(u'%r@%s Noise:%s/%s Levels:%s/%s', 
-                     self.unitno, pvec[0], pvec[1], pvec[2], pvec[3], pvec[4])
+                    LOG.info(u'%r@%s Noise:%s/%s Levels:%s/%s', self.unitno,
+                             pvec[0], pvec[1], pvec[2], pvec[3], pvec[4])
                 else:
                     LOG.info(u'Invalid status: %r', msg)
             elif b'+++' == msg[0:3] and len(msg) > 53:
                 self._parse_config(msg[3:])
             else:
                 pass
-        else:        
+        else:
             LOG.debug(u'Short message: %r', msg)
         return ret
 
@@ -405,14 +428,14 @@ class thbc(decoder):
         LOG.info(u'IP Config')
         time.sleep(10)
         self.write(QUECMD)
- 
+
     def _read(self):
         """Read messages from the decoder until a timeout condition."""
         ch = self._io.read(1)
         while ch != b'':
             if ch == LF and len(self._rdbuf) > 0 and self._rdbuf[-1] == CR:
                 # Return ends the current 'message', if preceeded by return
-                self._rdbuf += ch	# include trailing newline
+                self._rdbuf += ch  # include trailing newline
                 LOG.debug(u'RECV: %r', self._rdbuf)
                 t = self._parse_message(self._rdbuf.lstrip(b'\0'))
                 if t is not None:
@@ -460,8 +483,10 @@ class thbc(decoder):
         self.setcb()
         LOG.debug(u'Exiting')
 
+
 class dgram(object):
     """Serial-like UDP port object."""
+
     def __init__(self, host, port):
         self._host = host
         self._port = port
@@ -471,9 +496,9 @@ class dgram(object):
         self._buf = b''
 
     def read(self, sz=1):
-        ret = b''	# check this condition
+        ret = b''  # check this condition
         if len(self._buf) == 0:
-            nb, addr = self._s.recvfrom(4096)	# timeout raises exception
+            nb, addr = self._s.recvfrom(4096)  # timeout raises exception
             if addr[0] == self._host:
                 self._buf += nb
         if len(self._buf) > 0:

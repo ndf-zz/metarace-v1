@@ -1,4 +1,3 @@
-
 """Transponder 'decoder' interface."""
 
 from __future__ import division
@@ -17,6 +16,8 @@ RFID_LOG_LEVEL = 15
 logging.addLevelName(RFID_LOG_LEVEL, u'RFID')
 PHOTOTHRESH = tod.tod(u'0.03')
 DEFAULT_RFID_HANDLER = u'null'
+
+
 def mkdevice(portstr=u'', curdev=None):
     """Return a decoder handle for the provided port specification."""
     # Note: If possible, returns the current device
@@ -27,7 +28,7 @@ def mkdevice(portstr=u'', curdev=None):
         a = a.lower()
         if a in RFID_HANDLERS:
             devtype = a
-        a = c   # shift port into a
+        a = c  # shift port into a
     devport = a
     if curdev is None:
         curdev = RFID_HANDLERS[devtype]()
@@ -43,11 +44,11 @@ def mkdevice(portstr=u'', curdev=None):
             curdev.exit(u'Change device type')
         curdev = RFID_HANDLERS[devtype]()
         curdev.setport(devport)
-        LOG.debug(u'Switching device type to %r',
-                  curdev.__class__.__name__)
+        LOG.debug(u'Switching device type to %r', curdev.__class__.__name__)
         if wasalive:
             curdev.start()
     return curdev
+
 
 class decoder(threading.Thread):
     """Idealised transponder decoder interface."""
@@ -168,7 +169,7 @@ class decoder(threading.Thread):
     def _start_session(self, data=None):
         """Start decoder timing session."""
         raise NotImplementedError(u'decoder._start_session()')
-  
+
     def _stop_session(self, data=None):
         """Stop decoder timing session."""
         raise NotImplementedError(u'decoder._stop_session()')
@@ -214,14 +215,17 @@ class decoder(threading.Thread):
             except Exception as e:
                 # errors in dummy decoder should not appear in UI
                 LOG.debug(u'%s: %s', e.__class__.__name__, e)
-        self.setcb()	# make sure callback is unrefed
+        self.setcb()  # make sure callback is unrefed
         LOG.debug(u'Exiting')
+
 
 from rrs import rrs
 from rru import rru
 from thbc import thbc
-RFID_HANDLERS = { u'null':decoder,
-                  u'thbc':thbc,
-                  u'rrs':rrs,
-                  u'rru':rru,
-                }
+
+RFID_HANDLERS = {
+    u'null': decoder,
+    u'thbc': thbc,
+    u'rrs': rrs,
+    u'rru': rru,
+}

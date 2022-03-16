@@ -1,4 +1,3 @@
-
 """UNT4 Packet Wrapper."""
 
 # Mode 1 constants
@@ -6,9 +5,9 @@ NUL = 0x00
 SOH = 0x01
 STX = 0x02
 EOT = 0x04
-HOME= 0x08
-CR  = 0x0d
-LF  = 0x0a
+HOME = 0x08
+CR = 0x0d
+LF = 0x0a
 ERL = 0x0b
 ERP = 0x0c
 DLE = 0x10
@@ -19,33 +18,34 @@ US = 0x1f
 
 # String encodings for Mode 1 constants over telegraph
 ENCMAP = {
-  unichr(NUL):u'<0>',
-  unichr(SOH):u'<O>',
-  unichr(STX):u'<T>',
-  unichr(EOT):u'<E>',
-  unichr(CR):u'<R>',
-  unichr(LF):u'<A>',
-  unichr(ERL):u'<L>',
-  unichr(ERP):u'<P>',
-  unichr(DLE):u'<D>',
-  unichr(DC2):u'<2>',
-  unichr(DC3):u'<3>',
-  unichr(DC4):u'<4>',
-  unichr(US):u'<U>',
+    unichr(NUL): u'<0>',
+    unichr(SOH): u'<O>',
+    unichr(STX): u'<T>',
+    unichr(EOT): u'<E>',
+    unichr(CR): u'<R>',
+    unichr(LF): u'<A>',
+    unichr(ERL): u'<L>',
+    unichr(ERP): u'<P>',
+    unichr(DLE): u'<D>',
+    unichr(DC2): u'<2>',
+    unichr(DC3): u'<3>',
+    unichr(DC4): u'<4>',
+    unichr(US): u'<U>',
 }
-  
+
 # Translation map to blank forbidden control characters in header & text
 TRANSMAP = {
-  SOH:u' ',
-  STX:u' ',
-  EOT:u' ',
-  ERL:u' ',
-  ERP:u' ',
-  DLE:u' ',
-  DC2:u' ',
-  DC3:u' ',
-  DC4:u' ',
+    SOH: u' ',
+    STX: u' ',
+    EOT: u' ',
+    ERL: u' ',
+    ERP: u' ',
+    DLE: u' ',
+    DC2: u' ',
+    DC3: u' ',
+    DC4: u' ',
 }
+
 
 def encode(ubuf=u''):
     """Encode the unt4 buffer for use over telegraph."""
@@ -54,6 +54,7 @@ def encode(ubuf=u''):
         ubuf = ubuf.replace(key, ENCMAP[key])
     return ubuf
 
+
 def decode(tbuf=u''):
     """Decode the telegraph buffer to unt4 pack."""
     for key in ENCMAP:
@@ -61,12 +62,19 @@ def decode(tbuf=u''):
     tbuf = tbuf.replace(u'<>', u'<')
     return tbuf
 
+
 class unt4(object):
     """UNT4 Packet."""
-    def __init__(self, unt4str=None, 
-                   prefix=None, header=u'', 
-                   erp=False, erl=False, 
-                   xx=None, yy=None, text=u''):
+
+    def __init__(self,
+                 unt4str=None,
+                 prefix=None,
+                 header=u'',
+                 erp=False,
+                 erl=False,
+                 xx=None,
+                 yy=None,
+                 text=u''):
         """Constructor.
 
         Parameters:
@@ -81,12 +89,12 @@ class unt4(object):
           text -- packet content string
 
         """
-        self.prefix = prefix    # <DC2>, <DC3>, etc
+        self.prefix = prefix  # <DC2>, <DC3>, etc
         self.header = header.translate(TRANSMAP)
-        self.erp = erp          # true for general clearing <ERP>
-        self.erl = erl          # true for <ERL>
-        self.xx = xx            # input column 0-99
-        self.yy = yy            # input row 0-99
+        self.erp = erp  # true for general clearing <ERP>
+        self.erl = erl  # true for <ERL>
+        self.xx = xx  # input column 0-99
+        self.yy = yy  # input row 0-99
         self.text = text.translate(TRANSMAP)
         if unt4str is not None:
             self.unpack(unt4str)
@@ -100,7 +108,7 @@ class unt4(object):
             newtext = u''
             self.erl = False
             self.erp = False
-            head = True		# All text before STX is considered header
+            head = True  # All text before STX is considered header
             stx = False
             dle = False
             dlebuf = u''
@@ -119,7 +127,7 @@ class unt4(object):
                         dle = False
                 elif head:
                     if och in (DC2, DC3, DC4):
-                        self.prefix = och   # assume pfx before head text
+                        self.prefix = och  # assume pfx before head text
                     else:
                         newhead += unt4str[i]
                 elif stx:
@@ -140,14 +148,15 @@ class unt4(object):
         """Return Omega Style UNT4 unicode string packet."""
         head = u''
         text = u''
-        if self.erp:	# overrides any other message content
+        if self.erp:  # overrides any other message content
             text = unichr(STX) + unichr(ERP)
         else:
             head = self.header
             if self.prefix is not None:
                 head = unichr(self.prefix) + head
             if self.xx is not None and self.yy is not None:
-                text += unichr(DLE) + u'{0:02d}{1:02d}'.format(self.xx, self.yy)
+                text += unichr(DLE) + u'{0:02d}{1:02d}'.format(
+                    self.xx, self.yy)
             if self.text:
                 text += self.text
             if self.erl:
@@ -155,10 +164,11 @@ class unt4(object):
             if len(text) > 0:
                 text = unichr(STX) + text
         return unichr(SOH) + head + text + unichr(EOT)
- 
+
+
 # Pre-defined messages
 GENERAL_CLEARING = unt4(erp=True)
-GENERAL_EMPTY = unt4(xx=0,yy=0,text=u'')
+GENERAL_EMPTY = unt4(xx=0, yy=0, text=u'')
 OVERLAY_ON = unt4(header=u'OVERLAY ON')
 OVERLAY_OFF = unt4(header=u'OVERLAY OFF')
 OVERLAY_CLOCK = unt4(header=u'OVERLAY 01')

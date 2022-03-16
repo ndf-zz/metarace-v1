@@ -1,4 +1,3 @@
-
 """Point score, madison and omnium handler for trackmeet."""
 
 import gtk
@@ -46,9 +45,8 @@ RES_COL_STPTS = 11
 
 # scb consts
 
-SPRINT_PLACE_DELAY = 3		# 3 seconds per place
-SPRINT_PLACE_DELAY_MAX = 11	# to a maximum of 11
-
+SPRINT_PLACE_DELAY = 3  # 3 seconds per place
+SPRINT_PLACE_DELAY_MAX = 11  # to a maximum of 11
 
 # scb function key mappings
 key_startlist = 'F3'
@@ -64,8 +62,10 @@ key_lapdown = 'F11'
 key_abort = 'F5'
 key_falsestart = 'F6'
 
+
 class ps(object):
     """Data handling for point score and Madison races."""
+
     def loadconfig(self):
         """Load race config from disk."""
         self.riders.clear()
@@ -73,25 +73,27 @@ class ps(object):
         self.sprintlaps = u''
         self.sperintpoints = {}
         defscoretype = u'points'
-        defmasterslaps = u'No'		# for teams omit bibs?
+        defmasterslaps = u'No'  # for teams omit bibs?
         if self.evtype == u'madison':
             defscoretype = u'madison'
             defmasterslaps = u'No'
-        cr = ConfigParser.ConfigParser({'startlist':'',
-                                        'id':EVENT_ID,
-					'start':'',
-                                        'lstart':'',
-                                        'finish':'',
-                                        'comments':'',
-                                        'sprintlaps':'',
-                                        'distance':'',
-                                        'runlap':'',
-                                        'distunits':'laps',
-                                        'masterslaps':defmasterslaps,
-                                        'inomnium':'No',
-                                        'showinfo':'No',
-                                        'autospec':'',
-                                        'scoring':defscoretype})
+        cr = ConfigParser.ConfigParser({
+            'startlist': '',
+            'id': EVENT_ID,
+            'start': '',
+            'lstart': '',
+            'finish': '',
+            'comments': '',
+            'sprintlaps': '',
+            'distance': '',
+            'runlap': '',
+            'distunits': 'laps',
+            'masterslaps': defmasterslaps,
+            'inomnium': 'No',
+            'showinfo': 'No',
+            'autospec': '',
+            'scoring': defscoretype
+        })
         cr.add_section('event')
         cr.add_section('sprintplaces')
         cr.add_section('sprintpoints')
@@ -100,16 +102,16 @@ class ps(object):
         cr.add_section('points')
 
         if os.path.isfile(self.configpath):
-            self.log.debug('Attempting to read points config from path='
-                            + repr(self.configpath))
+            self.log.debug('Attempting to read points config from path=' +
+                           repr(self.configpath))
             cr.read(self.configpath)
 
         self.inomnium = strops.confopt_bool(cr.get('event', 'inomnium'))
         if self.inomnium:
-            self.seedsrc = 1    # fetch start list seeding from omnium
+            self.seedsrc = 1  # fetch start list seeding from omnium
 
         for r in cr.get('event', 'startlist').split():
-            nr=[r, '', '', '', True, 0, 0, 0, '', -1, '', 0]
+            nr = [r, '', '', '', True, 0, 0, 0, '', -1, '', 0]
             if cr.has_option('points', r):
                 ril = csv.reader([cr.get('points', r)]).next()
                 if len(ril) >= 1:
@@ -128,7 +130,7 @@ class ps(object):
 
             dbr = self.meet.rdb.getrider(r, self.series)
             if dbr is not None:
-                for i in range(1,4):
+                for i in range(1, 4):
                     nr[i] = self.meet.rdb.getvalue(dbr, i)
             self.riders.append(nr)
         if cr.get('event', 'scoring').lower() == 'madison':
@@ -146,7 +148,7 @@ class ps(object):
         self.autospec = cr.get('event', 'autospec')
         self.distance = strops.confopt_dist(cr.get('event', 'distance'))
         self.units = strops.confopt_distunits(cr.get('event', 'distunits'))
-        self.runlap = strops.confopt_posint(cr.get('event','runlap'))
+        self.runlap = strops.confopt_posint(cr.get('event', 'runlap'))
         self.masterslaps = strops.confopt_bool(cr.get('event', 'masterslaps'))
         # override laps from event listings
         if not self.onestart and self.event[u'laps']:
@@ -160,15 +162,15 @@ class ps(object):
 
         # load any special purpose sprint points
         for (sid, spstr) in cr.items('sprintpoints'):
-            self.sprintpoints[sid] = spstr	# validation in sprint model
+            self.sprintpoints[sid] = spstr  # validation in sprint model
 
         # load lap labels
         for (sid, spstr) in cr.items('laplabels'):
-            self.laplabels[sid] = spstr	# just plain text
+            self.laplabels[sid] = spstr  # just plain text
 
         # load any autospec'd sprint results
         for (sid, spstr) in cr.items('sprintsource'):
-            self.sprintsource[sid] = spstr	# just plain text
+            self.sprintsource[sid] = spstr  # just plain text
 
         self.sprint_model_init()
 
@@ -176,20 +178,20 @@ class ps(object):
         for s in self.sprints:
             places = ''
             if cr.has_option('sprintplaces', s[SPRINT_COL_ID]):
-                places = strops.reformat_placelist(cr.get('sprintplaces',
-                                               s[SPRINT_COL_ID]))
+                places = strops.reformat_placelist(
+                    cr.get('sprintplaces', s[SPRINT_COL_ID]))
                 if len(places) > 0:
                     oft += 1
             s[SPRINT_COL_PLACES] = places
             if cr.has_option('sprintplaces', s[SPRINT_COL_ID] + '_200'):
-                s[SPRINT_COL_200] = tod.mktod(cr.get('sprintplaces',
-                                          s[SPRINT_COL_ID] + '_200'))
+                s[SPRINT_COL_200] = tod.mktod(
+                    cr.get('sprintplaces', s[SPRINT_COL_ID] + '_200'))
             if cr.has_option('sprintplaces', s[SPRINT_COL_ID] + '_split'):
-                s[SPRINT_COL_SPLIT] = tod.mktod(cr.get('sprintplaces',
-                                          s[SPRINT_COL_ID] + '_split'))
+                s[SPRINT_COL_SPLIT] = tod.mktod(
+                    cr.get('sprintplaces', s[SPRINT_COL_ID] + '_split'))
         if oft > 0:
             if oft >= len(self.sprints):
-                oft = len(self.sprints) - 1 
+                oft = len(self.sprints) - 1
             self.ctrl_place_combo.set_active(oft)
             self.onestart = True
 
@@ -198,17 +200,18 @@ class ps(object):
             for s in self.sprints:
                 sid = s[SPRINT_COL_ID]
                 if sid in self.sprintsource:
-###
-# what is the SID
+                    ###
+                    # what is the SID
                     splac = self.meet.autoplace_riders(self,
-                                                    self.sprintsource[sid])
-                    self.log.debug(u'Loaded ' + sid + u' places from event ' + self.sprintsource[sid] + u' : ' + splac)
+                                                       self.sprintsource[sid])
+                    self.log.debug(u'Loaded ' + sid + u' places from event ' +
+                                   self.sprintsource[sid] + u' : ' + splac)
                     if splac:
                         s[SPRINT_COL_PLACES] = splac
         self.recalculate()
 
-        self.info_expand.set_expanded(strops.confopt_bool(
-                                       cr.get('event', 'showinfo')))
+        self.info_expand.set_expanded(
+            strops.confopt_bool(cr.get('event', 'showinfo')))
         self.set_start(cr.get('event', 'start'), cr.get('event', 'lstart'))
         self.set_finish(cr.get('event', 'finish'))
         self.set_elapsed()
@@ -223,8 +226,8 @@ class ps(object):
         # an appropriate outcome.
         eid = cr.get('event', 'id')
         if eid and eid != EVENT_ID:
-            self.log.error('Event configuration mismatch: '
-                           + repr(eid) + ' != ' + repr(EVENT_ID))
+            self.log.error('Event configuration mismatch: ' + repr(eid) +
+                           ' != ' + repr(EVENT_ID))
             #self.readonly = True
 
     def get_startlist(self):
@@ -267,7 +270,7 @@ class ps(object):
 
         thecom = u''
         if len(self.comments) > 0:
-           thecom = self.comments[0]
+            thecom = self.comments[0]
         cw.set('event', 'comments', thecom)
 
         cw.add_section('sprintplaces')
@@ -279,27 +282,32 @@ class ps(object):
             cw.set('sprintplaces', s[SPRINT_COL_ID], s[SPRINT_COL_PLACES])
             if s[SPRINT_COL_200] is not None:
                 cw.set('sprintplaces', s[SPRINT_COL_ID] + '_200',
-                         s[SPRINT_COL_200].rawtime())
+                       s[SPRINT_COL_200].rawtime())
             if s[SPRINT_COL_SPLIT] is not None:
                 cw.set('sprintplaces', s[SPRINT_COL_ID] + '_split',
-                         s[SPRINT_COL_SPLIT].rawtime())
+                       s[SPRINT_COL_SPLIT].rawtime())
             if s[SPRINT_COL_POINTS] is not None:
-                cw.set('sprintpoints', s[SPRINT_COL_ID], ' '.join(
-                         map(str, s[SPRINT_COL_POINTS])))
+                cw.set('sprintpoints', s[SPRINT_COL_ID],
+                       ' '.join(map(str, s[SPRINT_COL_POINTS])))
             if s[SPRINT_COL_ID] in self.laplabels:
                 cw.set('laplabels', sid, self.laplabels[sid])
-            if s[SPRINT_COL_ID] in self.sprintsource: 
+            if s[SPRINT_COL_ID] in self.sprintsource:
                 cw.set(u'sprintsource', sid, self.sprintsource[sid])
 
         cw.add_section('points')
         for r in self.riders:
             bf = 'No'
             if r[RES_COL_INRACE]:
-                bf='Yes'
-            slice = [bf, str(r[RES_COL_POINTS]), str(r[RES_COL_LAPS]),
-                     str(r[RES_COL_INFO]), str(r[RES_COL_STPTS])]
-            cw.set('points', r[RES_COL_BIB], 
-                ','.join(map(lambda i: str(i).replace(',', '\\,'), slice)))
+                bf = 'Yes'
+            slice = [
+                bf,
+                str(r[RES_COL_POINTS]),
+                str(r[RES_COL_LAPS]),
+                str(r[RES_COL_INFO]),
+                str(r[RES_COL_STPTS])
+            ]
+            cw.set('points', r[RES_COL_BIB],
+                   ','.join(map(lambda i: str(i).replace(',', '\\,'), slice)))
         cw.set('event', 'id', EVENT_ID)
         self.log.debug('Saving points config to: ' + self.configpath)
         with open(self.configpath, 'wb') as f:
@@ -325,19 +333,22 @@ class ps(object):
                     if r[RES_COL_INFO] in ['dns', 'dsq']:
                         rank = r[RES_COL_INFO]
                     else:
-                        rank = 'dnf'	# ps only handle did not finish
+                        rank = 'dnf'  # ps only handle did not finish
 
             if self.scoring == 'madison':
                 laps = r[RES_COL_LAPS]
                 if fl is None:
-                    fl = laps # anddetermine laps down
+                    fl = laps  # anddetermine laps down
                 if ll is not None:
                     down = fl - laps
                     if ll != laps:
-                        yield ['', ' ', str(down) + ' Lap'
-                                   + strops.plural(down) + ' Behind', '']
+                        yield [
+                            '', ' ',
+                            str(down) + ' Lap' + strops.plural(down) +
+                            ' Behind', ''
+                        ]
                 ll = laps
-           
+
             time = None
             yield [bib, rank, time, info]
 
@@ -346,13 +357,11 @@ class ps(object):
         self.recalculate()
         ret = []
         sec = report.section()
-        sec.heading = 'Event ' + self.evno + ': ' + ' '.join([
-                       self.event[u'pref'],
-                         self.event[u'info']
-                              ]).strip()
+        sec.heading = 'Event ' + self.evno + ': ' + ' '.join(
+            [self.event[u'pref'], self.event[u'info']]).strip()
         lapstring = strops.lapstring(self.event[u'laps'])
-        substr = u' '.join([lapstring, self.event[u'dist'],
-                             self.event[u'prog']]).strip()
+        substr = u' '.join(
+            [lapstring, self.event[u'dist'], self.event[u'prog']]).strip()
         sec.units = 'Pts'
         fs = ''
         if self.finish is not None:
@@ -373,12 +382,12 @@ class ps(object):
             if self.inomnium:
                 rcat = None
             if rh is not None and rh[u'ucicode']:
-                rcat = rh[u'ucicode']   # overwrite by force
+                rcat = rh[u'ucicode']  # overwrite by force
             if self.onestart and r[RES_COL_PLACE] is not None:
                 plstr = r[RES_COL_PLACE]
                 if r[RES_COL_PLACE].isdigit():
                     plstr += '.'
-                elif r[RES_COL_INFO] in [u'dns',u'dsq']:
+                elif r[RES_COL_INFO] in [u'dns', u'dsq']:
                     plstr = r[RES_COL_INFO]
                 ptstr = ''
                 if r[RES_COL_TOTAL] != 0:
@@ -390,27 +399,30 @@ class ps(object):
                 if self.scoring == 'madison':
                     laps = r[RES_COL_LAPS]
                     if fl is None:
-                        fl = laps # anddetermine laps down
+                        fl = laps  # anddetermine laps down
                     if ll is not None:
                         down = fl - laps
                         if ll != laps:
-                            sec.lines.append([None,None,unicode(down)
-                                              + u' Lap' + strops.plural(down)
-                                              + u' Behind', None, None, None])
+                            sec.lines.append([
+                                None, None,
+                                unicode(down) + u' Lap' + strops.plural(down) +
+                                u' Behind', None, None, None
+                            ])
                     ll = laps
-                if plstr or finplace or ptstr: # only output those with points
-                                         # dnf  or 
-					# placed in final sprint
+                if plstr or finplace or ptstr:  # only output those with points
+                    # dnf  or
+                    # placed in final sprint
                     sec.lines.append([plstr, rno, rname, rcat, fs, ptstr])
                     ## TEAM HACKS
                     if u't' in self.series and rh is not None:
                         for trno in rh[u'note'].split():
-                            trh = self.meet.newgetrider(trno) #!! SERIES?
+                            trh = self.meet.newgetrider(trno)  #!! SERIES?
                             if trh is not None:
                                 trname = trh[u'namestr']
                                 trinf = trh[u'ucicode']
-                                sec.lines.append([None, u'', trname, trinf,
-                                                        None, None, None])
+                                sec.lines.append([
+                                    None, u'', trname, trinf, None, None, None
+                                ])
                 fs = ''
 
         if self.onestart:
@@ -457,7 +469,7 @@ class ps(object):
         if bib == '' or er is None:
             dbr = self.meet.rdb.getrider(bib, self.series)
             if dbr is not None:
-                for i in range(1,4):
+                for i in range(1, 4):
                     nr[i] = self.meet.rdb.getvalue(dbr, i)
                 if self.inomnium:
                     if info:
@@ -486,17 +498,16 @@ class ps(object):
         uiutil.buttonchg(self.stat_but, uiutil.bg_none, 'Idle')
         self.stat_but.set_sensitive(True)
         self.set_elapsed()
-        
+
     def armstart(self):
         """Toggle timer arm start state."""
         if self.timerstat == 'idle':
             self.timerstat = 'armstart'
-            uiutil.buttonchg(self.stat_but, uiutil.bg_armstart,
-                             'Arm Start')
-            self.meet.timer.arm(timy.CHAN_START)            
+            uiutil.buttonchg(self.stat_but, uiutil.bg_armstart, 'Arm Start')
+            self.meet.timer.arm(timy.CHAN_START)
         elif self.timerstat == 'armstart':
             self.timerstat = 'idle'
-            uiutil.buttonchg(self.stat_but, uiutil.bg_none, 'Idle') 
+            uiutil.buttonchg(self.stat_but, uiutil.bg_none, 'Idle')
             self.meet.timer.dearm(timy.CHAN_START)
             self.curtimerstr = ''
         elif self.timerstat == 'running':
@@ -522,13 +533,13 @@ class ps(object):
     def sort_handicap(self, x, y):
         """Sort function for handicap marks."""
         if x[2] != y[2]:
-            if x[2] is None:    # y sorts first
+            if x[2] is None:  # y sorts first
                 return 1
             elif y[2] is None:  # x sorts first
                 return -1
-            else:       # Both should be ints here
+            else:  # Both should be ints here
                 return cmp(x[2], y[2])
-        else:   # Defer to rider number
+        else:  # Defer to rider number
             if x[1].isdigit() and y[1].isdigit():
                 return cmp(int(x[1]), int(y[1]))
             else:
@@ -543,15 +554,16 @@ class ps(object):
             for r in self.riders:
                 if self.inomnium:
                     # now os is omnium final, so sort on current rank
-                    if r[RES_COL_PLACE].isdigit() or r[RES_COL_PLACE]==u'':
+                    if r[RES_COL_PLACE].isdigit() or r[RES_COL_PLACE] == u'':
                         # but only add riders currently ranked, or unplaced
-                        intmark = strops.mark2int(r[RES_COL_PLACE].decode('utf-8','replace'))
+                        intmark = strops.mark2int(r[RES_COL_PLACE].decode(
+                            'utf-8', 'replace'))
                     else:
                         intmark = 999
                     # old omnium had ps in series
                     #intmark = strops.mark2int(r[RES_COL_INFO].decode('utf-8','replace'))
-                auxmap.append([cnt,
-                       r[RES_COL_BIB].decode('utf-8','replace'), intmark])
+                auxmap.append(
+                    [cnt, r[RES_COL_BIB].decode('utf-8', 'replace'), intmark])
                 cnt += 1
             auxmap.sort(self.sort_handicap)
             self.riders.reorder([a[0] for a in auxmap])
@@ -563,14 +575,15 @@ class ps(object):
         if self.evtype == 'madison':
             # use the team singlecol method
             sec = report.section()
-        headvec = [u'Event', self.evno, u':', self.event[u'pref'],
-                         self.event[u'info']]
+        headvec = [
+            u'Event', self.evno, u':', self.event[u'pref'], self.event[u'info']
+        ]
         if not program:
             headvec.append(u'- Start List')
         sec.heading = u' '.join(headvec)
         lapstring = strops.lapstring(self.event[u'laps'])
-        substr = u' '.join([lapstring, self.event[u'dist'],
-                             self.event[u'prog']]).strip()
+        substr = u' '.join(
+            [lapstring, self.event[u'dist'], self.event[u'prog']]).strip()
         if substr:
             sec.subheading = substr
         self.reorder_riderno()
@@ -578,18 +591,18 @@ class ps(object):
         col2 = []
         cnt = 0
         if self.inomnium and len(self.riders) > 0:
-            sec.lines.append([u' ',u' ',u'The Fence', None, None, None])
-            col2.append([u' ',u' ',u'Sprinters Lane', None, None, None])
+            sec.lines.append([u' ', u' ', u'The Fence', None, None, None])
+            col2.append([u' ', u' ', u'Sprinters Lane', None, None, None])
         for r in self.riders:
             rno = r[RES_COL_BIB].decode('utf-8')
             rh = self.meet.newgetrider(rno, self.series)
-            inf = r[RES_COL_INFO].decode('utf-8','replace')
+            inf = r[RES_COL_INFO].decode('utf-8', 'replace')
             if self.inomnium:
                 # inf holds seed, ignore for now
                 inf = None
             # layout needs adhjustment
             #if rh[u'ucicode']:
-                #inf = rh[u'ucicode']   # overwrite by force
+            #inf = rh[u'ucicode']   # overwrite by force
             rname = u''
             if rh is not None:
                 rname = rh[u'namestr']
@@ -597,7 +610,7 @@ class ps(object):
             if self.inomnium:
                 if r[RES_COL_PLACE].isdigit() or r[RES_COL_PLACE] == u'':
                     cnt += 1
-                    if cnt%2 == 1:
+                    if cnt % 2 == 1:
                         sec.lines.append([None, rno, rname, inf, None, None])
                     else:
                         col2.append([None, rno, rname, inf, None, None])
@@ -608,26 +621,28 @@ class ps(object):
                     # add the black/red entry
                     if rh is not None:
                         tvec = rh[u'note'].split()
-                        if len (tvec) == 2:
+                        if len(tvec) == 2:
                             trname = u''
                             trinf = u''
                             trh = self.meet.newgetrider(tvec[0])
                             if trh is not None:
                                 trname = trh[u'namestr']
                                 trinf = trh[u'ucicode']
-                            sec.lines.append([None, u'Red', trname, trinf,
-                                                None, None, None])
+                            sec.lines.append([
+                                None, u'Red', trname, trinf, None, None, None
+                            ])
                             trname = u''
                             trinf = u''
                             trh = self.meet.newgetrider(tvec[1])
                             if trh is not None:
                                 trname = trh[u'namestr']
                                 trinf = trh[u'ucicode']
-                            sec.lines.append([None, u'Black', trname, trinf,
-                                                None, None, None])
+                            sec.lines.append([
+                                None, u'Black', trname, trinf, None, None, None
+                            ])
                             #sec.lines.append([None, None, None, None,
-                                                #None, None, None])
-                    
+                            #None, None, None])
+
         for i in col2:
             sec.lines.append(i)
         ret.append(sec)
@@ -640,7 +655,7 @@ class ps(object):
 
         if cnt > 0 and not program:
             sec = report.bullet_text()
-            if self.evtype == 'madison': 
+            if self.evtype == 'madison':
                 sec.lines.append([None, 'Total teams: ' + str(cnt)])
             else:
                 sec.lines.append([None, 'Total riders: ' + str(cnt)])
@@ -654,36 +669,39 @@ class ps(object):
         self.timerwin = False
         startlist = []
         self.meet.announce.gfx_overlay(1)
-        self.meet.announce.gfx_set_title(u'Startlist: '
-                            + self.event[u'pref'] + u' '
-                            + self.event[u'info'])
+        self.meet.announce.gfx_set_title(u'Startlist: ' + self.event[u'pref'] +
+                                         u' ' + self.event[u'info'])
 
         name_w = self.meet.scb.linelen - 8
         for r in self.riders:
-            self.meet.announce.gfx_add_row([r[0],
-                               strops.resname(r[RES_COL_FIRST].decode('utf-8'),
-                                           r[RES_COL_LAST].decode('utf-8'),
-                                           r[RES_COL_CLUB].decode('utf-8')),
-                                                ''])
+            self.meet.announce.gfx_add_row([
+                r[0],
+                strops.resname(r[RES_COL_FIRST].decode('utf-8'),
+                               r[RES_COL_LAST].decode('utf-8'),
+                               r[RES_COL_CLUB].decode('utf-8')), ''
+            ])
 
             if r[RES_COL_INRACE]:
-                club = r[RES_COL_CLUB].decode('utf-8','replace')
+                club = r[RES_COL_CLUB].decode('utf-8', 'replace')
                 if len(club) > 3:
                     # look it up?
                     if self.series in self.meet.ridermap:
                         rh = self.meet.ridermap[self.series][r[RES_COL_BIB]]
                         if rh is not None:
                             club = rh['note']
-                startlist.append([r[RES_COL_BIB],
-                              strops.fitname(r[RES_COL_FIRST].decode('utf-8'),
-                                             r[RES_COL_LAST].decode('utf-8'),
-                                             name_w),
-                                  club])
-        FMT = [(3, u'r'), u' ', (name_w,u'l'), u' ', (3,u'r')]
+                startlist.append([
+                    r[RES_COL_BIB],
+                    strops.fitname(r[RES_COL_FIRST].decode('utf-8'),
+                                   r[RES_COL_LAST].decode('utf-8'), name_w),
+                    club
+                ])
+        FMT = [(3, u'r'), u' ', (name_w, u'l'), u' ', (3, u'r')]
         self.meet.scbwin = scbwin.scbtable(scb=self.meet.scb,
-                                    head=self.meet.racenamecat(self.event),
-                                    subhead=u'STARTLIST',
-                                    coldesc=FMT, rows=startlist)
+                                           head=self.meet.racenamecat(
+                                               self.event),
+                                           subhead=u'STARTLIST',
+                                           coldesc=FMT,
+                                           rows=startlist)
         self.meet.scbwin.reset()
 
     def key_event(self, widget, event):
@@ -691,7 +709,7 @@ class ps(object):
         if event.type == gtk.gdk.KEY_PRESS:
             key = gtk.gdk.keyval_name(event.keyval) or 'None'
             if event.state & gtk.gdk.CONTROL_MASK:
-                if key == key_abort:    # override ctrl+f5
+                if key == key_abort:  # override ctrl+f5
                     self.resettimer()
                     return True
             if key[0] == 'F':
@@ -724,9 +742,9 @@ class ps(object):
         if self.winopen:
             self.meet.announce.clrall()
             self.meet.ann_title(' '.join([
-                  self.meet.event_string(self.evno), ':',
-                     self.event[u'pref'],
-                         self.event[u'info']]))
+                self.meet.event_string(self.evno), ':', self.event[u'pref'],
+                self.event[u'info']
+            ]))
 
             self.meet.announce.linefill(1, '_')
             self.meet.announce.linefill(8, '_')
@@ -749,16 +767,17 @@ class ps(object):
                             if not unitshown:
                                 pstr += 'pts'
                                 unitshown = True
-                        self.meet.announce.postxt(4+cnt,0, ' '.join([
-                            strops.truncpad(r[0], 3),
-                            strops.truncpad(r[1], 3, 'r'),
-                            strops.truncpad(r[2], 20),
-                            pstr]))
+                        self.meet.announce.postxt(
+                            4 + cnt, 0, ' '.join([
+                                strops.truncpad(r[0], 3),
+                                strops.truncpad(r[1], 3, 'r'),
+                                strops.truncpad(r[2], 20), pstr
+                            ]))
                         cnt += 1
-                        if cnt > 3:	# is this required?
+                        if cnt > 3:  # is this required?
                             break
                 else:
-                    sid = int(self.sprints.get_string_from_iter(i))-1
+                    sid = int(self.sprints.get_string_from_iter(i)) - 1
 
             tp = ''
             if self.start is not None and self.finish is not None:
@@ -776,8 +795,8 @@ class ps(object):
             sidstart = mscount - 8
             if sidstart < 0:
                 sidstart = 0
-            elif sidstart > len(self.sprints)-10:
-                sidstart = len(self.sprints)-10
+            elif sidstart > len(self.sprints) - 10:
+                sidstart = len(self.sprints) - 10
             if self.scoring == 'madison':
                 leaderboard = []
                 rtype = 'Team '
@@ -787,7 +806,7 @@ class ps(object):
                 nopts = ''
                 scnt = 0
                 for s in self.sprints:
-                    if scnt >= sidstart and scnt < sidstart+10:
+                    if scnt >= sidstart and scnt < sidstart + 10:
                         hdr += strops.truncpad(s[SPRINT_COL_ID], 4, 'r')
                         nopts += '    '
                     scnt += 1
@@ -796,7 +815,7 @@ class ps(object):
                 curline = 11
                 ldrlap = None
                 curlap = None
-                for r in self.riders:                     
+                for r in self.riders:
                     if ldrlap is None:
                         ldrlap = r[RES_COL_LAPS]
                         curlap = ldrlap
@@ -804,7 +823,7 @@ class ps(object):
                     lapstr = '  '
                     if lapdwn != 0:
                         lapstr = strops.truncpad(str(lapdwn), 2, 'r')
-                    
+
                     psrc = '-'
                     if r[RES_COL_TOTAL] != 0:
                         psrc = str(r[RES_COL_TOTAL])
@@ -820,7 +839,7 @@ class ps(object):
                     if r[RES_COL_BIB] in self.auxmap:
                         scnt = 0
                         for s in self.auxmap[r[RES_COL_BIB]]:
-                            if scnt >= sidstart and scnt < sidstart+10:
+                            if scnt >= sidstart and scnt < sidstart + 10:
                                 spstr += str(s).rjust(4)
                             scnt += 1
                     else:
@@ -828,21 +847,27 @@ class ps(object):
 
                     finstr = 'u/p'
                     if r[RES_COL_FINAL] >= 0:
-                       finstr = strops.truncpad(str(r[RES_COL_FINAL] + 1),
-                                                3, 'r')
+                        finstr = strops.truncpad(str(r[RES_COL_FINAL] + 1), 3,
+                                                 'r')
 
                     bibstr = strops.truncpad(r[RES_COL_BIB], 2, 'r')
 
                     clubstr = ''
-                    if r[RES_COL_CLUB] != '' and len(r[RES_COL_CLUB]) <=3:
+                    if r[RES_COL_CLUB] != '' and len(r[RES_COL_CLUB]) <= 3:
                         clubstr = ' (' + r[RES_COL_CLUB] + ')'
                     namestr = strops.truncpad(strops.fitname(r[RES_COL_FIRST],
-                                r[RES_COL_LAST], 22-len(clubstr),
-                                trunc=True)+clubstr, 22, elipsis=False)
+                                                             r[RES_COL_LAST],
+                                                             22 - len(clubstr),
+                                                             trunc=True) +
+                                              clubstr,
+                                              22,
+                                              elipsis=False)
 
-                    self.meet.announce.postxt(curline, 0, ' '.join([
-                          placestr, bibstr, namestr, lapstr, ptstr,
-                          spstr, finstr]))
+                    self.meet.announce.postxt(
+                        curline, 0, ' '.join([
+                            placestr, bibstr, namestr, lapstr, ptstr, spstr,
+                            finstr
+                        ]))
                     curline += 1
                     if r[RES_COL_INRACE]:
                         if curlap > r[RES_COL_LAPS]:
@@ -851,17 +876,18 @@ class ps(object):
                                 if curlap < -15:
                                     break
                                 leaderboard.append(u'-')
-                        leaderboard.append(r[RES_COL_BIB].rjust(2)
-                                           + psrc.rjust(3))
-                self.meet.announce.publish_cmd(u'leaderboard',
-                         unichr(unt4.US).join(leaderboard))
+                        leaderboard.append(r[RES_COL_BIB].rjust(2) +
+                                           psrc.rjust(3))
+                self.meet.announce.publish_cmd(
+                    u'leaderboard',
+                    unichr(unt4.US).join(leaderboard))
             else:
                 # use scratch race style layout for up to 26 riders
-                count = 0       
+                count = 0
                 curline = 11
-                posoft = 0      
+                posoft = 0
                 leaderboard = []
-                for r in self.riders:                     
+                for r in self.riders:
                     count += 1
                     if count == 14:
                         curline = 11
@@ -873,33 +899,42 @@ class ps(object):
 
                     ptstr = strops.truncpad(psrc, 3, 'r')
                     clubstr = ''
-                    if r[RES_COL_CLUB] != '' and len(r[RES_COL_CLUB]) <=3:
+                    if r[RES_COL_CLUB] != '' and len(r[RES_COL_CLUB]) <= 3:
                         clubstr = ' (' + r[RES_COL_CLUB] + ')'
                     namestr = strops.truncpad(strops.fitname(r[RES_COL_FIRST],
-                                r[RES_COL_LAST], 27-len(clubstr),
-                              trunc=True)+clubstr, 27, elipsis=False)
+                                                             r[RES_COL_LAST],
+                                                             27 - len(clubstr),
+                                                             trunc=True) +
+                                              clubstr,
+                                              27,
+                                              elipsis=False)
                     placestr = '   '
                     if self.onestart and r[RES_COL_PLACE] != '':
                         placestr = strops.truncpad(r[RES_COL_PLACE] + '.', 3)
                     elif not r[RES_COL_INRACE]:
                         placestr = 'dnf'
                     bibstr = strops.truncpad(r[RES_COL_BIB], 3, 'r')
-                    self.meet.announce.postxt(curline, posoft, ' '.join([
-                          placestr, bibstr, namestr, ptstr]))
+                    self.meet.announce.postxt(
+                        curline, posoft,
+                        ' '.join([placestr, bibstr, namestr, ptstr]))
                     curline += 1
 
                     if self.inomnium and r[RES_COL_INRACE]:
-                        leaderboard.append(r[RES_COL_BIB].rjust(2)
-                                           + psrc.rjust(3))
+                        leaderboard.append(r[RES_COL_BIB].rjust(2) +
+                                           psrc.rjust(3))
                 if posoft > 0:
-                    self.meet.announce.postxt(10,0,'      # Rider                       Pts        # Rider                       Pts')
+                    self.meet.announce.postxt(
+                        10, 0,
+                        '      # Rider                       Pts        # Rider                       Pts'
+                    )
                 else:
-                    self.meet.announce.postxt(10,0,'      # Rider                       Pts')
+                    self.meet.announce.postxt(
+                        10, 0, '      # Rider                       Pts')
 
-                self.meet.announce.publish_cmd(u'leaderboard',
-                         unichr(unt4.US).join(leaderboard))
+                self.meet.announce.publish_cmd(
+                    u'leaderboard',
+                    unichr(unt4.US).join(leaderboard))
         return False
-
 
     def do_places(self):
         """Show race result on scoreboard."""
@@ -907,12 +942,11 @@ class ps(object):
         thesec = self.result_report()
         placestype = u'Standings: '
         if len(thesec) > 0:
-            if self.finished: 
+            if self.finished:
                 placestype = u'Result: '
             self.meet.announce.gfx_overlay(1)
-            self.meet.announce.gfx_set_title(placestype
-                                + self.event[u'pref'] + u' '
-                                + self.event[u'info'])
+            self.meet.announce.gfx_set_title(placestype + self.event[u'pref'] +
+                                             u' ' + self.event[u'info'])
             for l in thesec[0].lines:
                 pts = '-'
                 if l[5]:
@@ -924,61 +958,65 @@ class ps(object):
         hdr = ''
         if self.scoring == 'madison':
             name_w = self.meet.scb.linelen - 8
-            fmt = [(2,u'r'),u' ',(name_w,u'l'),
-                      (2,u'r'),(3,u'r')]
+            fmt = [(2, u'r'), u' ', (name_w, u'l'), (2, u'r'), (3, u'r')]
             # does this require special consideration?
             leaderboard = []
-            hdr = u' # team' + ((self.meet.scb.linelen-13) * u' ') + u'lap pt'
-            llap = None		# leader's lap
+            hdr = u' # team' + (
+                (self.meet.scb.linelen - 13) * u' ') + u'lap pt'
+            llap = None  # leader's lap
             for r in self.riders:
                 if r[RES_COL_INRACE]:
-                    bstr = r[RES_COL_BIB].decode('utf-8','ignore')
+                    bstr = r[RES_COL_BIB].decode('utf-8', 'ignore')
                     if llap is None:
                         llap = r[RES_COL_LAPS]
                     lstr = str(r[RES_COL_LAPS] - llap)
                     if lstr == '0': lstr = ''
                     pstr = str(r[RES_COL_TOTAL])
                     if pstr == '0': pstr = '-'
-                    resvec.append([bstr,
-                         strops.fitname('',
-                                     r[RES_COL_LAST].decode('utf-8',
-                                                 'ignore').upper(), name_w),
-                         lstr, pstr])
+                    resvec.append([
+                        bstr,
+                        strops.fitname(
+                            '', r[RES_COL_LAST].decode('utf-8',
+                                                       'ignore').upper(),
+                            name_w), lstr, pstr
+                    ])
         else:
-            name_w = self.meet.scb.linelen-10
-            fmt = [(3,u'l'),(3,u'r'),u' ',
-                     (name_w,u'l'),(3,u'r')]
-                        #self.meet.scb.linelen - 3) + ' pt'
+            name_w = self.meet.scb.linelen - 10
+            fmt = [(3, u'l'), (3, u'r'), u' ', (name_w, u'l'), (3, u'r')]
+            #self.meet.scb.linelen - 3) + ' pt'
             if self.inomnium:
-                fmt = [(3,u'l'),(3,u'r'),u' ',
-                     (name_w-1,u'l'),(4,u'r')]
-                        #self.meet.scb.linelen - 3) + ' pt'
+                fmt = [(3, u'l'), (3, u'r'), u' ', (name_w - 1, u'l'),
+                       (4, u'r')]
+                #self.meet.scb.linelen - 3) + ' pt'
             #ldr = None
             for r in self.riders:
                 if r[RES_COL_INRACE]:
                     plstr = r[RES_COL_PLACE] + u'.'
                     bstr = r[RES_COL_BIB]
                     #if ldr is None and r[RES_COL_TOTAL] > 0:
-                        #ldr = r[RES_COL_TOTAL]	# current leader
+                    #ldr = r[RES_COL_TOTAL]	# current leader
                     pstr = str(r[RES_COL_TOTAL])
                     #if self.inomnium and ldr is not None:
-                        #pstr = '-' + str(ldr - r[RES_COL_TOTAL])
+                    #pstr = '-' + str(ldr - r[RES_COL_TOTAL])
                     if pstr == '0': pstr = '-'
-                    resvec.append([plstr, bstr,
-                         strops.fitname(r[RES_COL_FIRST], r[RES_COL_LAST],
-                                        name_w),
-                         pstr])
+                    resvec.append([
+                        plstr, bstr,
+                        strops.fitname(r[RES_COL_FIRST], r[RES_COL_LAST],
+                                       name_w), pstr
+                    ])
             # cols are: rank, bib, name, pts
         hdr = self.meet.racenamecat(self.event)
         self.meet.scbwin = None
         self.timerwin = False
         evtstatus = self.standingstr(width=self.meet.scb.linelen).upper()
         #evtstatus=u'STANDINGS'
-        #if self.finished: 
-            #evtstatus=u'RESULT'
-        self.meet.scbwin = scbwin.scbtable(scb=self.meet.scb, head=hdr,
-                                        subhead=evtstatus, coldesc=fmt,
-                                        rows=resvec)
+        #if self.finished:
+        #evtstatus=u'RESULT'
+        self.meet.scbwin = scbwin.scbtable(scb=self.meet.scb,
+                                           head=hdr,
+                                           subhead=evtstatus,
+                                           coldesc=fmt,
+                                           rows=resvec)
         self.meet.scbwin.reset()
         return False
 
@@ -997,7 +1035,7 @@ class ps(object):
             self.recalculate()
             self.meet.delayed_export()
         return False
-  
+
     def announce_packet(self, line, pos, txt):
         self.meet.announce.postxt(line, pos, txt)
         return False
@@ -1013,32 +1051,37 @@ class ps(object):
                 r[RES_COL_LAPS] += 1
                 recalc = True
                 self.log.info('Rider ' + str(bib) + ' gain lap')
-                rlines.append(' '.join([bib.rjust(3), 
-                                  strops.fitname(r[RES_COL_FIRST],
-                                       r[RES_COL_LAST], 26, trunc=True)]))
-                srlines.append([bib,strops.fitname(r[RES_COL_FIRST],
-                                r[RES_COL_LAST], 20)])
+                rlines.append(' '.join([
+                    bib.rjust(3),
+                    strops.fitname(r[RES_COL_FIRST],
+                                   r[RES_COL_LAST],
+                                   26,
+                                   trunc=True)
+                ]))
+                srlines.append([
+                    bib,
+                    strops.fitname(r[RES_COL_FIRST], r[RES_COL_LAST], 20)
+                ])
             else:
                 self.log.warn('Did not gain lap for no. = ' + str(bib))
         if recalc:
             self.oktochangecombo = False
             self.recalculate()
-            glib.timeout_add_seconds(2, self.announce_packet,
-                                        3, 50, 'Gaining a lap:')
+            glib.timeout_add_seconds(2, self.announce_packet, 3, 50,
+                                     'Gaining a lap:')
             cnt = 1
             for line in rlines:
-                glib.timeout_add_seconds(2, self.announce_packet,
-                                        3+cnt, 50, line)
-                cnt+=1
+                glib.timeout_add_seconds(2, self.announce_packet, 3 + cnt, 50,
+                                         line)
+                cnt += 1
                 if cnt > 4:
                     break
             # and do it on the scoreboard too ?!
-            self.meet.scbwin = scbwin.scbintsprint(self.meet.scb,
-                                   self.meet.racenamecat(self.event),
-                                   u'Gaining a Lap'.upper(),
-                                   [(3,u'r'), u' ',
-                                    (self.meet.scb.linelen-4,u'l')],
-                                   srlines)
+            self.meet.scbwin = scbwin.scbintsprint(
+                self.meet.scb, self.meet.racenamecat(self.event),
+                u'Gaining a Lap'.upper(), [(3, u'r'), u' ',
+                                           (self.meet.scb.linelen - 4, u'l')],
+                srlines)
             self.meet.scbwin.reset()
             self.next_sprint_counter += 1
             delay = SPRINT_PLACE_DELAY * len(rlines) or 1
@@ -1047,7 +1090,7 @@ class ps(object):
             glib.timeout_add_seconds(delay, self.delayed_result)
             self.meet.delayed_export()
         return False
-        
+
     def loselap(self, biblist=''):
         """Deduct a lap from each rider listed in biblist."""
         recalc = False
@@ -1058,33 +1101,38 @@ class ps(object):
                 r[RES_COL_LAPS] -= 1
                 recalc = True
                 self.log.info('Rider ' + str(bib) + ' lose lap')
-                rlines.append(u' '.join([bib.rjust(3), 
-                                  strops.fitname(r[RES_COL_FIRST],
-                                       r[RES_COL_LAST], 26, trunc=True)]))
+                rlines.append(u' '.join([
+                    bib.rjust(3),
+                    strops.fitname(r[RES_COL_FIRST],
+                                   r[RES_COL_LAST],
+                                   26,
+                                   trunc=True)
+                ]))
             else:
                 self.log.warn('Did not lose lap for no. = ' + str(bib))
         if recalc:
             self.oktochangecombo = False
             self.recalculate()
-            glib.timeout_add_seconds(2, self.announce_packet,
-                                        3, 50, 'Losing a lap:')
+            glib.timeout_add_seconds(2, self.announce_packet, 3, 50,
+                                     'Losing a lap:')
             cnt = 1
             for line in rlines:
-                glib.timeout_add_seconds(2, self.announce_packet,
-                                        3+cnt, 50, line)
-                cnt+=1
+                glib.timeout_add_seconds(2, self.announce_packet, 3 + cnt, 50,
+                                         line)
+                cnt += 1
                 if cnt > 4:
                     break
             self.meet.delayed_export()
         return False
-        
+
     def showtimer(self):
         """Show race timer on scoreboard."""
         tp = 'Time:'
         self.meet.scbwin = scbwin.scbtimer(scb=self.meet.scb,
-                                   line1=self.meet.racenamecat(self.event),
-                                   line2=u'',
-                                   timepfx=tp)
+                                           line1=self.meet.racenamecat(
+                                               self.event),
+                                           line2=u'',
+                                           timepfx=tp)
         wastimer = self.timerwin
         self.timerwin = True
         if self.timerstat == 'finished':
@@ -1133,7 +1181,7 @@ class ps(object):
             uiutil.buttonchg(self.stat_but, uiutil.bg_none, 'Running')
             self.timerstat = 'running'
             if self.sprintstart is not None:
-                elap = (e-self.sprintstart).timestr(2)
+                elap = (e - self.sprintstart).timestr(2)
                 self.log.info('200m: ' + elap)
                 if self.timerwin and type(self.meet.scbwin) is scbwin.scbtimer:
                     self.meet.scbwin.avgpfx = '200m:'
@@ -1142,7 +1190,7 @@ class ps(object):
 
     def rftimercb(self, e):
         """Handle rftimer event."""
-        if e.refid == '' or e.chan == u'STS':       # got a trigger
+        if e.refid == '' or e.chan == u'STS':  # got a trigger
             #return self.starttrig(e)
             return False
 
@@ -1161,7 +1209,6 @@ class ps(object):
         if r is not None:
             self.log.info(u'SAW ' + repr(bib))
         return False
-
 
     def timercb(self, e):
         """Handle a timer event."""
@@ -1217,7 +1264,7 @@ class ps(object):
         as_e.set_text(self.autospec)
 
         response = dlg.run()
-        if response == 1:       # id 1 set in glade for "Apply"
+        if response == 1:  # id 1 set in glade for "Apply"
             self.log.debug('Updating race properties.')
             if not self.onestart:
                 newlaps = strops.reformat_biblist(rle.get_text())
@@ -1253,12 +1300,13 @@ class ps(object):
                 self.autospec = nspec
                 if not self.onestart:
                     if self.autospec:
-                        self.meet.autostart_riders(self, self.autospec, self.seedsrc)
+                        self.meet.autostart_riders(self, self.autospec,
+                                                   self.seedsrc)
 
             # xfer starters if not empty
             slist = strops.reformat_riderlist(
-                          b.get_object('race_starters_entry').get_text(),
-                                        self.meet.rdb, self.series).split()
+                b.get_object('race_starters_entry').get_text(), self.meet.rdb,
+                self.series).split()
             for s in slist:
                 self.addrider(s)
 
@@ -1318,8 +1366,8 @@ class ps(object):
         if self.start is not None and self.finish is not None:
             et = self.finish - self.start
             self.time_lbl.set_text(et.timestr(2))
-        elif self.start is not None:    # Note: uses 'local start' for RT
-            runtm  = (tod.now() - self.lstart).timestr(1)
+        elif self.start is not None:  # Note: uses 'local start' for RT
+            runtm = (tod.now() - self.lstart).timestr(1)
             self.time_lbl.set_text(runtm)
 
             if self.runlap is not None:
@@ -1340,8 +1388,8 @@ class ps(object):
         self.meet.timer.printline(self.meet.racenamecat(self.event))
         self.meet.timer.printline('      ST: ' + self.start.timestr(4))
         self.meet.timer.printline('     FIN: ' + self.finish.timestr(4))
-        self.meet.timer.printline('    TIME: ' + (self.finish 
-                                                  - self.start).timestr(2))
+        self.meet.timer.printline('    TIME: ' +
+                                  (self.finish - self.start).timestr(2))
 
     ## State manipulation
     def set_running(self):
@@ -1358,20 +1406,19 @@ class ps(object):
 
     def update_expander_lbl_cb(self):
         """Update the expander label."""
-        self.info_expand.set_label('Race Info : '
-                    + self.meet.racenamecat(self.event, 64))
+        self.info_expand.set_label('Race Info : ' +
+                                   self.meet.racenamecat(self.event, 64))
 
     def ps_info_time_edit_clicked_cb(self, button, data=None):
         """Run the edit times dialog."""
         ostx = ''
         oftx = ''
         if self.start is not None:
-            ostx =  self.start.rawtime(4)
+            ostx = self.start.rawtime(4)
         if self.finish is not None:
             oftx = self.finish.rawtime(4)
-        ret = uiutil.edit_times_dlg(self.meet.window,
-                                ostx, oftx)
-        if ret[0] == 1:       # id 1 set in glade for "Apply"
+        ret = uiutil.edit_times_dlg(self.meet.window, ostx, oftx)
+        if ret[0] == 1:  # id 1 set in glade for "Apply"
             try:
                 stod = None
                 if ret[1]:
@@ -1394,11 +1441,11 @@ class ps(object):
 
     def ps_ctrl_place_combo_changed_cb(self, combo, data=None):
         """Handle sprint combo change."""
-        self.oktochangecombo = False	# cancel delayed combo changer
+        self.oktochangecombo = False  # cancel delayed combo changer
         i = self.ctrl_place_combo.get_active_iter()
         if i is not None:
-            self.ctrl_places.set_text(self.sprints.get_value(
-                         i, SPRINT_COL_PLACES) or '')
+            self.ctrl_places.set_text(
+                self.sprints.get_value(i, SPRINT_COL_PLACES) or '')
         else:
             self.ctrl_places.set_text('')
         self.ctrl_places.grab_focus()
@@ -1411,7 +1458,8 @@ class ps(object):
         sprintid = None
         cur = 1
         for s in self.sprints:
-            self.log.debug(u'cur: ' + repr(cur) + u' val: ' + repr(s[SPRINT_COL_PLACES]))
+            self.log.debug(u'cur: ' + repr(cur) + u' val: ' +
+                           repr(s[SPRINT_COL_PLACES]))
             if s[SPRINT_COL_PLACES]:
                 lastsprint = cur
                 sprintid = s[SPRINT_COL_ID]
@@ -1433,15 +1481,15 @@ class ps(object):
                     ret += ' After ' + self.laplabels[sprintid]
                 elif totsprints > 0:
                     if width is not None and width < 25:
-                        ret += u' - Sprint {0}/{1}'.format(lastsprint,
-                                                          totsprints)
+                        ret += u' - Sprint {0}/{1}'.format(
+                            lastsprint, totsprints)
                     else:
-                        ret += u' After Sprint {0} of {1}'.format(lastsprint,
-                                                             totsprints)
+                        ret += u' After Sprint {0} of {1}'.format(
+                            lastsprint, totsprints)
                 else:
-                    self.log.debug(u'Total sprints was 0: '
-                                    +  repr(lastsprint)
-                                    + u' / ' + repr(totsprints))
+                    self.log.debug(u'Total sprints was 0: ' +
+                                   repr(lastsprint) + u' / ' +
+                                   repr(totsprints))
         return ret
 
     def delayed_result(self):
@@ -1463,7 +1511,7 @@ class ps(object):
                 # input widget lost focus, don't auto advance
                 self.oktochangecombo = False
         else:
-            self.next_sprint_counter = 0        # clamp negatives
+            self.next_sprint_counter = 0  # clamp negatives
         return False
 
     def checkplaces(self, places=''):
@@ -1494,7 +1542,7 @@ class ps(object):
         """Handle places entry."""
         places = strops.reformat_placelist(entry.get_text())
         if self.checkplaces(places):
-            self.oktochangecombo = False # cancel existing delayed change
+            self.oktochangecombo = False  # cancel existing delayed change
             entry.set_text(places)
 
             i = self.ctrl_place_combo.get_active_iter()
@@ -1507,11 +1555,10 @@ class ps(object):
             self.log.info(sinfo + ': ' + places)
             if prevplaces == '':
                 FMT = [(2, u'l'), (3, u'r'), u' ',
-                  (self.meet.scb.linelen-8, u'l'), u' ', (1, u'r')]
-                self.meet.scbwin = scbwin.scbintsprint(self.meet.scb,
-                                   self.meet.racenamecat(self.event),
-                                   sinfo.upper(),
-                                   FMT, self.sprintresults[sid][0:4])
+                       (self.meet.scb.linelen - 8, u'l'), u' ', (1, u'r')]
+                self.meet.scbwin = scbwin.scbintsprint(
+                    self.meet.scb, self.meet.racenamecat(self.event),
+                    sinfo.upper(), FMT, self.sprintresults[sid][0:4])
                 self.meet.scbwin.reset()
                 self.next_sprint_counter += 1
                 delay = SPRINT_PLACE_DELAY * len(self.sprintresults[sid]) or 1
@@ -1520,15 +1567,15 @@ class ps(object):
                 self.oktochangecombo = True
 
                 self.meet.announce.gfx_overlay(1)
-                self.meet.announce.gfx_set_title(self.event[u'pref'] + u' '
-                                             + self.event[u'info'] + u' '
-                                                  + sinfo)
+                self.meet.announce.gfx_set_title(self.event[u'pref'] + u' ' +
+                                                 self.event[u'info'] + u' ' +
+                                                 sinfo)
                 for r in self.sprintresults[sid]:
                     self.meet.announce.gfx_add_row([r[0], r[4], r[3]])
 
                 glib.timeout_add_seconds(delay, self.delayed_result)
             elif type(self.meet.scbwin) is scbwin.scbtable:
-                self.do_places() # overwrite result table?
+                self.do_places()  # overwrite result table?
             glib.timeout_add_seconds(1, self.delayed_announce)
             self.meet.delayed_export()
         else:
@@ -1543,7 +1590,7 @@ class ps(object):
         """Perform current action on bibs listed."""
         rlist = entry.get_text()
         acode = self.action_model.get_value(
-                  self.ctrl_action_combo.get_active_iter(), 1)
+            self.ctrl_action_combo.get_active_iter(), 1)
         if acode == 'gain':
             self.gainlap(strops.reformat_biblist(rlist))
             entry.set_text('')
@@ -1554,14 +1601,14 @@ class ps(object):
             self.dnfriders(strops.reformat_biblist(rlist))
             entry.set_text('')
         elif acode == 'add':
-            rlist = strops.reformat_riderlist(rlist,
-                                              self.meet.rdb, self.series)
+            rlist = strops.reformat_riderlist(rlist, self.meet.rdb,
+                                              self.series)
             for bib in rlist.split():
                 self.addrider(bib)
             entry.set_text('')
         elif acode == 'del':
-            rlist = strops.reformat_riderlist(rlist,
-                                              self.meet.rdb, self.series)
+            rlist = strops.reformat_riderlist(rlist, self.meet.rdb,
+                                              self.series)
             for bib in rlist.split():
                 self.delrider(bib)
             entry.set_text('')
@@ -1580,7 +1627,7 @@ class ps(object):
         new_text = strops.reformat_placelist(new_text)
         self.sprints[path][SPRINT_COL_PLACES] = new_text
         opath = self.sprints.get_string_from_iter(
-                       self.ctrl_place_combo.get_active_iter())
+            self.ctrl_place_combo.get_active_iter())
         if opath == path:
             self.ctrl_places.set_text(new_text)
         self.recalculate()
@@ -1591,14 +1638,14 @@ class ps(object):
         new_text = new_text.strip()
         self.riders[path][col] = new_text.strip()
         glib.idle_add(self.meet.rider_edit, self.riders[path][RES_COL_BIB],
-                                           self.series, col, new_text)
+                      self.series, col, new_text)
 
     def editcol_cb(self, cell, path, new_text, col):
         self.riders[path][col] = new_text.strip()
 
     def ps_result_cr_inrace_toggled_cb(self, cr, path, data=None):
-        self.riders[path][RES_COL_INRACE] = not(
-                     self.riders[path][RES_COL_INRACE])
+        self.riders[path][RES_COL_INRACE] = not (
+            self.riders[path][RES_COL_INRACE])
         self.recalculate()
 
     def ps_result_cr_laps_edited_cb(self, cr, path, new_text, data=None):
@@ -1620,7 +1667,7 @@ class ps(object):
         """Transfer points from sprint placings to aggregate."""
         placeset = set()
         if points is None:
-            points = [5, 3, 2, 1]	# Default is four places
+            points = [5, 3, 2, 1]  # Default is four places
         self.sprintresults[index] = []
         place = 0
         count = 0
@@ -1630,7 +1677,7 @@ class ps(object):
                 if bib not in placeset:
                     placeset.add(bib)
                     r = self.getrider(bib)
-                    if r is None:	# ensure rider exists at this point
+                    if r is None:  # ensure rider exists at this point
                         self.log.info('Adding non-starter: ' + repr(bib))
                         self.addrider(bib)
                         r = self.getrider(bib)
@@ -1654,24 +1701,25 @@ class ps(object):
                             rh = self.meet.ridermap[self.series][bib]
                             if rh is not None:
                                 club = rh['note']
-                    self.sprintresults[index].append([plstr,
-                           r[RES_COL_BIB],
-                           strops.fitname(fname, lname, name_w),
-                                ptsstr, strops.resname(fname, lname, club)])
+                    self.sprintresults[index].append([
+                        plstr, r[RES_COL_BIB],
+                        strops.fitname(fname, lname, name_w), ptsstr,
+                        strops.resname(fname, lname, club)
+                    ])
                     count += 1
                 else:
-                    self.log.error('Ignoring duplicate no: ' +repr(bib))
+                    self.log.error('Ignoring duplicate no: ' + repr(bib))
             place = count
         if count > 0:
             self.onestart = True
-    
+
     def retotal(self, r):
         """Update totals."""
         if self.scoring == 'madison':
             r[RES_COL_TOTAL] = r[RES_COL_STPTS] + r[RES_COL_POINTS]
         else:
-            r[RES_COL_TOTAL] = r[RES_COL_STPTS] + r[RES_COL_POINTS] + (self.lappoints
-                                  * r[RES_COL_LAPS])
+            r[RES_COL_TOTAL] = r[RES_COL_STPTS] + r[RES_COL_POINTS] + (
+                self.lappoints * r[RES_COL_LAPS])
 
     # Sorting performed in-place on aux table with cols:
     #  0 INDEX		Index in main model
@@ -1684,23 +1732,23 @@ class ps(object):
     # Point score sorting:
     # inrace / points / final sprint
     def sortpoints(self, x, y):
-        if x[2] != y[2]:	# compare inrace
+        if x[2] != y[2]:  # compare inrace
             if x[2]:
                 return -1
             else:
                 return 1
-        else:			# defer to points
+        else:  # defer to points
             return self.sortpointsonly(x, y)
-                        
+
     def sortpointsonly(self, x, y):
         if x[4] > y[4]:
             return -1
         elif x[4] < y[4]:
             return 1
-        else:		# defer to last sprint
+        else:  # defer to last sprint
             if x[5] == y[5]:
                 #self.log.warn('Sort could not split riders.')
-                return 0	# places same - or both unplaced
+                return 0  # places same - or both unplaced
             else:
                 xp = x[5]
                 if xp < 0: xp = 9999
@@ -1712,17 +1760,17 @@ class ps(object):
     # Madison score sorting:
     # inrace / laps / points / final sprint
     def sortmadison(self, x, y):
-        if x[2] != y[2]:	# compare inrace
+        if x[2] != y[2]:  # compare inrace
             if x[2]:
                 return -1
             else:
                 return 1
-        else:			# defer to distance (laps)
+        else:  # defer to distance (laps)
             if x[3] > y[3]:
                 return -1
             elif x[3] < y[3]:
                 return 1
-            else:		# defer to points / final sprint
+            else:  # defer to points / final sprint
                 return self.sortpointsonly(x, y)
 
     def sort_riderno(self, x, y):
@@ -1735,8 +1783,8 @@ class ps(object):
         self.auxmap = {}
         idx = 0
         for s in self.sprints:
-            self.pointsxfer(s[SPRINT_COL_PLACES],
-                            s[SPRINT_COL_ID] == '0', idx, s[SPRINT_COL_POINTS])
+            self.pointsxfer(s[SPRINT_COL_PLACES], s[SPRINT_COL_ID] == '0', idx,
+                            s[SPRINT_COL_POINTS])
             idx += 1
 
         if len(self.riders) == 0:
@@ -1746,9 +1794,10 @@ class ps(object):
         idx = 0
         for r in self.riders:
             self.retotal(r)
-            auxtbl.append([idx, r[RES_COL_BIB], r[RES_COL_INRACE],
-                           r[RES_COL_LAPS], r[RES_COL_TOTAL],
-                           r[RES_COL_FINAL] ])
+            auxtbl.append([
+                idx, r[RES_COL_BIB], r[RES_COL_INRACE], r[RES_COL_LAPS],
+                r[RES_COL_TOTAL], r[RES_COL_FINAL]
+            ])
             idx += 1
         if self.scoring == 'madison':
             auxtbl.sort(self.sortmadison)
@@ -1833,7 +1882,7 @@ class ps(object):
         """Format tod into text for listview."""
         pv = model.get_value(iter, SPRINT_COL_POINTS)
         if pv is not None and len(pv) > 0:
-            cr.set_property('text', u', '.join(map(unicode,pv)))
+            cr.set_property('text', u', '.join(map(unicode, pv)))
         else:
             cr.set_property('text', '')
 
@@ -1850,12 +1899,12 @@ class ps(object):
         """Update lap points allocations."""
         if self.masterslaps:
             self.lappoints = 10
-            ## OLD WAY WAS AUTO -> NOW JUST MANUALLY  
+            ## OLD WAY WAS AUTO -> NOW JUST MANUALLY
             #dist = self.meet.get_distance(self.distance, self.units)
             #if dist is not None and dist < 20000:
-                #self.lappoints = 10
+            #self.lappoints = 10
             #else:
-                #self.lappoints = 20
+            #self.lappoints = 20
         else:
             self.lappoints = 20
 
@@ -1882,7 +1931,7 @@ class ps(object):
     def __init__(self, meet, event, ui=True):
         """Constructor."""
         self.meet = meet
-        self.event = event      # Note: now a treerowref
+        self.event = event  # Note: now a treerowref
         self.evno = event[u'evid']
         self.evtype = event[u'type']
         self.series = event[u'seri']
@@ -1929,25 +1978,27 @@ class ps(object):
         self.seedsrc = None
 
         # data models
-        self.sprints = gtk.ListStore(gobject.TYPE_STRING,   # ID = 0
-                                     gobject.TYPE_STRING,   # LABEL = 1
-                                     gobject.TYPE_PYOBJECT, # 200 = 2
-                                     gobject.TYPE_PYOBJECT, # SPLITS = 3
-                                     gobject.TYPE_STRING,   # PLACES = 4
-                                     gobject.TYPE_PYOBJECT) # POINTS = 5
+        self.sprints = gtk.ListStore(
+            gobject.TYPE_STRING,  # ID = 0
+            gobject.TYPE_STRING,  # LABEL = 1
+            gobject.TYPE_PYOBJECT,  # 200 = 2
+            gobject.TYPE_PYOBJECT,  # SPLITS = 3
+            gobject.TYPE_STRING,  # PLACES = 4
+            gobject.TYPE_PYOBJECT)  # POINTS = 5
 
-        self.riders = gtk.ListStore(gobject.TYPE_STRING, # BIB = 0
-                                    gobject.TYPE_STRING, # FIRST = 1
-                                    gobject.TYPE_STRING, # LAST = 2
-                                    gobject.TYPE_STRING, # CLUB = 3
-                                    gobject.TYPE_BOOLEAN, # INRACE = 4
-                                    gobject.TYPE_INT, # POINTS = 5
-                                    gobject.TYPE_INT, # LAPS = 6
-                                    gobject.TYPE_INT, # TOTAL = 7
-                                    gobject.TYPE_STRING, # PLACE = 8
-                                    gobject.TYPE_INT, # FINAL = 9
-                                    gobject.TYPE_STRING, # INFO = 10
-                                    gobject.TYPE_INT) # STPTS = 11
+        self.riders = gtk.ListStore(
+            gobject.TYPE_STRING,  # BIB = 0
+            gobject.TYPE_STRING,  # FIRST = 1
+            gobject.TYPE_STRING,  # LAST = 2
+            gobject.TYPE_STRING,  # CLUB = 3
+            gobject.TYPE_BOOLEAN,  # INRACE = 4
+            gobject.TYPE_INT,  # POINTS = 5
+            gobject.TYPE_INT,  # LAPS = 6
+            gobject.TYPE_INT,  # TOTAL = 7
+            gobject.TYPE_STRING,  # PLACE = 8
+            gobject.TYPE_INT,  # FINAL = 9
+            gobject.TYPE_STRING,  # INFO = 10
+            gobject.TYPE_INT)  # STPTS = 11
 
         b = gtk.Builder()
         b.add_from_file(os.path.join(metarace.UI_PATH, 'ps.ui'))
@@ -1960,15 +2011,15 @@ class ps(object):
         b.get_object('ps_info_evno').set_text(self.evno)
         self.showev = b.get_object('ps_info_evno_show')
         self.prefix_ent = b.get_object('ps_info_prefix')
-        self.prefix_ent.connect('changed', self.editent_cb,u'pref')
+        self.prefix_ent.connect('changed', self.editent_cb, u'pref')
         self.prefix_ent.set_text(self.event[u'pref'])
         self.info_ent = b.get_object('ps_info_title')
-        self.info_ent.connect('changed', self.editent_cb,u'info')
+        self.info_ent.connect('changed', self.editent_cb, u'info')
         self.info_ent.set_text(self.event[u'info'])
 
         self.time_lbl = b.get_object('ps_info_time')
         self.time_lbl.modify_font(pango.FontDescription("monospace bold"))
-        self.update_expander_lbl_cb()	# signals get connected later...
+        self.update_expander_lbl_cb()  # signals get connected later...
         self.type_lbl = b.get_object('race_type')
         self.type_lbl.set_text(self.scoring.capitalize())
 
@@ -1987,15 +2038,21 @@ class ps(object):
         t.set_enable_search(False)
         t.set_rules_hint(True)
         t.show()
-        uiutil.mkviewcoltxt(t, 'Sprint', SPRINT_COL_LABEL,
-                             self.ps_sprint_cr_label_edited_cb,
-                             expand=True)
+        uiutil.mkviewcoltxt(t,
+                            'Sprint',
+                            SPRINT_COL_LABEL,
+                            self.ps_sprint_cr_label_edited_cb,
+                            expand=True)
         #uiutil.mkviewcoltod(t, '200m', cb=self.todstr)
-        uiutil.mkviewcoltxt(t, 'Places', SPRINT_COL_PLACES,
-                             self.ps_sprint_cr_places_edited_cb,
-                             expand=True)
-        uiutil.mkviewcoltod(t, 'Points', cb=self.spptsstr,
-                                         editcb=self.spptsedit)
+        uiutil.mkviewcoltxt(t,
+                            'Places',
+                            SPRINT_COL_PLACES,
+                            self.ps_sprint_cr_places_edited_cb,
+                            expand=True)
+        uiutil.mkviewcoltod(t,
+                            'Points',
+                            cb=self.spptsstr,
+                            editcb=self.spptsedit)
         b.get_object('ps_sprint_win').add(t)
 
         # results pane
@@ -2005,29 +2062,33 @@ class ps(object):
         t.set_rules_hint(True)
         t.show()
         uiutil.mkviewcoltxt(t, 'No.', RES_COL_BIB, calign=1.0)
-        uiutil.mkviewcoltxt(t, 'First Name', RES_COL_FIRST,
-                               self.editcol_db,
-                               expand=True)
-        uiutil.mkviewcoltxt(t, 'Last Name', RES_COL_LAST,
-                               self.editcol_db,
-                               expand=True)
-        uiutil.mkviewcoltxt(t, 'Club', RES_COL_CLUB,
-                               self.editcol_db)
-        uiutil.mkviewcoltxt(t, 'Info', RES_COL_INFO,
-                               self.editcol_cb)
-        uiutil.mkviewcolbool(t, 'In', RES_COL_INRACE,
-                               self.ps_result_cr_inrace_toggled_cb,
-                               width=50)
-        uiutil.mkviewcoltxt(t, 'Pts', RES_COL_POINTS, calign=1.0,
-                               width=50)
-        uiutil.mkviewcoltxt(t, 'Laps', RES_COL_LAPS, calign=1.0, width=50,
-                                cb=self.ps_result_cr_laps_edited_cb)
-        uiutil.mkviewcoltxt(t, 'Total', RES_COL_TOTAL, calign=1.0,
-                                width=50)
-        uiutil.mkviewcoltxt(t, 'L/S', RES_COL_FINAL, calign=0.5,
-                                width=50)
-        uiutil.mkviewcoltxt(t, 'Rank', RES_COL_PLACE, calign=0.5,
-                                width=50)
+        uiutil.mkviewcoltxt(t,
+                            'First Name',
+                            RES_COL_FIRST,
+                            self.editcol_db,
+                            expand=True)
+        uiutil.mkviewcoltxt(t,
+                            'Last Name',
+                            RES_COL_LAST,
+                            self.editcol_db,
+                            expand=True)
+        uiutil.mkviewcoltxt(t, 'Club', RES_COL_CLUB, self.editcol_db)
+        uiutil.mkviewcoltxt(t, 'Info', RES_COL_INFO, self.editcol_cb)
+        uiutil.mkviewcolbool(t,
+                             'In',
+                             RES_COL_INRACE,
+                             self.ps_result_cr_inrace_toggled_cb,
+                             width=50)
+        uiutil.mkviewcoltxt(t, 'Pts', RES_COL_POINTS, calign=1.0, width=50)
+        uiutil.mkviewcoltxt(t,
+                            'Laps',
+                            RES_COL_LAPS,
+                            calign=1.0,
+                            width=50,
+                            cb=self.ps_result_cr_laps_edited_cb)
+        uiutil.mkviewcoltxt(t, 'Total', RES_COL_TOTAL, calign=1.0, width=50)
+        uiutil.mkviewcoltxt(t, 'L/S', RES_COL_FINAL, calign=0.5, width=50)
+        uiutil.mkviewcoltxt(t, 'Rank', RES_COL_PLACE, calign=0.5, width=50)
         b.get_object('ps_result_win').add(t)
 
         if ui:

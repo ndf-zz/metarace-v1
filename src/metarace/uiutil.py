@@ -1,4 +1,3 @@
-
 """Shared gtk UI helper functions."""
 
 import os
@@ -16,9 +15,11 @@ LOGVIEWFONT = FontDescription(u'Noto Mono 11')
 
 # Button indications
 bg_none = gtk.image_new_from_file(metarace.default_file(u'bg_idle.svg'))
-bg_armstart = gtk.image_new_from_file(metarace.default_file(u'bg_armstart.svg'))
+bg_armstart = gtk.image_new_from_file(
+    metarace.default_file(u'bg_armstart.svg'))
 bg_armint = gtk.image_new_from_file(metarace.default_file(u'bg_armint.svg'))
 bg_armfin = gtk.image_new_from_file(metarace.default_file(u'bg_armfin.svg'))
+
 
 def hvscroller(child):
     """Return a new scrolled window packed with the supplied child."""
@@ -30,6 +31,7 @@ def hvscroller(child):
     vs.add(child)
     return vs
 
+
 def vscroller(child):
     """Return a new scrolled window packed with the supplied child."""
     vs = gtk.ScrolledWindow()
@@ -40,7 +42,9 @@ def vscroller(child):
     vs.add(child)
     return vs
 
+
 class statbut(object):
+
     def __init__(self, b):
         c = gtk.HBox(spacing=2)
         self._i = gtk.image_new_from_pixbuf(bg_none.get_pixbuf())
@@ -62,8 +66,13 @@ class statbut(object):
     def set_sensitive(self, sensitive=False):
         self._b.set_sensitive(sensitive)
 
-def mkviewcoltod(view=None, header=u'', cb=None, width=120,
-                 editcb=None, colno=None):
+
+def mkviewcoltod(view=None,
+                 header=u'',
+                 cb=None,
+                 width=120,
+                 editcb=None,
+                 colno=None):
     """Return a Time of Day view column."""
     i = gtk.CellRendererText()
     i.set_property(u'xalign', 1.0)
@@ -76,10 +85,20 @@ def mkviewcoltod(view=None, header=u'', cb=None, width=120,
     view.append_column(j)
     return j
 
-def mkviewcoltxt(view=None, header=u'', colno=None, cb=None,
-                  width=None, halign=None, calign=None,
-                  expand=False, editcb=None, maxwidth=None,
-                  bgcol=None, fontdesc=None, fixed=False):
+
+def mkviewcoltxt(view=None,
+                 header=u'',
+                 colno=None,
+                 cb=None,
+                 width=None,
+                 halign=None,
+                 calign=None,
+                 expand=False,
+                 editcb=None,
+                 maxwidth=None,
+                 bgcol=None,
+                 fontdesc=None,
+                 fixed=False):
     """Return a text view column."""
     i = gtk.CellRendererText()
     if cb is not None:
@@ -110,9 +129,17 @@ def mkviewcoltxt(view=None, header=u'', colno=None, cb=None,
         i.connect(u'editing-started', editcb)
     return i
 
-def mkviewcolbg(view=None, header=u'', colno=None, cb=None,
-                  width=None, halign=None, calign=None,
-                  expand=False, editcb=None, maxwidth=None):
+
+def mkviewcolbg(view=None,
+                header=u'',
+                colno=None,
+                cb=None,
+                width=None,
+                halign=None,
+                calign=None,
+                expand=False,
+                editcb=None,
+                maxwidth=None):
     """Return a text view column."""
     i = gtk.CellRendererText()
     if cb is not None:
@@ -137,11 +164,12 @@ def mkviewcolbg(view=None, header=u'', colno=None, cb=None,
         i.connect(u'editing-started', editcb)
     return i
 
+
 def savecsvdlg(title=u'', parent=None, hintfile=None, lpath=None):
     ret = None
-    dlg = gtk.FileChooserDialog(title, parent,
-        gtk.FILE_CHOOSER_ACTION_SAVE, (gtk.STOCK_CANCEL,
-        gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+    dlg = gtk.FileChooserDialog(title, parent, gtk.FILE_CHOOSER_ACTION_SAVE,
+                                (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                 gtk.STOCK_SAVE, gtk.RESPONSE_OK))
     cfilt = gtk.FileFilter()
     cfilt.set_name(u'CSV Files')
     cfilt.add_mime_type(u'text/csv')
@@ -161,11 +189,12 @@ def savecsvdlg(title=u'', parent=None, hintfile=None, lpath=None):
     dlg.destroy()
     return ret
 
+
 def loadcsvdlg(title=u'', parent=None, lpath=None):
     ret = None
-    dlg = gtk.FileChooserDialog(title, parent,
-            gtk.FILE_CHOOSER_ACTION_OPEN, (gtk.STOCK_CANCEL,
-            gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+    dlg = gtk.FileChooserDialog(title, parent, gtk.FILE_CHOOSER_ACTION_OPEN,
+                                (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                 gtk.STOCK_OPEN, gtk.RESPONSE_OK))
     cfilt = gtk.FileFilter()
     cfilt.set_name(u'CSV Files')
     cfilt.add_mime_type(u'text/csv')
@@ -183,8 +212,13 @@ def loadcsvdlg(title=u'', parent=None, lpath=None):
     dlg.destroy()
     return ret
 
-def mkviewcolbool(view=None, header=u'', colno=None, cb=None,
-                  width=None, expand=False):
+
+def mkviewcolbool(view=None,
+                  header=u'',
+                  colno=None,
+                  cb=None,
+                  width=None,
+                  expand=False):
     """Return a boolean view column."""
     i = gtk.CellRendererToggle()
     i.set_property(u'activatable', True)
@@ -200,15 +234,22 @@ def mkviewcolbool(view=None, header=u'', colno=None, cb=None,
     view.append_column(j)
     return i
 
+
 def coltxtbibser(col, cr, model, iter, data):
     """Display a bib.ser string in a tree view."""
     (bibcol, sercol) = data
-    cr.set_property(u'text', 
-                    strops.bibser2bibstr(model.get_value(iter, bibcol),
-                                         model.get_value(iter, sercol)))
+    cr.set_property(
+        u'text',
+        strops.bibser2bibstr(model.get_value(iter, bibcol),
+                             model.get_value(iter, sercol)))
 
-def mkviewcolbibser(view=None, header=u'No.', bibno=0, serno=1,
-                    width=None, expand=False):
+
+def mkviewcolbibser(view=None,
+                    header=u'No.',
+                    bibno=0,
+                    serno=1,
+                    width=None,
+                    expand=False):
     """Return a column to display bib/series as a bib.ser string."""
     i = gtk.CellRendererText()
     i.set_property(u'xalign', 1.0)
@@ -223,6 +264,7 @@ def mkviewcolbibser(view=None, header=u'No.', bibno=0, serno=1,
     view.append_column(j)
     return i
 
+
 def mktextentry(prompt, row, table):
     """Create and return a text entry within a gtk table."""
     if u'?' not in prompt:
@@ -230,53 +272,70 @@ def mktextentry(prompt, row, table):
     l = gtk.Label(prompt)
     l.set_alignment(0.0, 0.5)
     l.show()
-    table.attach(l, 0, 1, row, row+1, gtk.FILL, gtk.FILL, xpadding=5)
+    table.attach(l, 0, 1, row, row + 1, gtk.FILL, gtk.FILL, xpadding=5)
     e = gtk.Entry()
     e.set_width_chars(24)
-    e.set_activates_default(True)	# Check assumption on window
+    e.set_activates_default(True)  # Check assumption on window
     e.show()
-    table.attach(e, 1, 2, row, row+1, gtk.FILL|gtk.EXPAND, gtk.FILL,
-                   xpadding=5, ypadding=2)
+    table.attach(e,
+                 1,
+                 2,
+                 row,
+                 row + 1,
+                 gtk.FILL | gtk.EXPAND,
+                 gtk.FILL,
+                 xpadding=5,
+                 ypadding=2)
     return e
+
 
 def mkcomboentry(prompt, row, table, options):
     """Create and return a combo entry within a gtk table."""
     l = gtk.Label(prompt)
     l.set_alignment(1.0, 0.5)
     l.show()
-    table.attach(l, 0, 1, row, row+1, gtk.FILL, gtk.FILL, xpadding=5)
+    table.attach(l, 0, 1, row, row + 1, gtk.FILL, gtk.FILL, xpadding=5)
     c = gtk.combo_box_new_text()
     c.show()
     for opt in options:
         c.append_text(opt)
-    table.attach(c, 1, 2, row, row+1, gtk.FILL, gtk.FILL, xpadding=5)
+    table.attach(c, 1, 2, row, row + 1, gtk.FILL, gtk.FILL, xpadding=5)
     return c
+
 
 def mklbl(prompt, row, table):
     """Create and return label within a gtk table."""
     l = gtk.Label(prompt)
     l.set_alignment(1.0, 0.5)
     l.show()
-    table.attach(l, 0, 1, row, row+1, gtk.FILL, gtk.FILL, xpadding=5)
+    table.attach(l, 0, 1, row, row + 1, gtk.FILL, gtk.FILL, xpadding=5)
     e = gtk.Label()
     e.set_alignment(0.0, 0.5)
     e.show()
-    table.attach(e, 1, 2, row, row+1, gtk.FILL, gtk.FILL, xpadding=5)
+    table.attach(e, 1, 2, row, row + 1, gtk.FILL, gtk.FILL, xpadding=5)
     return e
+
 
 def mkbutintbl(prompt, row, col, table):
     """Create and return button within a gtk table."""
     b = gtk.Button(prompt)
     b.show()
-    table.attach(b, col, col+1, row, row+1, gtk.FILL, gtk.FILL,
-                 xpadding=5, ypadding=5)
+    table.attach(b,
+                 col,
+                 col + 1,
+                 row,
+                 row + 1,
+                 gtk.FILL,
+                 gtk.FILL,
+                 xpadding=5,
+                 ypadding=5)
     return b
+
 
 def questiondlg(window, question, subtext=None):
     """Display a question dialog and return True/False."""
-    dlg = gtk.MessageDialog(window, gtk.DIALOG_MODAL,
-                            gtk.MESSAGE_QUESTION, gtk.BUTTONS_YES_NO,
-                            question)
+    dlg = gtk.MessageDialog(window, gtk.DIALOG_MODAL, gtk.MESSAGE_QUESTION,
+                            gtk.BUTTONS_YES_NO, question)
     if subtext is not None:
         dlg.format_secondary_text(subtext)
     ret = False
@@ -284,16 +343,22 @@ def questiondlg(window, question, subtext=None):
     if response == gtk.RESPONSE_YES:
         ret = True
     dlg.destroy()
-    return ret    
+    return ret
+
 
 def now_button_clicked_cb(button, entry=None):
     """Copy the current time of day into the supplied entry."""
     if entry is not None:
         entry.set_text(tod.now().timestr())
 
-def edit_times_dlg(window, stxt=None, ftxt=None,
-                           btxt=None, ptxt=None,
-                           bonus=False, penalty=False):
+
+def edit_times_dlg(window,
+                   stxt=None,
+                   ftxt=None,
+                   btxt=None,
+                   ptxt=None,
+                   bonus=False,
+                   penalty=False):
     """Display times edit dialog and return updated time strings."""
     b = gtk.Builder()
     b.add_from_file(os.path.join(metarace.UI_PATH, u'edit_times.ui'))
@@ -305,14 +370,14 @@ def edit_times_dlg(window, stxt=None, ftxt=None,
     if stxt is not None:
         se.set_text(stxt)
     b.get_object(u'timing_start_now').connect(u'clicked',
-                  now_button_clicked_cb, se)
+                                              now_button_clicked_cb, se)
 
     fe = b.get_object(u'timing_finish_entry')
     fe.modify_font(MONOFONT)
     if ftxt is not None:
         fe.set_text(ftxt)
     b.get_object(u'timing_finish_now').connect(u'clicked',
-                  now_button_clicked_cb, fe)
+                                               now_button_clicked_cb, fe)
 
     be = b.get_object(u'timing_bonus_entry')
     be.modify_font(MONOFONT)

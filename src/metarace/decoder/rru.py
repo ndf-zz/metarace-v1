@@ -1,4 +1,3 @@
-
 """Race Result USB Decoder interface."""
 
 from __future__ import division
@@ -20,98 +19,166 @@ LOG.setLevel(logging.DEBUG)
 RRU_BAUD = 19200
 RRU_PASSLEN = 12
 RRU_BEACONLEN = 17
-RRU_LOWBATT = 2.0       # Warn if battery voltage is below this many volts
-RRU_REFCHECK = 3600	# check ref after this many timeouts
-RRU_REFTHRESH = 0x2a30000	# 2 x 86400 x 256
+RRU_LOWBATT = 2.0  # Warn if battery voltage is below this many volts
+RRU_REFCHECK = 3600  # check ref after this many timeouts
+RRU_REFTHRESH = 0x2a30000  # 2 x 86400 x 256
 RRU_ENCODING = u'iso8859-1'
-RRU_MARKER = u'_____127'	# trigger marker
+RRU_MARKER = u'_____127'  # trigger marker
 RRU_EOL = u'\n'
-RRU_IOTIMEOUT = 1.0	# Serial port I/O read timeout in seconds
+RRU_IOTIMEOUT = 1.0  # Serial port I/O read timeout in seconds
 REPLIES = [
-	u'ASCII', u'CONFSET', u'CONFGET', u'INFOGET', u'SITESURVEY',
-        u'TIMESTAMPGET', u'EPOCHREFGET', u'EPOCHREFSET',
-        u'EPOCHREFADJ1D', u'PASSINGGET', u'PASSINGINFOGET', u'BEACONGET',
+    u'ASCII',
+    u'CONFSET',
+    u'CONFGET',
+    u'INFOGET',
+    u'SITESURVEY',
+    u'TIMESTAMPGET',
+    u'EPOCHREFGET',
+    u'EPOCHREFSET',
+    u'EPOCHREFADJ1D',
+    u'PASSINGGET',
+    u'PASSINGINFOGET',
+    u'BEACONGET',
 ]
 CONFINFO = {
-	u'01': {u'label': u'Push Pre-Warn',
-		u'00': u'disabled',
-		u'01': u'enabled' },
-	u'02': {u'label': u'Blink/beep on repeated passing',
-		u'00': u'disabled',
-		u'01': u'enabled' },
-	u'03': {u'label': u'Impulse input or beep output',
-		u'00': u'impulse-in',
-		u'01': u'beep-out' },
-	u'04': {u'label': u'Auto-shutdown on power loss',
-		u'00': u'disabled',
-		u'01': u'enabled' },
-	u'05': {u'label': u'Operation Mode',
-		u'05': u'usb-kiosk',
-		u'06': u'usb-timing',
-                u'07': u'usb-store&copy' },
-	u'06': {u'label': u'Channel ID',
-		u'00':u'1', u'01':u'2', u'02':u'3', u'03':u'4',
-		u'04':u'5', u'05':u'6', u'06':u'7', u'07':u'8'},
-	u'07': {u'label': u'Loop ID',
-		u'00':u'1', u'01':u'2', u'02':u'3', u'03':u'4',
-		u'04':u'5', u'05':u'6', u'06':u'7', u'07':u'8'},
-	u'08': {u'label': u'Loop Power'},
-        u'09': {u'label': u'Blink dead-time'},
-        u'0a': {u'label': u'Charging via USB',
-		u'00': u'disabled',
-		u'01': u'enabled' },
-        u'0b': {u'label': u'Use DTR',
-		u'00': u'disabled',
-		u'01': u'enabled' },
-        u'0c': {u'label': u'Alternate Channel Switching',
-                u'00': u'disabled',
-                u'01': u'automatic',
-                u'02': u'force' },
-        u'0d': {u'label': u'Box Mode',
-                u'31': u'check',
-                u'32': u'deep-sleep',
-                u'33': u'health-check',
-                u'34': u'tracking',
-        },
+    u'01': {
+        u'label': u'Push Pre-Warn',
+        u'00': u'disabled',
+        u'01': u'enabled'
+    },
+    u'02': {
+        u'label': u'Blink/beep on repeated passing',
+        u'00': u'disabled',
+        u'01': u'enabled'
+    },
+    u'03': {
+        u'label': u'Impulse input or beep output',
+        u'00': u'impulse-in',
+        u'01': u'beep-out'
+    },
+    u'04': {
+        u'label': u'Auto-shutdown on power loss',
+        u'00': u'disabled',
+        u'01': u'enabled'
+    },
+    u'05': {
+        u'label': u'Operation Mode',
+        u'05': u'usb-kiosk',
+        u'06': u'usb-timing',
+        u'07': u'usb-store&copy'
+    },
+    u'06': {
+        u'label': u'Channel ID',
+        u'00': u'1',
+        u'01': u'2',
+        u'02': u'3',
+        u'03': u'4',
+        u'04': u'5',
+        u'05': u'6',
+        u'06': u'7',
+        u'07': u'8'
+    },
+    u'07': {
+        u'label': u'Loop ID',
+        u'00': u'1',
+        u'01': u'2',
+        u'02': u'3',
+        u'03': u'4',
+        u'04': u'5',
+        u'05': u'6',
+        u'06': u'7',
+        u'07': u'8'
+    },
+    u'08': {
+        u'label': u'Loop Power'
+    },
+    u'09': {
+        u'label': u'Blink dead-time'
+    },
+    u'0a': {
+        u'label': u'Charging via USB',
+        u'00': u'disabled',
+        u'01': u'enabled'
+    },
+    u'0b': {
+        u'label': u'Use DTR',
+        u'00': u'disabled',
+        u'01': u'enabled'
+    },
+    u'0c': {
+        u'label': u'Alternate Channel Switching',
+        u'00': u'disabled',
+        u'01': u'automatic',
+        u'02': u'force'
+    },
+    u'0d': {
+        u'label': u'Box Mode',
+        u'31': u'check',
+        u'32': u'deep-sleep',
+        u'33': u'health-check',
+        u'34': u'tracking',
+    },
 }
 INFOLBLS = {
-	u'01': u'Decoder ID',
-	u'02': u'Firmware Version',
-	u'03': u'Hardware Version',
-	u'04': u'Box Type',
-	u'05': u'Battery Voltage',
-	u'07': u'Battery State',
-	u'08': u'Battery Level',
-	u'09': u'Internal Temperature',
-	u'0a': u'Supply Voltage',
-	u'0b': u'Loop Status',
+    u'01': u'Decoder ID',
+    u'02': u'Firmware Version',
+    u'03': u'Hardware Version',
+    u'04': u'Box Type',
+    u'05': u'Battery Voltage',
+    u'07': u'Battery State',
+    u'08': u'Battery Level',
+    u'09': u'Internal Temperature',
+    u'0a': u'Supply Voltage',
+    u'0b': u'Loop Status',
 }
-BOX_TYPES = { u'0a': u'active-ext', u'1e': u'management-box',
-              u'28': u'usb-timing-box' }
-BATTERY_STATES = { u'00':u'Fault', u'01':u'Charging',
-                   u'02':u'Reduced Charging', u'03':u'Discharging'}
-LOOP_STATES = { u'00':u'OK', u'01':u'Fault',
-                u'02':u'Limit', u'03':u'Overvoltage Error' }
+BOX_TYPES = {
+    u'0a': u'active-ext',
+    u'1e': u'management-box',
+    u'28': u'usb-timing-box'
+}
+BATTERY_STATES = {
+    u'00': u'Fault',
+    u'01': u'Charging',
+    u'02': u'Reduced Charging',
+    u'03': u'Discharging'
+}
+LOOP_STATES = {
+    u'00': u'OK',
+    u'01': u'Fault',
+    u'02': u'Limit',
+    u'03': u'Overvoltage Error'
+}
+
 
 def randkey(junk):
-    return randint(0,0xffffff)
+    return randint(0, 0xffffff)
+
 
 class rru(decoder):
     """Race Result USB Active thread object class."""
+
     def __init__(self):
         decoder.__init__(self)
-        self.looppower = 37	# percentage ish
-        self.loopid = 1		# id number 1-8
-        self.loopchannel = 1	# channel id 1-8
-        self._sitenoise = {1:100, 2:100, 3:100, 4:100,
-                            5:100, 6:100, 7:100, 8:100 }
+        self.looppower = 37  # percentage ish
+        self.loopid = 1  # id number 1-8
+        self.loopchannel = 1  # channel id 1-8
+        self._sitenoise = {
+            1: 100,
+            2: 100,
+            3: 100,
+            4: 100,
+            5: 100,
+            6: 100,
+            7: 100,
+            8: 100
+        }
         self._boxname = u'rru'
         self._rrustamp = None
         self._rruht = None
         self._error = False
         self._io = None
         self._rdbuf = b''
-        self._curreply = None	# current multi-line response mode
+        self._curreply = None  # current multi-line response mode
         self._lastpassing = 0
         self._lastrequest = None
         self._request_pending = False
@@ -127,26 +194,27 @@ class rru(decoder):
         self._cqueue.put_nowait((u'_port', device))
 
     def sane(self):
-        for m in [ u'ASCII',		# Decoder protocol
-                   u'INFOGET;01',	# Decoder ID
-                   u'CONFSET;05;06',	# Operation Mode usb-timing
-                   u'CONFSET;0b;01',	# Use DTR enabled
-                   u'CONFSET;01;00',	# Push Pre-Warn enabled
-                   u'CONFSET;02;00',	# Blink on repeated... disabled
-                   u'CONFSET;04;00',	# Auto-shutdown ... disabled
-                   u'CONFSET;0a;01',	# Charging via USB enabled
-                   u'CONFSET;06;{0:02x}'.format(self.loopchannel-1),
-                   u'CONFSET;07;{0:02x}'.format(self.loopid-1),
-                   u'CONFSET;08;{0:02x}'.format(self.looppower),
-                   u'EPOCHREFGET',	# Request current epoch ref setting
-                   u'TIMESTAMPGET',	# Request number of ticks on decoder
-                   u'CONFSET;03;00',	# Impulse input (must follow op mode)
-                 ]:
+        for m in [
+                u'ASCII',  # Decoder protocol
+                u'INFOGET;01',  # Decoder ID
+                u'CONFSET;05;06',  # Operation Mode usb-timing
+                u'CONFSET;0b;01',  # Use DTR enabled
+                u'CONFSET;01;00',  # Push Pre-Warn enabled
+                u'CONFSET;02;00',  # Blink on repeated... disabled
+                u'CONFSET;04;00',  # Auto-shutdown ... disabled
+                u'CONFSET;0a;01',  # Charging via USB enabled
+                u'CONFSET;06;{0:02x}'.format(self.loopchannel - 1),
+                u'CONFSET;07;{0:02x}'.format(self.loopid - 1),
+                u'CONFSET;08;{0:02x}'.format(self.looppower),
+                u'EPOCHREFGET',  # Request current epoch ref setting
+                u'TIMESTAMPGET',  # Request number of ticks on decoder
+                u'CONFSET;03;00',  # Impulse input (must follow op mode)
+        ]:
             self.write(m)
 
     def status(self):
         """Request status from decoder."""
-        for c in range(0,0x0f):
+        for c in range(0, 0x0f):
             m = u'INFOGET;{0:02x}'.format(c)
             self.write(m)
         self.write(u'BEACONGET')
@@ -168,9 +236,10 @@ class rru(decoder):
         """Re-establish connection to supplied device port."""
         self._close()
         LOG.debug(u'Connecting to %r', port)
-        s = serial.Serial(baudrate=RRU_BAUD, rtscts=False,
+        s = serial.Serial(baudrate=RRU_BAUD,
+                          rtscts=False,
                           timeout=RRU_IOTIMEOUT)
-        s.dtr = 0	# This must be set _before_ open()
+        s.dtr = 0  # This must be set _before_ open()
         s.port = port
         s.open()
         self._io = s
@@ -231,15 +300,15 @@ class rru(decoder):
         ret = None
         try:
             ti = int(ts, 16) - self._rrustamp
-            tsec = decimal.Decimal(ti//256)+decimal.Decimal(ti%256)/256
-            nsec = (self._rruht.timeval + tsec)%86400
+            tsec = decimal.Decimal(ti // 256) + decimal.Decimal(ti % 256) / 256
+            nsec = (self._rruht.timeval + tsec) % 86400
             if nsec < 0:
                 LOG.debug(u'Negative timestamp: %r', nsec)
-                nsec = 86400+nsec
+                nsec = 86400 + nsec
             ret = tod.tod(nsec).truncate(3)
         except Exception as e:
-            LOG.error(u'%s converting timeval %r: %s',
-                      e.__class__.__name__, ts, e)
+            LOG.error(u'%s converting timeval %r: %s', e.__class__.__name__,
+                      ts, e)
         return ret
 
     def _confmsg(self, cid, val):
@@ -260,28 +329,28 @@ class rru(decoder):
         vbl = val
         if pid in INFOLBLS:
             lbl = INFOLBLS[pid]
-            if pid == u'01':	# ID
+            if pid == u'01':  # ID
                 vbl = u'A-{0:d}'.format(int(val, 16))
                 self._boxname = vbl
-            elif pid == u'02':	# Firmware 
-                vbl = u'v{0:0.1f}'.format(int(val, 16)/10)
-            elif pid == u'03':	# Hardware
-                vbl = u'v{0:0.1f}'.format(int(val, 16)/10)
-            elif pid == u'04':	# Box Type
+            elif pid == u'02':  # Firmware
+                vbl = u'v{0:0.1f}'.format(int(val, 16) / 10)
+            elif pid == u'03':  # Hardware
+                vbl = u'v{0:0.1f}'.format(int(val, 16) / 10)
+            elif pid == u'04':  # Box Type
                 if val in BOX_TYPES:
                     vbl = BOX_TYPES[val]
-            elif pid == u'05':	# Batt Voltage
-                vbl = u'{0:0.1f}V'.format(int(val, 16)/10)
-            elif pid == u'07':	# Battery State
+            elif pid == u'05':  # Batt Voltage
+                vbl = u'{0:0.1f}V'.format(int(val, 16) / 10)
+            elif pid == u'07':  # Battery State
                 if val in BATTERY_STATES:
                     vbl = BATTERY_STATES[val]
-            elif pid == u'08':      # Battery Level
+            elif pid == u'08':  # Battery Level
                 vbl = u'{0:d}%'.format(int(val, 16))
-            elif pid == u'09':	# Int Temp
+            elif pid == u'09':  # Int Temp
                 vbl = u'{0:d}\xb0C'.format(int(val, 16))
-            elif pid == u'0a':	# Supply Voltage
-                vbl = u'{0:0.1f}V'.format(int(val, 16)/10)
-            elif pid == u'0b':      # Loop Status
+            elif pid == u'0a':  # Supply Voltage
+                vbl = u'{0:0.1f}V'.format(int(val, 16) / 10)
+            elif pid == u'0b':  # Loop Status
                 if val in LOOP_STATES:
                     vbl = LOOP_STATES[val]
             LOG.info(u'Info %s: %s', lbl, vbl)
@@ -293,7 +362,7 @@ class rru(decoder):
         self._rruht = tod.mkagg(int(epoch, 16))
         self._rrustamp = int(stime, 16)
         LOG.debug(u'Reference ticks: %r @ %r', self._rrustamp,
-                    self._rruht.rawtime())
+                  self._rruht.rawtime())
 
     def _timestampchk(self, ticks):
         """Receive the number of ticks on the decoder."""
@@ -312,9 +381,8 @@ class rru(decoder):
                 pftime = self._tstotod(mv[2])
                 plast = int(mv[3], 16)
                 pltime = self._tstotod(mv[4])
-                LOG.info(u'Info %r Passings, %r@%s - %r@%s',
-                         pcount, pfirst, pftime.rawtime(2),
-                                  plast, pltime.rawtime(2))
+                LOG.info(u'Info %r Passings, %r@%s - %r@%s', pcount, pfirst,
+                         pftime.rawtime(2), plast, pltime.rawtime(2))
             else:
                 LOG.info(u'Info No Passings')
         else:
@@ -325,31 +393,31 @@ class rru(decoder):
         if len(mv) == RRU_PASSLEN:
             # USB decoder doesn't return passing ID, use internal count
             istr = unicode(self._lastpassing)
-            tagid = mv[0]		# [TranspCode:string]
-            wuc = mv[1]			# [WakeupCounter:4]
-            timestr = mv[2]		# [Time:8]
-            hits = mv[3]		# [Hits:2]
-            rssi = mv[4]		# [RSSI:2]
-            battery = mv[5]		# [Battery:2]
-            loopid = mv[8]		# [LoopId:1]
-            adata = mv[10]		# [InternalActiveData:2]
+            tagid = mv[0]  # [TranspCode:string]
+            wuc = mv[1]  # [WakeupCounter:4]
+            timestr = mv[2]  # [Time:8]
+            hits = mv[3]  # [Hits:2]
+            rssi = mv[4]  # [RSSI:2]
+            battery = mv[5]  # [Battery:2]
+            loopid = mv[8]  # [LoopId:1]
+            adata = mv[10]  # [InternalActiveData:2]
 
             # Check values
             if not loopid:
-                loopid = u'1'	# add fake id for passives
+                loopid = u'1'  # add fake id for passives
             else:
-                loopid = unicode(int(loopid,16)+1)
+                loopid = unicode(int(loopid, 16) + 1)
             activestore = False
             if adata:
                 aval = int(adata, 16)
-                activestore = (int(adata, 16)&0x40) == 0x40
+                activestore = (int(adata, 16) & 0x40) == 0x40
 
             if tagid == RRU_MARKER:
                 tagid = u''
 
             if battery and tagid:
                 try:
-                    bv = int(battery, 16)/10
+                    bv = int(battery, 16) / 10
                     if bv < RRU_LOWBATT:
                         LOG.warning(u'Low battery on %r: %0.1fV', tagid, bv)
                 except Exception as e:
@@ -360,14 +428,14 @@ class rru(decoder):
                 try:
                     hitcount = int(hits, 16)
                     rssival = int(rssi, 16)
-                    twofour = -90 + ((rssival&0x70)>>2)
-                    lstrength = 1 + (rssival&0x0f)
+                    twofour = -90 + ((rssival & 0x70) >> 2)
+                    lstrength = 1 + (rssival & 0x0f)
                     if lstrength < 5 or twofour < -82 or hitcount < 4:
-                        LOG.warning(u'%r Hits:%d RSSI:%ddBm Loop:%ddB',
-                                  tagid, hitcount, twofour, lstrength)
+                        LOG.warning(u'%r Hits:%d RSSI:%ddBm Loop:%ddB', tagid,
+                                    hitcount, twofour, lstrength)
                     else:
-                        LOG.debug(u'%r Hits:%d RSSI:%ddBm Loop:%ddB',
-                                  tagid, hitcount, twofour, lstrength)
+                        LOG.debug(u'%r Hits:%d RSSI:%ddBm Loop:%ddB', tagid,
+                                  hitcount, twofour, lstrength)
                 except Exception as e:
                     LOG.debug(u'%s reading hits/RSSI: %s',
                               e.__class__.__name__, e)
@@ -382,9 +450,11 @@ class rru(decoder):
                     t.source = self._boxname
                     self._trig(t)
             else:
-                LOG.info(u'Stored passing: %r',
-                         u';'.join([istr, tagid, u'0000-00-00', timestr,
-                                    self._boxname, loopid]))
+                LOG.info(
+                    u'Stored passing: %r', u';'.join([
+                        istr, tagid, u'0000-00-00', timestr, self._boxname,
+                        loopid
+                    ]))
             self._lastpassing += 1
         elif len(mv) == 2:
             resp = int(mv[0], 16)
@@ -402,7 +472,7 @@ class rru(decoder):
         """Receive a beacon from the decoder."""
         if len(mv) == RRU_BEACONLEN:
             # transponder averages
-            tlqi = int(mv[13], 16)/2.56
+            tlqi = int(mv[13], 16) / 2.56
             trssi = -90 + int(mv[14], 16)
             LOG.info(u'Info Avg LQI: {0:0.0f}%'.format(tlqi))
             LOG.info(u'Info Avg RSSI: {}dBm'.format(trssi))
@@ -433,7 +503,7 @@ class rru(decoder):
     def _chansurf(self):
         """Examine survey for a better channel and hop if needed."""
         ch = None
-        cv = 55		# don't accept any channel with noise over 50%
+        cv = 55  # don't accept any channel with noise over 50%
         lv = []
         for c in sorted(self._sitenoise, key=randkey):
             nv = self._sitenoise[c]
@@ -445,7 +515,7 @@ class rru(decoder):
         if ch is not None:
             LOG.info(u'Selected loop channel %r (%d%%)', ch, cv)
             self.loopchannel = ch
-            m = u'CONFSET;06;{0:02x}'.format(self.loopchannel-1)
+            m = u'CONFSET;06;{0:02x}'.format(self.loopchannel - 1)
             self.write(m)
 
     def _handlereply(self, mv):
@@ -460,8 +530,9 @@ class rru(decoder):
         elif self._curreply == u'INFOGET':
             if len(mv) == 2:
                 self._infomsg(mv[0], mv[1])
-        elif self._curreply in [u'EPOCHREFGET',
-                                 u'EPOCHREFSET', u'EPOCHREFADJ1D']:
+        elif self._curreply in [
+                u'EPOCHREFGET', u'EPOCHREFSET', u'EPOCHREFADJ1D'
+        ]:
             if len(mv) == 2:
                 self._refgetmsg(mv[0], mv[1])
         elif self._curreply in [u'CONFGET', u'CONFSET']:
@@ -482,7 +553,7 @@ class rru(decoder):
         """Handle the next line of response from decoder."""
         mv = l.split(u';')
         if len(mv) > 0:
-            if mv[0] == u'#P':	# pushed passing overrides cmd/reply logic
+            if mv[0] == u'#P':  # pushed passing overrides cmd/reply logic
                 self._passingmsg(mv[1:])
             elif mv[0] == u'EOR':
                 if self._curreply in [u'PASSINGGET', u'PASSINGIDERROR']:
@@ -515,7 +586,7 @@ class rru(decoder):
                     ret = self._rdbuf.lstrip(b'\0').decode(RRU_ENCODING)
                     self._rdbuf = b''
                 else:
-                    ret = u'EOR'	# Flag end of response
+                    ret = u'EOR'  # Flag end of response
                 break
             else:
                 self._rdbuf += ch
@@ -541,23 +612,23 @@ class rru(decoder):
         self._running = True
         while self._running:
             try:
-                m = None	# next commmand
+                m = None  # next commmand
                 if self._io is not None:
                     # Fetch all responses from unit
                     refetch = False
                     while True:
-                         l = self._readline()
-                         if l is None:
-                             # wait for sitesurvey
-                             if self._curreply != u'SITESURVEY': 
-                                 # on time out, request passings
-                                 refetch = True
-                                 break
-                         else:
-                             #LOG.debug(u'RECV: %r', l)
-                             self._procline(l)
-                             if l == u'EOR':
-                                 break
+                        l = self._readline()
+                        if l is None:
+                            # wait for sitesurvey
+                            if self._curreply != u'SITESURVEY':
+                                # on time out, request passings
+                                refetch = True
+                                break
+                        else:
+                            #LOG.debug(u'RECV: %r', l)
+                            self._procline(l)
+                            if l == u'EOR':
+                                break
                     if refetch:
                         self._request_next()
                     m = self._cqueue.get_nowait()
@@ -572,5 +643,5 @@ class rru(decoder):
                 LOG.error(u'%s: %s', e.__class__.__name__, e)
             except Exception as e:
                 LOG.error(u'%s: %s', e.__class__.__name__, e)
-        self.setcb()	# make sure callback is unrefed
+        self.setcb()  # make sure callback is unrefed
         LOG.debug(u'Exiting')

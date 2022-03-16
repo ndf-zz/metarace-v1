@@ -1,9 +1,10 @@
-
 """Countback support."""
+
 
 class countback(object):
     """Wrapper for countback store/compare."""
     __hash__ = None
+
     def __init__(self, cbstr=None):
         self.__store = {}
         if cbstr is not None:
@@ -20,7 +21,7 @@ class countback(object):
         propmap = {}
         cbvec = cbstr.split(u',')
         if len(cbvec) > 0:
-            for i in range(0,len(cbvec)):
+            for i in range(0, len(cbvec)):
                 if cbvec[i].isdigit():
                     propmap[i] = int(cbvec[i])
         self.__store = {}
@@ -35,7 +36,7 @@ class countback(object):
 
     def __unicode__(self):
         ret = []
-        for i in range(0,self.maxplace()+1):
+        for i in range(0, self.maxplace() + 1):
             if i in self.__store and self.__store[i] != 0:
                 ret.append(unicode(self.__store[i]))
             else:
@@ -55,7 +56,7 @@ class countback(object):
         self.__store[key] = value
 
     def __delitem__(self, key):
-        del(self.__store[key])
+        del (self.__store[key])
 
     def __iter__(self):
         return self.__store.iterkeys()
@@ -69,8 +70,8 @@ class countback(object):
     def __lt__(self, other):
         if not isinstance(other, countback):
             return NotImplemented
-        ret = False # assume all same
-        for i in range(0,max(self.maxplace(), other.maxplace())+1):
+        ret = False  # assume all same
+        for i in range(0, max(self.maxplace(), other.maxplace()) + 1):
             a = self[i]
             b = other[i]
             if a != b:
@@ -81,8 +82,8 @@ class countback(object):
     def __le__(self, other):
         if not isinstance(other, countback):
             return NotImplemented
-        ret = True # assume all same
-        for i in range(0,max(self.maxplace(), other.maxplace())+1):
+        ret = True  # assume all same
+        for i in range(0, max(self.maxplace(), other.maxplace()) + 1):
             a = self[i]
             b = other[i]
             if a != b:
@@ -94,7 +95,7 @@ class countback(object):
         if not isinstance(other, countback):
             return NotImplemented
         ret = True
-        for i in range(0,max(self.maxplace(), other.maxplace())+1):
+        for i in range(0, max(self.maxplace(), other.maxplace()) + 1):
             if self[i] != other[i]:
                 ret = False
                 break
@@ -104,7 +105,7 @@ class countback(object):
         if not isinstance(other, countback):
             return NotImplemented
         ret = False
-        for i in range(0,max(self.maxplace(), other.maxplace())+1):
+        for i in range(0, max(self.maxplace(), other.maxplace()) + 1):
             if self[i] != other[i]:
                 ret = True
                 break
@@ -113,8 +114,8 @@ class countback(object):
     def __gt__(self, other):
         if not isinstance(other, countback):
             return NotImplemented
-        ret = False # assume all same
-        for i in range(0,max(self.maxplace(), other.maxplace())+1):
+        ret = False  # assume all same
+        for i in range(0, max(self.maxplace(), other.maxplace()) + 1):
             a = self[i]
             b = other[i]
             if a != b:
@@ -125,8 +126,8 @@ class countback(object):
     def __ge__(self, other):
         if not isinstance(other, countback):
             return NotImplemented
-        ret = True # assume all same
-        for i in range(0,max(self.maxplace(), other.maxplace())+1):
+        ret = True  # assume all same
+        for i in range(0, max(self.maxplace(), other.maxplace()) + 1):
             a = self[i]
             b = other[i]
             if a != b:
@@ -139,6 +140,6 @@ class countback(object):
         if not isinstance(other, countback):
             return NotImplemented
         ret = countback(str(self))
-        for i in range(0,max(self.maxplace(), other.maxplace())+1):
+        for i in range(0, max(self.maxplace(), other.maxplace()) + 1):
             ret[i] += other[i]
         return ret

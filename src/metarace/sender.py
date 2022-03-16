@@ -1,4 +1,3 @@
-
 """DHI scoreboard sender class.
 
 This module provides a thread object which collects
@@ -24,8 +23,7 @@ PAGELEN = 7
 SERIALBAUD = 115200
 
 # protocol to object mappings
-PROTOCOLS = {
-}
+PROTOCOLS = {}
 
 # dispatch thread queue commands
 TCMDS = (u'EXIT', u'PORT', u'MSG')
@@ -34,8 +32,10 @@ TCMDS = (u'EXIT', u'PORT', u'MSG')
 LOG = logging.getLogger(u'metarace.sender')
 LOG.setLevel(logging.DEBUG)
 
+
 class serialport(object):
     """Scoreboard communication port object."""
+
     def __init__(self, addr, baudrate):
         """Constructor.
 
@@ -46,7 +46,7 @@ class serialport(object):
 
         """
         LOG.debug(u'Serial connection %s @ %d baud.', addr, baudrate)
-        self.__s = serial.Serial(addr,baudrate,rtscts=False)
+        self.__s = serial.Serial(addr, baudrate, rtscts=False)
         self.send = self.__s.write
         self.running = True
 
@@ -66,8 +66,10 @@ class serialport(object):
         except:
             pass
 
+
 class scbport(object):
     """Scoreboard communication port object."""
+
     def __init__(self, addr, protocol):
         """Constructor.
 
@@ -82,7 +84,7 @@ class scbport(object):
             # set the TCP 'no delay' option
             self.__s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             LOG.debug(u'Opening TCP socket %s', repr(addr))
-        else:	# assume Datagram (UDP)
+        else:  # assume Datagram (UDP)
             # enable broadcast send
             self.__s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             LOG.debug(u'Opening UDP socket %s', repr(addr))
@@ -109,6 +111,7 @@ class scbport(object):
         except:
             pass
 
+
 def mkport(port=None):
     """Create a new scbport socket object.
 
@@ -123,16 +126,16 @@ def mkport(port=None):
         PORT :: port name or number (optional)
 
     """
-    nprot = socket.SOCK_STREAM	# default is TCP
-    naddr = u'localhost'	# default is localhost
-    nport = 1946		# default is 1946 (Caprica DHI)
+    nprot = socket.SOCK_STREAM  # default is TCP
+    naddr = u'localhost'  # default is localhost
+    nport = 1946  # default is 1946 (Caprica DHI)
 
     # import system defaults if required
-    if metarace.sysconf.has_option(u'sender',u'portspec'):
+    if metarace.sysconf.has_option(u'sender', u'portspec'):
         if not port or port == u'DEFAULT':
-            port = metarace.sysconf.get(u'sender',u'portspec')
-    
-    if port == u'DEBUG': # force use of the hardcoded UDP endpoint
+            port = metarace.sysconf.get(u'sender', u'portspec')
+
+    if port == u'DEBUG':  # force use of the hardcoded UDP endpoint
         LOG.debug(u'Using debug port: UDP:localhost:5060')
         nprot = socket.SOCK_DGRAM
         naddr = u'localhost'
@@ -172,16 +175,17 @@ def mkport(port=None):
             nport = int(vels[2])
         else:
             nport = socket.getservbyname(vels[2])
-    
+
     ## split port string into [PROTOCOL:]ADDR[:PORT]
     if u'/dev/' in naddr:
         baud = SERIALBAUD
         if metarace.sysconf.has_option(u'sender', u'serialbaud'):
-            baud = strops.confopt_posint(metarace.sysconf.get(u'sender',
-                       u'serialbaud'), SERIALBAUD)
+            baud = strops.confopt_posint(
+                metarace.sysconf.get(u'sender', u'serialbaud'), SERIALBAUD)
         return serialport(naddr, baud)
     else:
         return scbport((naddr, nport), nprot)
+
 
 def mksender(port=None, protocol=None):
     nprot = u'dhi'
@@ -209,6 +213,7 @@ def mksender(port=None, protocol=None):
     ret.encoding = encoding
     return ret
 
+
 class sender(threading.Thread):
     """Caprica/Galactica DHI sender thread."""
 
@@ -218,12 +223,12 @@ class sender(threading.Thread):
 
     def clrline(self, line):
         """Clear the specified line in DHI database."""
-        self.sendmsg(unt4.unt4(xx=0,yy=int(line),erl=True))
+        self.sendmsg(unt4.unt4(xx=0, yy=int(line), erl=True))
 
     def setline(self, line, msg):
         """Set the specified DHI database line to msg."""
-        msg = strops.truncpad(msg,self.linelen,u'l',False)
-        self.sendmsg(unt4.unt4(xx=0,yy=int(line),erl=True,text=msg))
+        msg = strops.truncpad(msg, self.linelen, u'l', False)
+        self.sendmsg(unt4.unt4(xx=0, yy=int(line), erl=True, text=msg))
 
     def flush(self):
         """Send an empty update to force timeout clock to zero."""
@@ -232,11 +237,11 @@ class sender(threading.Thread):
     def linefill(self, line, char=u'_'):
         """Use char to fill the specified line."""
         msg = char * self.linelen
-        self.sendmsg(unt4.unt4(xx=0,yy=int(line),text=msg))
+        self.sendmsg(unt4.unt4(xx=0, yy=int(line), text=msg))
 
     def postxt(self, line, oft, msg):
         """Position msg at oft on line in DHI database."""
-        self.sendmsg(unt4.unt4(xx=int(oft),yy=int(line),text=msg))
+        self.sendmsg(unt4.unt4(xx=int(oft), yy=int(line), text=msg))
 
     def setoverlay(self, newov):
         """Request overlay newov to be displayed on the scoreboard."""
@@ -246,12 +251,12 @@ class sender(threading.Thread):
 
     def __init__(self, port=None):
         """Constructor."""
-        threading.Thread.__init__(self) 
+        threading.Thread.__init__(self)
         self.name = u'sender'
         self.port = None
-        self.linelen = LINELEN		# overridden by mksender
-        self.pagelen = PAGELEN		# overridden by mksender
-        self.encoding = ENCODING	# overridden by mksender
+        self.linelen = LINELEN  # overridden by mksender
+        self.pagelen = PAGELEN  # overridden by mksender
+        self.encoding = ENCODING  # overridden by mksender
         self.ignore = False
         self.curov = None
         self.queue = Queue.Queue()
@@ -293,7 +298,7 @@ class sender(threading.Thread):
                 self.queue.get_nowait()
                 self.queue.task_done()
         except Queue.Empty:
-            pass 
+            pass
         self.queue.put_nowait((u'PORT', port))
 
     def set_ignore(self, ignval=False):
@@ -313,7 +318,7 @@ class sender(threading.Thread):
             try:
                 if m[0] == u'MSG' and not self.ignore and self.port:
                     #LOG.debug(u'Sending message : ' + repr(m[1]))
-                    self.port.sendall(m[1].encode(self.encoding,'replace'))
+                    self.port.sendall(m[1].encode(self.encoding, 'replace'))
                 elif m[0] == u'EXIT':
                     LOG.debug(u'Request to close: %s', m[1])
                     self.running = False
@@ -339,4 +344,5 @@ class sender(threading.Thread):
             self.port.close()
         LOG.info(u'Exiting')
 
-PROTOCOLS[u'dhi']=sender
+
+PROTOCOLS[u'dhi'] = sender

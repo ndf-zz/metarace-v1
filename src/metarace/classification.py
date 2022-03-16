@@ -1,4 +1,3 @@
-
 """Classification/Medal meta-event handler for trackmeet."""
 
 import os
@@ -33,21 +32,26 @@ COL_PLACE = 5
 COL_MEDAL = 6
 
 # scb function key mappings
-key_reannounce = u'F4'	# (+CTRL)
-key_abort = u'F5'	# (+CTRL)
+key_reannounce = u'F4'  # (+CTRL)
+key_abort = u'F5'  # (+CTRL)
 key_startlist = u'F3'
 key_results = u'F4'
 
+
 class classification(object):
+
     def loadconfig(self):
         """Load race config from disk."""
-        cr = jsonconfig.config({u'event':
-                                  {u'id':EVENT_ID,
-                                   u'showinfo':True,
-                                   u'showevents':u'',
-				   u'comments':[],
-                                   u'placesrc':u'',
-                                   u'medals':u'' }})
+        cr = jsonconfig.config({
+            u'event': {
+                u'id': EVENT_ID,
+                u'showinfo': True,
+                u'showevents': u'',
+                u'comments': [],
+                u'placesrc': u'',
+                u'medals': u''
+            }
+        })
         cr.add_section('event')
         if os.path.exists(self.configfile):
             try:
@@ -59,14 +63,14 @@ class classification(object):
             LOG.info(u'%r not found, loading defaults', self.configfile)
 
         self.update_expander_lbl_cb()
-        self.info_expand.set_expanded(strops.confopt_bool(
-                                       cr.get(u'event', u'showinfo')))
+        self.info_expand.set_expanded(
+            strops.confopt_bool(cr.get(u'event', u'showinfo')))
 
         self.showevents = cr.get(u'event', u'showevents')
         self.placesrc = cr.get(u'event', u'placesrc')
         self.medals = cr.get(u'event', u'medals')
         self.comments = cr.get(u'event', u'comments')
-        self.recalculate()	# model is cleared and loaded in recalc
+        self.recalculate()  # model is cleared and loaded in recalc
         eid = cr.get(u'event', u'id')
         if eid and eid != EVENT_ID:
             LOG.info(u'Event config mismatch: %r != %r', eid, EVENT_ID)
@@ -75,20 +79,21 @@ class classification(object):
         """Return a startlist report."""
         ret = []
         sec = report.section()
-        headvec = [u'Event', self.evno, u':', self.event[u'pref'],
-                         self.event[u'info']]
+        headvec = [
+            u'Event', self.evno, u':', self.event[u'pref'], self.event[u'info']
+        ]
         if not program:
             headvec.append(u'- Start List')
         sec.heading = u' '.join(headvec)
         lapstring = strops.lapstring(self.event[u'laps'])
-        substr = u' '.join([lapstring, self.event[u'dist'],
-                             self.event[u'prog']]).strip()
+        substr = u' '.join(
+            [lapstring, self.event[u'dist'], self.event[u'prog']]).strip()
         if substr:
             sec.subheading = substr
         sec.lines = []
         for r in self.riders:
             rno = r[COL_BIB].decode(u'utf-8')
-            if u't' in self.series: # Team no hack
+            if u't' in self.series:  # Team no hack
                 rno = u' '  # force name
             rh = self.meet.newgetrider(rno, self.series)
             rname = u''
@@ -136,23 +141,23 @@ class classification(object):
                 else:
                     # TODO: allow for 'dnf'/'dns' here, propagates into event
                     rank = rks
-                    info = None		# no seeding info available
+                    info = None  # no seeding info available
             time = None
 
             yield [bib, rank, time, info]
 
-    def result_report(self, recurse=True): # by default include inners
+    def result_report(self, recurse=True):  # by default include inners
         """Return a list of report sections containing the race result."""
         ret = []
 
         # start with the overall result
         sec = report.section()
-        sec.heading = u'Event ' + self.evno + u': ' + u' '.join([
-                          self.event[u'pref'], self.event[u'info'] ]).strip()
+        sec.heading = u'Event ' + self.evno + u': ' + u' '.join(
+            [self.event[u'pref'], self.event[u'info']]).strip()
         sec.lines = []
         lapstring = strops.lapstring(self.event[u'laps'])
-        substr = u' '.join([lapstring, self.event[u'dist'],
-                             self.event[u'prog']]).strip()
+        substr = u' '.join(
+            [lapstring, self.event[u'dist'], self.event[u'prog']]).strip()
         if substr:
             sec.subheading = substr
         prevmedal = u''
@@ -163,7 +168,7 @@ class classification(object):
             rname = u''
             plink = u''
             rcat = u''
-            if u't' in self.series: # Team no hack
+            if u't' in self.series:  # Team no hack
                 rno = u' '  # force name
                 if rh is not None:
                     rname = rh[u'first']
@@ -171,14 +176,16 @@ class classification(object):
                 if rh is not None:
                     rname = rh[u'namestr']
                     if rh[u'ucicode']:
-                        rcat = rh[u'ucicode']   # overwrite by force
+                        rcat = rh[u'ucicode']  # overwrite by force
 
                     # consider partners here
                     if rh[u'cat'] and u'tandem' in rh[u'cat'].lower():
                         ph = self.meet.newgetrider(rh[u'note'], self.series)
                         if ph is not None:
-                            plink = [u'', u'', ph[u'namestr'] + u' - Pilot', ph[
-u'ucicode'], u'', u'',u'']
+                            plink = [
+                                u'', u'', ph[u'namestr'] + u' - Pilot',
+                                ph[u'ucicode'], u'', u'', u''
+                            ]
 
             rank = u''
             rks = r[COL_PLACE].decode(u'utf-8')
@@ -196,16 +203,16 @@ u'ucicode'], u'', u'',u'']
                 sec.lines.append([None, None, None])
             prevmedal = medal
 
-            nrow = [rank, rno, rname, rcat, None, medal,plink]
+            nrow = [rank, rno, rname, rcat, None, medal, plink]
             sec.lines.append(nrow)
             if u't' in self.series:
                 for trno in strops.reformat_riderlist(rh[u'note']).split():
-                    trh = self.meet.newgetrider(trno) #!! SERIES?
+                    trh = self.meet.newgetrider(trno)  #!! SERIES?
                     if trh is not None:
                         trname = trh[u'namestr']
                         trinf = trh[u'ucicode']
-                        sec.lines.append([None, trno, trname, trinf,
-                                                 None, None, None])
+                        sec.lines.append(
+                            [None, trno, trname, trinf, None, None, None])
         ret.append(sec)
 
         if recurse:
@@ -217,23 +224,23 @@ u'ucicode'], u'', u'',u'']
                     if r is None:
                         LOG.error(u'Invalid event %r in showplaces', evno)
                         continue
-                    r.loadconfig()	# now have queryable event handle
-                    if r.onestart:	# go for result
+                    r.loadconfig()  # now have queryable event handle
+                    if r.onestart:  # go for result
                         ret.extend(r.result_report())
-                    else:		# go for startlist
+                    else:  # go for startlist
                         ret.extend(r.startlist_report())
                     r.destroy()
         return ret
 
     def addrider(self, bib=u'', place=u''):
         """Add specified rider to race model."""
-        nr=[bib, u'', u'', u'', u'', u'', u'']
+        nr = [bib, u'', u'', u'', u'', u'', u'']
         er = self.getrider(bib)
         if not bib or er is None:
             dbr = self.meet.rdb.getrider(bib, self.series)
             if dbr is not None:
-                for i in range(1,5):
-                    nr[i] = self.meet.rdb.getvalue(dbr, i) # unicode
+                for i in range(1, 5):
+                    nr[i] = self.meet.rdb.getvalue(dbr, i)  # unicode
             nr[COL_PLACE] = place
             return self.riders.append(nr)
         else:
@@ -276,8 +283,8 @@ u'ucicode'], u'', u'',u'']
         for p in self.placesrc.split(u';'):
             placegroup = p.strip()
             if placegroup:
-                LOG.debug(u'Adding place group %r at rank %r',
-                            placegroup, currank)
+                LOG.debug(u'Adding place group %r at rank %r', placegroup,
+                          currank)
                 if placegroup == u'X':
                     LOG.debug(u'Added placeholder at rank %r', currank)
                     currank += 1
@@ -297,7 +304,7 @@ u'ucicode'], u'', u'',u'']
                                         placegroup, currank)
                     else:
                         LOG.warning(u'Invalid placegroup %r at rank %r',
-                                      placegroup, currank)
+                                    placegroup, currank)
             else:
                 LOG.warning(u'Empty placegroup at rank %r', currank)
 
@@ -307,10 +314,10 @@ u'ucicode'], u'', u'',u'']
         for evno in lookup:
             r = self.meet.get_event(evno, False)
             if r is None:
-                LOG.warning(u'Event %r not found for lookup %r',
-                                      evno, lookup[evno])
+                LOG.warning(u'Event %r not found for lookup %r', evno,
+                            lookup[evno])
                 return
-            r.loadconfig()	# now have queryable event handle
+            r.loadconfig()  # now have queryable event handle
             for res in r.result_gen():
                 if isinstance(res[1], int):
                     if res[1] in lookup[evno]:
@@ -324,13 +331,13 @@ u'ucicode'], u'', u'',u'']
 
         # Pass 3: add riders to model in rank order
         i = 1
-        while i <= maxcrank: 
+        while i <= maxcrank:
             if i in placemap:
                 for r in placemap[i]:
                     self.addrider(r, unicode(i))
             i += 1
 
-        if len(self.riders) > 0:	# got at least one result to report
+        if len(self.riders) > 0:  # got at least one result to report
             self.onestart = True
         # Pass 4: Mark medals if required
         medalmap = {}
@@ -374,8 +381,9 @@ u'ucicode'], u'', u'',u'']
             # clear page
             self.meet.txt_clear()
             self.meet.txt_title(u' '.join([
-                  u'Event', self.evno, u':', self.event[u'pref'],
-                   self.event[u'info']]))
+                u'Event', self.evno, u':', self.event[u'pref'],
+                self.event[u'info']
+            ]))
             self.meet.txt_line(1)
             self.meet.txt_line(19)
 
@@ -399,15 +407,17 @@ u'ucicode'], u'', u'',u'']
                 tcs = r[COL_CLUB].decode(u'utf-8')
                 if tcs and tcs <= 3:
                     clubstr = u' (' + tcs + u')'
-                namestr = strops.truncpad(strops.fitname(r[COL_FIRST].decode(u'utf-8'),
-                    r[COL_LAST].decode(u'utf-8'), 25-len(clubstr))+clubstr, 25)
+                namestr = strops.truncpad(
+                    strops.fitname(r[COL_FIRST].decode(u'utf-8'),
+                                   r[COL_LAST].decode(u'utf-8'),
+                                   25 - len(clubstr)) + clubstr, 25)
                 medal = r[COL_MEDAL].decode(u'utf-8')
                 if lmedal != u'' and medal == u'':
-                    l += 1	 # gap to medals
+                    l += 1  # gap to medals
                 lmedal = medal
                 ol = [plstr, bibstr, namestr, medal]
-                self.meet.txt_postxt(l, posoft, u' '.join([
-                      plstr, bibstr, namestr, medal]))
+                self.meet.txt_postxt(
+                    l, posoft, u' '.join([plstr, bibstr, namestr, medal]))
                 l += 1
 
         return False
@@ -423,34 +433,37 @@ u'ucicode'], u'', u'',u'']
         count = 0
         teamnames = False
         name_w = self.meet.scb.linelen - 12
-        fmt = [(3,u'l'), (4,u'r'), u' ',(name_w, u'l'), (4,u'r')]
+        fmt = [(3, u'l'), (4, u'r'), u' ', (name_w, u'l'), (4, u'r')]
         if self.series and self.series[0].lower() == u't':
             teamnames = True
             name_w = self.meet.scb.linelen - 8
-            fmt = [(3,u'l'), u' ',(name_w, u'l'), (4,u'r')]
+            fmt = [(3, u'l'), u' ', (name_w, u'l'), (4, u'r')]
 
         for r in self.riders:
             plstr = r[COL_PLACE].decode('utf-8')
             if plstr.isdigit():
                 plstr = plstr + u'.'
             no = r[COL_BIB]
-            first=r[COL_FIRST].decode('utf-8')
-            last=r[COL_LAST].decode('utf-8')
-            club=r[COL_CLUB].decode('utf-8')
+            first = r[COL_FIRST].decode('utf-8')
+            last = r[COL_LAST].decode('utf-8')
+            club = r[COL_CLUB].decode('utf-8')
             if not teamnames:
-                resvec.append([plstr, no, strops.fitname(first,last, name_w),
-                                     club])
+                resvec.append(
+                    [plstr, no,
+                     strops.fitname(first, last, name_w), club])
             else:
                 resvec.append([plstr, first, club])
             count += 1
         self.meet.scbwin = None
-        header=self.meet.racenamecat(self.event)
+        header = self.meet.racenamecat(self.event)
         ## TODO: Flag Provisional
-        evtstatus=u'Final Classification'.upper()
+        evtstatus = u'Final Classification'.upper()
         self.meet.scbwin = scbwin.scbtable(scb=self.meet.scb,
-                                  head=self.meet.racenamecat(self.event),
-                                  subhead=evtstatus,
-                                  coldesc=fmt, rows=resvec)
+                                           head=self.meet.racenamecat(
+                                               self.event),
+                                           subhead=evtstatus,
+                                           coldesc=fmt,
+                                           rows=resvec)
         self.meet.scbwin.reset()
         return False
 
@@ -473,7 +486,8 @@ u'ucicode'], u'', u'',u'']
 
     def do_properties(self):
         """Run race properties dialog."""
-        prfile = os.path.join(metarace.UI_PATH, u'classification_properties.ui')
+        prfile = os.path.join(metarace.UI_PATH,
+                              u'classification_properties.ui')
         LOG.debug(u'Building event properties from %r', prfile)
         b = gtk.Builder()
         b.add_from_file(prfile)
@@ -488,7 +502,7 @@ u'ucicode'], u'', u'',u'']
         me = b.get_object(u'race_medals_entry')
         me.set_text(self.medals)
         response = dlg.run()
-        if response == 1:       # id 1 set in glade for "Apply"
+        if response == 1:  # id 1 set in glade for "Apply"
             LOG.debug(u'Updating event properties')
             self.placesrc = pe.get_text().decode(u'utf-8')
             self.medals = me.get_text().decode(u'utf-8')
@@ -538,16 +552,16 @@ u'ucicode'], u'', u'',u'']
 
     def editcol_db(self, cell, path, new_text, col):
         """Cell update with writeback to meet."""
-        new_text = new_text.decode(u'utf-8','replace').strip()
+        new_text = new_text.decode(u'utf-8', 'replace').strip()
         self.riders[path][col] = new_text
         glib.idle_add(self.meet.rider_edit,
-                      self.riders[path][COL_BIB].decode(u'utf-8'),
-                                           self.series, col, new_text)
+                      self.riders[path][COL_BIB].decode(u'utf-8'), self.series,
+                      col, new_text)
 
     def __init__(self, meet, event, ui=True):
         """Constructor."""
         self.meet = meet
-        self.event = event      # Note: now a treerowref
+        self.event = event  # Note: now a treerowref
         self.evno = event[u'evid']
         self.evtype = event[u'type']
         self.series = event[u'seri']
@@ -555,20 +569,21 @@ u'ucicode'], u'', u'',u'']
         LOG.debug(u'Init event %s', self.evno)
 
         # race run time attributes
-        self.onestart = True	# always true for autospec classification
+        self.onestart = True  # always true for autospec classification
         self.readonly = not ui
         self.winopen = ui
         self.placesrc = u''
         self.medals = u''
         self.comments = []
 
-        self.riders = gtk.ListStore(gobject.TYPE_STRING, # 0 bib
-                                    gobject.TYPE_STRING, # 1 first name
-                                    gobject.TYPE_STRING, # 2 last name
-                                    gobject.TYPE_STRING, # 3 club
-                                    gobject.TYPE_STRING, # 4 comment
-                                    gobject.TYPE_STRING, # 5 place
-                                    gobject.TYPE_STRING) # 6 medal
+        self.riders = gtk.ListStore(
+            gobject.TYPE_STRING,  # 0 bib
+            gobject.TYPE_STRING,  # 1 first name
+            gobject.TYPE_STRING,  # 2 last name
+            gobject.TYPE_STRING,  # 3 club
+            gobject.TYPE_STRING,  # 4 comment
+            gobject.TYPE_STRING,  # 5 place
+            gobject.TYPE_STRING)  # 6 medal
 
         uifile = os.path.join(metarace.UI_PATH, u'classification.ui')
         LOG.debug(u'Building event interface from %r', uifile)
@@ -584,10 +599,10 @@ u'ucicode'], u'', u'',u'']
         self.showev = b.get_object(u'classification_info_evno_show')
         self.prefix_ent = b.get_object(u'classification_info_prefix')
         self.prefix_ent.set_text(self.event[u'pref'])
-        self.prefix_ent.connect(u'changed', self.editent_cb,u'pref')
+        self.prefix_ent.connect(u'changed', self.editent_cb, u'pref')
         self.info_ent = b.get_object(u'classification_info_title')
         self.info_ent.set_text(self.event[u'info'])
-        self.info_ent.connect(u'changed', self.editent_cb,u'info')
+        self.info_ent.connect(u'changed', self.editent_cb, u'info')
 
         self.context_menu = None
         if ui:
@@ -598,13 +613,18 @@ u'ucicode'], u'', u'',u'']
 
             # riders columns
             uiutil.mkviewcoltxt(t, u'No.', COL_BIB, calign=1.0)
-            uiutil.mkviewcoltxt(t, u'First Name', COL_FIRST,
-                                    self.editcol_db, expand=True)
-            uiutil.mkviewcoltxt(t, u'Last Name', COL_LAST,
-                                    self.editcol_db, expand=True)
+            uiutil.mkviewcoltxt(t,
+                                u'First Name',
+                                COL_FIRST,
+                                self.editcol_db,
+                                expand=True)
+            uiutil.mkviewcoltxt(t,
+                                u'Last Name',
+                                COL_LAST,
+                                self.editcol_db,
+                                expand=True)
             uiutil.mkviewcoltxt(t, u'Club', COL_CLUB, self.editcol_db)
-            uiutil.mkviewcoltxt(t, u'Rank', COL_PLACE,
-                                    halign=0.5, calign=0.5)
+            uiutil.mkviewcoltxt(t, u'Rank', COL_PLACE, halign=0.5, calign=0.5)
             uiutil.mkviewcoltxt(t, u'Medal', COL_MEDAL)
             t.show()
             b.get_object(u'classification_result_win').add(t)

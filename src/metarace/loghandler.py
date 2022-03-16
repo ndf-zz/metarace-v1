@@ -1,16 +1,19 @@
-
 """Custom log handlers."""
 
 import logging
 import glib
 
+
 class traceFilter(logging.Filter):
     """Filter events to type TIMER only."""
+
     def filter(self, record):
-        return record.levelno == 25	# TIMER LOG LEVEL
+        return record.levelno == 25  # TIMER LOG LEVEL
+
 
 class traceHandler(logging.Handler):
     """Class for capturing timer log traces."""
+
     def __init__(self, trace=None):
         self.__trace = trace
         logging.Handler.__init__(self)
@@ -21,6 +24,7 @@ class traceHandler(logging.Handler):
         if self.__trace is not None:
             msg = self.format(record)
             self.__trace.append(msg)
+
 
 class textViewHandler(logging.Handler):
     """A class for displaying log messages in a GTK text view."""
@@ -38,14 +42,14 @@ class textViewHandler(logging.Handler):
             self.view.scroll_to_iter(self.log.get_end_iter(), 0)
             self.scroll_pending = False
         return False
-    
+
     def append_log(self, msg):
         """Append msg to the text view."""
         atend = True
         if self.scroll and self.scroll.page_size > 0:
             # Fudge a 'sticky' end of scroll mode... about a pagesz
-            if self.scroll.upper - (self.scroll.value
-                   + self.scroll.page_size) > (0.5 * self.scroll.page_size):
+            if self.scroll.upper - (self.scroll.value + self.scroll.page_size
+                                    ) > (0.5 * self.scroll.page_size):
                 atend = False
         self.log.insert(self.log.get_end_iter(), msg.strip() + '\n')
         if atend:
@@ -57,6 +61,7 @@ class textViewHandler(logging.Handler):
         """Emit log record to gtk main loop."""
         msg = self.format(record)
         glib.idle_add(self.append_log, msg)
+
 
 class statusHandler(logging.Handler):
     """A class for displaying log messages in a GTK status bar."""
@@ -84,4 +89,3 @@ class statusHandler(logging.Handler):
         """Emit log record to gtk main loop."""
         msg = self.format(record)
         glib.idle_add(self.push_status, msg, record.levelno)
-

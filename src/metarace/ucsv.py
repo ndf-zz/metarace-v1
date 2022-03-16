@@ -1,4 +1,3 @@
-
 """Transitional Python 2.x unicode csv helper module."""
 
 # Copied from the Python manual:
@@ -14,10 +13,12 @@ import csv, codecs, cStringIO
 
 QUOTE_MINIMAL = csv.QUOTE_MINIMAL
 
+
 class UTF8Recoder:
     """
     Iterator that reads an encoded stream and reencodes the input to UTF-8
     """
+
     def __init__(self, f, encoding):
         self.reader = codecs.getreader(encoding)(f, errors='ignore')
 
@@ -26,6 +27,7 @@ class UTF8Recoder:
 
     def next(self):
         return self.reader.next().encode('utf-8', 'ignore')
+
 
 class UnicodeReader:
     """
@@ -50,13 +52,19 @@ class UnicodeReader:
     def __iter__(self):
         return self
 
+
 class UnicodeWriter:
     """
     A CSV writer which will write rows to CSV file "f",
     which is encoded in the given encoding.
     """
 
-    def __init__(self, f, dialect=csv.excel, encoding="utf-8", quoting=csv.QUOTE_NONNUMERIC, **kwds):
+    def __init__(self,
+                 f,
+                 dialect=csv.excel,
+                 encoding="utf-8",
+                 quoting=csv.QUOTE_NONNUMERIC,
+                 **kwds):
         # Redirect output to a queue
         dialect.quoting = quoting
         self.queue = cStringIO.StringIO()
@@ -79,4 +87,3 @@ class UnicodeWriter:
     def writerows(self, rows):
         for row in rows:
             self.writerow(row)
-

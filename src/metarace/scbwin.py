@@ -1,4 +1,3 @@
-
 """Scoreboard 'windows'.
 
 This module provides a number of animated plaintext scoreboard window
@@ -23,7 +22,7 @@ or first call to update() will emit anything to scb surface.
 
 """
 
-import time		# for time.strftime() :(
+import time  # for time.strftime() :(
 import logging
 
 from metarace import strops
@@ -33,22 +32,24 @@ from metarace import tod
 LOG = logging.getLogger(u'metarace.scbwin')
 LOG.setLevel(logging.DEBUG)
 
-PAGE_INIT=10		# delay before table data starts displaying
-PAGE_DELAY=60		# def tenths of sec to hold each page of table
-PAGE_ROWOFT=2		# first DHI row for table data
-DATE_FMT=('%a %d/%m/%y')
+PAGE_INIT = 10  # delay before table data starts displaying
+PAGE_DELAY = 60  # def tenths of sec to hold each page of table
+PAGE_ROWOFT = 2  # first DHI row for table data
+DATE_FMT = ('%a %d/%m/%y')
+
 
 def get_dateline(width=32):
-    dpart = time.strftime(DATE_FMT) 
+    dpart = time.strftime(DATE_FMT)
     tpart = tod.now().meridiem()
-    ret = tpart 
-    totlen = len(tpart)+len(dpart)
-    if totlen >= width: # with a space
-        ret = tpart.center(width)	# fall back to time
+    ret = tpart
+    totlen = len(tpart) + len(dpart)
+    if totlen >= width:  # with a space
+        ret = tpart.center(width)  # fall back to time
     else:
-        ret = dpart + u' ' * (width-totlen) + tpart
+        ret = dpart + u' ' * (width - totlen) + tpart
 
     return ret
+
 
 class scbwin(object):
     """Base class for all scoreboard windows.
@@ -57,6 +58,7 @@ class scbwin(object):
     update() and redraw() methods.
 
     """
+
     def __init__(self, scb=None):
         """Base class constructor."""
         self.paused = False
@@ -77,9 +79,9 @@ class scbwin(object):
 
         """
         if set is not None:
-           self.paused = bool(set)
+            self.paused = bool(set)
         else:
-           self.paused = not self.paused
+            self.paused = not self.paused
         return self.paused
 
     def redraw(self):
@@ -89,6 +91,7 @@ class scbwin(object):
     def update(self):
         """Virtual update method."""
         self.count += 1
+
 
 class scbclock(scbwin):
     """Event clock window.
@@ -103,20 +106,21 @@ class scbclock(scbwin):
            CENTERED LINE 3
 
     """
-    def __init__(self, scb=None, line1=u'', line2=u'', line3=u'',locstr=u''):
+
+    def __init__(self, scb=None, line1=u'', line2=u'', line3=u'', locstr=u''):
         scbwin.__init__(self, scb)
         self.line1 = line1
         self.line2 = line2
         self.line3 = line3
         self.locstr = locstr
-        self.bodyoft = 1 # body text offset
+        self.bodyoft = 1  # body text offset
         if self.scb.pagelen > 4:
             self.bodyoft = 2
         self.header = get_dateline(self.scb.linelen)
 
     def redraw(self):
         self.scb.setline(0, self.header)
-        for i in range(1,self.scb.pagelen):
+        for i in range(1, self.scb.pagelen):
             self.scb.clrline(i)
         self.scb.setoverlay(unt4.OVERLAY_MATRIX)
 
@@ -135,13 +139,13 @@ class scbclock(scbwin):
                 self.scb.setline(self.bodyoft,
                                  self.line1.strip().center(self.scb.linelen))
             if self.count == 16:
-                self.scb.setline(self.bodyoft+1,
+                self.scb.setline(self.bodyoft + 1,
                                  self.line2.strip().center(self.scb.linelen))
             if self.count == 18:
-                self.scb.setline(self.bodyoft+2,
+                self.scb.setline(self.bodyoft + 2,
                                  self.line3.strip().center(self.scb.linelen))
             if self.count == 20:
-                self.scb.setline(self.bodyoft+4,
+                self.scb.setline(self.bodyoft + 4,
                                  self.locstr.strip().center(self.scb.linelen))
             if self.count % 2 == 0:
                 next = get_dateline(self.scb.linelen)
@@ -149,6 +153,7 @@ class scbclock(scbwin):
                     self.scb.setline(0, next)
                     self.header = next
             self.count += 1
+
 
 class scbtt(scbwin):
     """Pursuit/ITT/Teams Timer window.
@@ -173,7 +178,13 @@ class scbtt(scbwin):
         >>>>>>>>(3) hh:mm:ss.dcm 
 
     """
-    def __init__(self, scb=None, header=u'',line1=u'', line2=u'',subheader=u''):
+
+    def __init__(self,
+                 scb=None,
+                 header=u'',
+                 line1=u'',
+                 line2=u'',
+                 subheader=u''):
         scbwin.__init__(self, scb)
         self.header = header.strip().center(self.scb.linelen)
         self.subheader = subheader.strip().center(self.scb.linelen)
@@ -195,15 +206,15 @@ class scbtt(scbwin):
         self.singleoft = 1
 
     def redraw(self):
-        clrset = list(range(0,self.scb.pagelen))
+        clrset = list(range(0, self.scb.pagelen))
         self.scb.setline(0, self.header)
         clrset.remove(0)
         self.scb.setline(1, self.subheader)
         clrset.remove(1)
-        self.scb.setline(2+self.singleoft, self.line1)
-        clrset.remove(2+self.singleoft)
-        self.scb.setline(4+self.singleoft, self.line2)
-        clrset.remove(4+self.singleoft)
+        self.scb.setline(2 + self.singleoft, self.line1)
+        clrset.remove(2 + self.singleoft)
+        self.scb.setline(4 + self.singleoft, self.line2)
+        clrset.remove(4 + self.singleoft)
         # only clear rows not already set above.
         for i in clrset:
             self.scb.clrline(i)
@@ -222,11 +233,11 @@ class scbtt(scbwin):
     def setline1(self, line1str=u''):
         """Replace the line 1 text."""
         self.nextline1 = line1str
- 
+
     def setline2(self, line2str=u''):
         """Replace the line 2 text."""
         self.nextline2 = line2str
- 
+
     def sett1(self, timestr=u''):
         """Set the next front straight time string."""
         self.nextt1 = timestr
@@ -247,26 +258,27 @@ class scbtt(scbwin):
         """If any time or ranks change, copy new value onto overlay."""
         if not self.paused:
             if self.curr1 != self.nextr1 or self.curt1 != self.nextt1:
-                self.scb.setline(3+self.singleoft,
-                      strops.truncpad(self.nextr1, self.scb.linelen - 13,
-                                      'r') + u' ' + self.nextt1)
+                self.scb.setline(
+                    3 + self.singleoft,
+                    strops.truncpad(self.nextr1, self.scb.linelen - 13, 'r') +
+                    u' ' + self.nextt1)
                 self.curr1 = self.nextr1
                 self.curt1 = self.nextt1
             if self.curr2 != self.nextr2 or self.curt2 != self.nextt2:
-                self.scb.setline(5,
-                      strops.truncpad(self.nextr2, self.scb.linelen - 13,
-                                      'r') + u' ' + self.nextt2)
+                self.scb.setline(
+                    5,
+                    strops.truncpad(self.nextr2, self.scb.linelen - 13, 'r') +
+                    u' ' + self.nextt2)
                 self.curr2 = self.nextr2
                 self.curt2 = self.nextt2
             if self.line1 != self.nextline1:
                 self.line1 = self.nextline1
-                self.scb.setline(2+self.singleoft,
-                                 self.nextline1)
+                self.scb.setline(2 + self.singleoft, self.nextline1)
             if self.line2 != self.nextline2:
                 self.line2 = self.nextline2
-                self.scb.setline(4+self.singleoft,
-                                 self.nextline2)
+                self.scb.setline(4 + self.singleoft, self.nextline2)
             self.count += 1
+
 
 class scbtimer(scbwin):
     """Sprint timer window with avg speed.
@@ -285,8 +297,13 @@ class scbtimer(scbwin):
                Avg:  xx.yyy km/h
 
     """
-    def __init__(self, scb=None, line1=u'', line2=u'',
-                 timepfx=u'', avgpfx=u'Avg:'):
+
+    def __init__(self,
+                 scb=None,
+                 line1=u'',
+                 line2=u'',
+                 timepfx=u'',
+                 avgpfx=u'Avg:'):
         scbwin.__init__(self, scb)
         self.line1 = line1
         self.line2 = line2
@@ -298,13 +315,13 @@ class scbtimer(scbwin):
         self.nextavg = u''
 
     def redraw(self):
-        clrset = list(range(0,self.scb.pagelen))
+        clrset = list(range(0, self.scb.pagelen))
         self.scb.setline(0, self.line1.strip().center(self.scb.linelen))
         clrset.remove(0)
         self.scb.setline(1, self.line2.strip().center(self.scb.linelen))
         clrset.remove(1)
-        #self.scb.setline(3, strops.truncpad(self.timepfx, 
-                             #self.scb.linelen - 13, 'r'))
+        #self.scb.setline(3, strops.truncpad(self.timepfx,
+        #self.scb.linelen - 13, 'r'))
         #clrset.remove(3)
         for i in clrset:
             self.scb.clrline(i)
@@ -328,30 +345,34 @@ class scbtimer(scbwin):
         if not self.paused:
             if self.curtime != self.nexttime:
                 #self.scb.postxt(3, self.scb.linelen - 13,
-                     #strops.truncpad(self.nexttime,12,'r'))
-                self.scb.setline(3,
-                  strops.truncpad(self.timepfx, self.scb.linelen - 13, 'r')
-                  +strops.truncpad(self.nexttime, 13, 'r'))
+                #strops.truncpad(self.nexttime,12,'r'))
+                self.scb.setline(
+                    3,
+                    strops.truncpad(self.timepfx, self.scb.linelen - 13, 'r') +
+                    strops.truncpad(self.nexttime, 13, 'r'))
                 self.curtime = self.nexttime
             if self.curavg != self.nextavg:
-                self.scb.setline(4,
-                  strops.truncpad(self.avgpfx, self.scb.linelen - 13, 'r')
-                  +strops.truncpad(self.nextavg, 12, 'r'))
+                self.scb.setline(
+                    4,
+                    strops.truncpad(self.avgpfx, self.scb.linelen - 13, 'r') +
+                    strops.truncpad(self.nextavg, 12, 'r'))
                 self.curavg = self.nextavg
             self.count += 1
 
+
 class scbtest(scbwin):
     """A test pattern to check character and line sizes."""
+
     def redraw(self):
         hdrv = []
         for i in range(0, self.scb.linelen):
-            hdrv.append(u'{0:x}'.format(i%16))
+            hdrv.append(u'{0:x}'.format(i % 16))
         self.scb.setline(0, u''.join(hdrv))
         hdrv[1] = u':'
         hdrv[2] = u' '
         hdrv[3] = u' '
-        for i in range(1,self.scb.pagelen):
-            hdrv[0] = u'{0:x}'.format(i%16)
+        for i in range(1, self.scb.pagelen):
+            hdrv[0] = u'{0:x}'.format(i % 16)
             self.scb.setline(i, u''.join(hdrv))
         self.scb.setoverlay(unt4.OVERLAY_MATRIX)
 
@@ -371,8 +392,9 @@ class scbintsprint(scbwin):
     Parameters coldesc and rows as per scbtable)
 
     """
+
     def loadrows(self, coldesc=None, rows=None):
-        self.rows=[]
+        self.rows = []
         if coldesc is not None and rows is not None:
             for row in rows:
                 nr = u''
@@ -381,13 +403,13 @@ class scbintsprint(scbwin):
                     if type(col) in [unicode, str]:
                         nr += col
                     else:
-                        if len(row) > oft:	# space pad 'short' rows
+                        if len(row) > oft:  # space pad 'short' rows
                             nr += strops.truncpad(row[oft], col[0], col[1])
                         else:
                             nr += u' ' * col[0]
                         oft += 1
                 self.rows.append(nr[0:32])
-        self.nrpages = len(self.rows)//self.pagesz + 1
+        self.nrpages = len(self.rows) // self.pagesz + 1
         if self.nrpages > 1 and len(self.rows) % self.pagesz == 0:
             self.nrpages -= 1
         # avoid hanging residual by scooting 2nd last entry onto
@@ -398,44 +420,50 @@ class scbintsprint(scbwin):
     def redraw(self):
         self.scb.setline(0, self.line1.strip().center(self.scb.linelen))
         self.scb.setline(1, self.line2.strip().center(self.scb.linelen))
-        for i in range(2,self.scb.pagelen):
+        for i in range(2, self.scb.pagelen):
             self.scb.clrline(i)
         self.scb.setoverlay(unt4.OVERLAY_MATRIX)
 
     def update(self):
-        if self.count%2 == 0 and self.count > PAGE_INIT: # wait ~1/2 sec
+        if self.count % 2 == 0 and self.count > PAGE_INIT:  # wait ~1/2 sec
             lclk = (self.count - PAGE_INIT) // 2
-	    cpage = (lclk//self.delay) % self.nrpages
-            pclk = lclk%self.delay
+            cpage = (lclk // self.delay) % self.nrpages
+            pclk = lclk % self.delay
             if pclk < self.pagesz + 1:
                 if pclk != self.pagesz:
                     self.scb.clrline(self.rowoft + pclk)
                 elif self.nrpages == 1:
                     self.count += 1
-                    self.paused = True       # no animate on single page
+                    self.paused = True  # no animate on single page
                 if pclk != 0:
-                    roft = self.pagesz * cpage + pclk-1
+                    roft = self.pagesz * cpage + pclk - 1
                     if roft < len(self.rows):
-                        self.scb.setline(self.rowoft + pclk-1,
+                        self.scb.setline(self.rowoft + pclk - 1,
                                          self.rows[roft])
         if not self.paused:
             self.count += 1
 
-    def __init__(self, scb=None, line1=u'', line2=u'',
-                 coldesc=None, rows=None, delay=PAGE_DELAY):
+    def __init__(self,
+                 scb=None,
+                 line1=u'',
+                 line2=u'',
+                 coldesc=None,
+                 rows=None,
+                 delay=PAGE_DELAY):
         scbwin.__init__(self, scb)
         self.pagesz = 4
         self.nrpages = 0
         self.delay = delay
-        self.rowoft = 3		# check for < 7
+        self.rowoft = 3  # check for < 7
 
         # prepare header
         self.line1 = line1[0:self.scb.linelen]
         self.line2 = line2[0:self.scb.linelen]
 
         # load rows
-        self.rows = []		# formatted rows
+        self.rows = []  # formatted rows
         self.loadrows(coldesc, rows)
+
 
 class scbtable(scbwin):
     """A self-looping info table.
@@ -457,23 +485,24 @@ class scbtable(scbwin):
     ADDED: timepfx and timestr for appending a time field to results
 
     """
+
     def loadrows(self, coldesc=None, rows=None):
-        self.rows=[]
+        self.rows = []
         if coldesc is not None and rows is not None:
             for row in rows:
                 nr = u''
                 oft = 0
                 for col in coldesc:
-                    if type(col) in [unicode, str]:	# HACK py<3.0
+                    if type(col) in [unicode, str]:  # HACK py<3.0
                         nr += col
                     else:
-                        if len(row) > oft:	# space pad 'short' rows
+                        if len(row) > oft:  # space pad 'short' rows
                             nr += strops.truncpad(row[oft], col[0], col[1])
                         else:
                             nr += u' ' * col[0]
                         oft += 1
-                self.rows.append(nr)	# truncation in sender ok
-        self.nrpages = len(self.rows)//self.pagesz + 1
+                self.rows.append(nr)  # truncation in sender ok
+        self.nrpages = len(self.rows) // self.pagesz + 1
         if self.nrpages > 1 and len(self.rows) % self.pagesz == 0:
             self.nrpages -= 1
         # avoid hanging residual by scooting 2nd last entry onto
@@ -484,20 +513,20 @@ class scbtable(scbwin):
     def redraw(self):
         self.scb.setline(0, self.header.center(self.scb.linelen))
         j = 1
-        if self.rowoft == 2:	# space for subheader
+        if self.rowoft == 2:  # space for subheader
             self.scb.setline(1, self.subhead.center(self.scb.linelen))
             j = 2
-        for i in range(j,self.scb.pagelen):
+        for i in range(j, self.scb.pagelen):
             self.scb.clrline(i)
         self.scb.setoverlay(unt4.OVERLAY_MATRIX)
 
     def update(self):
         # if time field set and not a round number of rows, append
         # time line to last row of last page
-        if self.count%2 == 0 and self.count > PAGE_INIT: # wait ~1/2 sec
+        if self.count % 2 == 0 and self.count > PAGE_INIT:  # wait ~1/2 sec
             lclk = (self.count - PAGE_INIT) // 2
-	    cpage = (lclk//self.delay) % self.nrpages
-            pclk = lclk%self.delay
+            cpage = (lclk // self.delay) % self.nrpages
+            pclk = lclk % self.delay
             # special case for single page results to hold page w/ Caprica
             if self.nrpages == 1 and lclk >= self.delay:
                 if pclk == 0:
@@ -505,26 +534,34 @@ class scbtable(scbwin):
             elif pclk < self.pagesz + 1:
                 if pclk != self.pagesz:
                     self.scb.clrline(self.rowoft + pclk)
-                else:	# end of page
+                else:  # end of page
                     #if self.nrpages == 1:
-                        #self.count += 1
-                        #self.paused = True # no further animate on single page
+                    #self.count += 1
+                    #self.paused = True # no further animate on single page
                     if self.timestr is not None:
-                        self.scb.setline(self.rowoft + pclk,
-                                 strops.truncpad(self.timepfx,
-                                  self.scb.linelen - 13, 'r')
-                                      + u' ' + self.timestr[0:12])
+                        self.scb.setline(
+                            self.rowoft + pclk,
+                            strops.truncpad(self.timepfx,
+                                            self.scb.linelen - 13, 'r') +
+                            u' ' + self.timestr[0:12])
                 if pclk != 0:
-                    roft = self.pagesz * cpage + pclk-1
+                    roft = self.pagesz * cpage + pclk - 1
                     if roft < len(self.rows):
-                        self.scb.setline(self.rowoft + pclk-1,
+                        self.scb.setline(self.rowoft + pclk - 1,
                                          self.rows[roft])
         if not self.paused:
             self.count += 1
 
-    def __init__(self, scb=None, head=u'', subhead=u'',
-                 coldesc=None, rows=None, pagesz=None,
-                 timepfx=u'', timestr=None, delay=PAGE_DELAY):
+    def __init__(self,
+                 scb=None,
+                 head=u'',
+                 subhead=u'',
+                 coldesc=None,
+                 rows=None,
+                 pagesz=None,
+                 timepfx=u'',
+                 timestr=None,
+                 delay=PAGE_DELAY):
         scbwin.__init__(self, scb)
         # set page size
         self.pagesz = self.scb.pagelen - 2
@@ -535,19 +572,19 @@ class scbtable(scbwin):
         self.timestr = timestr
         self.timepfx = timepfx
         if pagesz and pagesz > 5:
-            self.pagesz = 6		# grab a line from the top
+            self.pagesz = 6  # grab a line from the top
             self.rowoft = 2
 
         if self.timestr is not None:
-            self.pagesz -= 1		# grab a line from the bottom
+            self.pagesz -= 1  # grab a line from the bottom
 
         # prepare header -> must be preformatted
-        if pagesz < 6:	# this is a hack for the madison, maybe replace?
+        if pagesz < 6:  # this is a hack for the madison, maybe replace?
             self.header = head[0:self.scb.linelen].strip()
         else:
             self.header = head[0:self.scb.linelen]
         self.subhead = subhead
 
         # load rows
-        self.rows = []		# formatted rows
+        self.rows = []  # formatted rows
         self.loadrows(coldesc, rows)

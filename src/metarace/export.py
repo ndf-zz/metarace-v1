@@ -1,4 +1,3 @@
-
 """export result files in a thread"""
 
 import threading
@@ -8,18 +7,25 @@ import os
 
 import metarace
 
-MIRROR_CMD = u'echo'		# Command/Argument defaults
+MIRROR_CMD = u'echo'  # Command/Argument defaults
 MIRROR_ARGS = [u'dummy', u'srcdir={srcdir}', u'dstdir={dstdir}']
 LOG = logging.getLogger(u'metarace.export')
 LOG.setLevel(logging.DEBUG)
 
+
 class mirror(threading.Thread):
     """Mirror thread object class."""
-    def __init__(self, callback=None, callbackdata=None,
-                       localpath=u'.', remotepath=None,
-                       mirrorcmd=None, arguments=None, data=None):
+
+    def __init__(self,
+                 callback=None,
+                 callbackdata=None,
+                 localpath=u'.',
+                 remotepath=None,
+                 mirrorcmd=None,
+                 arguments=None,
+                 data=None):
         """Construct mirror thread object."""
-        threading.Thread.__init__(self) 
+        threading.Thread.__init__(self)
         self.__cb = None
         if callback is not None:
             self.__cb = callback
@@ -40,7 +46,8 @@ class mirror(threading.Thread):
             if metarace.sysconf.has_option(u'export', u'command'):
                 self.__mirrorcmd = metarace.sysconf.get(u'export', u'command')
             if metarace.sysconf.has_option(u'export', u'arguments'):
-                self.__arguments = metarace.sysconf.get(u'export', u'arguments')
+                self.__arguments = metarace.sysconf.get(
+                    u'export', u'arguments')
 
         # and then finally allow override in object creation
         if mirrorcmd:
@@ -75,11 +82,13 @@ class mirror(threading.Thread):
         ret = None
         try:
             # format errors in arguments caught as exception
-            arglist = [a.format(srcdir=self.__localpath, 
-                                dstdir=self.__remotepath,
-                                command=self.__mirrorcmd,
-                                data=self.__data) for a in self.__arguments]
-            arglist.insert(0,self.__mirrorcmd)
+            arglist = [
+                a.format(srcdir=self.__localpath,
+                         dstdir=self.__remotepath,
+                         command=self.__mirrorcmd,
+                         data=self.__data) for a in self.__arguments
+            ]
+            arglist.insert(0, self.__mirrorcmd)
 
             LOG.debug(u'Calling subprocess: %r', arglist)
             # TODO: convert to run w/timeout and I/O capture (py3)

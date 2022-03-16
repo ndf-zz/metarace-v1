@@ -1,4 +1,3 @@
-
 """Flying 200m and lap time trial module for trackmeet."""
 
 # Refer: UCI Regulations Part 3 "Track Races" 3.2.022 - 3.2.028
@@ -40,20 +39,21 @@ COL_FINISH = 8
 COL_100 = 9
 
 # scb function key mappings (also trig announce)
-key_reannounce = u'F4'    # (+CTRL) calls into delayed announce
-key_startlist = u'F3'     # startlist
-key_results = u'F4'       # recalc/show result window
-key_timerwin = u'F6'      # re-show timing window
+key_reannounce = u'F4'  # (+CTRL) calls into delayed announce
+key_startlist = u'F3'  # startlist
+key_results = u'F4'  # recalc/show result window
+key_timerwin = u'F6'  # re-show timing window
 
 # timing function key mappings
-key_armstart = u'F5'      # arm for start impulse
-key_armsplit = u'F7'      # de/arm intermed (manual override)
-key_armfinish = u'F9'     # de/arm finish (manual override)
+key_armstart = u'F5'  # arm for start impulse
+key_armsplit = u'F7'  # de/arm intermed (manual override)
+key_armfinish = u'F9'  # de/arm finish (manual override)
 
 # extended function key mappings
-key_reset = u'F5'         # + ctrl for clear/abort
-key_falsestart = u'F6'    # + ctrl for false start
-key_abort = u'F7'         # + ctrl abort A
+key_reset = u'F5'  # + ctrl for clear/abort
+key_falsestart = u'F6'  # + ctrl for false start
+key_abort = u'F7'  # + ctrl abort A
+
 
 class f200(object):
     """Flying 200 time trial."""
@@ -63,7 +63,7 @@ class f200(object):
         if event.type == gtk.gdk.KEY_PRESS:
             key = gtk.gdk.keyval_name(event.keyval) or u'None'
             if event.state & gtk.gdk.CONTROL_MASK:
-                if key == key_reset:    # override ctrl+f5
+                if key == key_reset:  # override ctrl+f5
                     self.toidle()
                     return True
                 elif key == key_reannounce:
@@ -117,20 +117,21 @@ class f200(object):
                 last = r[COL_LASTNAME].decode('utf-8')
                 club = r[COL_CLUB].decode('utf-8')
                 bib = r[COL_BIB].decode('utf-8')
-                fmtplaces.append([plstr, bib,
-                            strops.fitname(first, last, name_w),
-                                  club])
-        FMT = [(3,u'l'), (3,u'r'), u' ',(name_w, u'l'), (4,u'r')]
+                fmtplaces.append(
+                    [plstr, bib,
+                     strops.fitname(first, last, name_w), club])
+        FMT = [(3, u'l'), (3, u'r'), u' ', (name_w, u'l'), (4, u'r')]
 
         evtstatus = u'Standings'
         if rcount > 0 and pcount == rcount:
             evtstatus = u'Result'
 
         self.meet.scbwin = scbwin.scbtable(scb=self.meet.scb,
-                               head=self.meet.racenamecat(self.event),
-                               subhead=evtstatus.upper(),
-                               coldesc=FMT,
-                               rows=fmtplaces)
+                                           head=self.meet.racenamecat(
+                                               self.event),
+                                           subhead=evtstatus.upper(),
+                                           coldesc=FMT,
+                                           rows=fmtplaces)
         self.meet.scbwin.reset()
 
     def todstr(self, col, cr, model, iter, data=None):
@@ -145,7 +146,7 @@ class f200(object):
             sstr = u''
             if sp is not None:
                 sstr = u'/' + (ft - sp).rawtime(3)
-            cr.set_property(u'text', mstr+sstr)
+            cr.set_property(u'text', mstr + sstr)
         else:
             cr.set_property(u'text', u'')
 
@@ -169,25 +170,28 @@ class f200(object):
             defchani = timy.CHAN_200
             defchanf = timy.CHAN_FINISH
 
-        self.seedsrc = 1 # for autospec loads, fetch seed from the rank col
+        self.seedsrc = 1  # for autospec loads, fetch seed from the rank col
 
-        cr = jsonconfig.config({u'event':{
-				u'startlist':'',
-				u'id':EVENT_ID,
-				u'start':None,
-      				u'lstart':None,
-				u'fsbib':None,
-				u'fsstat':u'idle',
-				u'showinfo':True,
-				u'autospec':u'',
-				u'comments':[],
-                                u'chan_S': defchans,
-                                u'chan_I': defchani,
-                                u'chan_F': defchanf,
-				u'inomnium':False,
-				u'distance':defdistance,
-				u'distunits':defunits,
-				u'autoarm':defautoarm}})
+        cr = jsonconfig.config({
+            u'event': {
+                u'startlist': '',
+                u'id': EVENT_ID,
+                u'start': None,
+                u'lstart': None,
+                u'fsbib': None,
+                u'fsstat': u'idle',
+                u'showinfo': True,
+                u'autospec': u'',
+                u'comments': [],
+                u'chan_S': defchans,
+                u'chan_I': defchani,
+                u'chan_F': defchanf,
+                u'inomnium': False,
+                u'distance': defdistance,
+                u'distunits': defunits,
+                u'autoarm': defautoarm
+            }
+        })
         cr.add_section(u'event')
         cr.add_section(u'riders')
         cr.add_section(u'traces')
@@ -200,48 +204,51 @@ class f200(object):
         else:
             LOG.info(u'%r not found, loading defaults', self.configfile)
 
-        self.chan_S = strops.confopt_chan(cr.get(u'event', u'chan_S'), defchans)
-        self.chan_I = strops.confopt_chan(cr.get(u'event', u'chan_I'), defchans)
-        self.chan_F = strops.confopt_chan(cr.get(u'event', u'chan_F'), defchans)
+        self.chan_S = strops.confopt_chan(cr.get(u'event', u'chan_S'),
+                                          defchans)
+        self.chan_I = strops.confopt_chan(cr.get(u'event', u'chan_I'),
+                                          defchans)
+        self.chan_F = strops.confopt_chan(cr.get(u'event', u'chan_F'),
+                                          defchans)
         self.comments = cr.get(u'event', u'comments')
         self.autospec = cr.get(u'event', u'autospec')
         self.distance = strops.confopt_dist(cr.get(u'event', u'distance'))
         self.units = strops.confopt_distunits(cr.get(u'event', u'distunits'))
         self.autoarm = strops.confopt_bool(cr.get(u'event', u'autoarm'))
         self.update_expander_lbl_cb()
-        self.info_expand.set_expanded(strops.confopt_bool(
-                                       cr.get(u'event', u'showinfo')))
+        self.info_expand.set_expanded(
+            strops.confopt_bool(cr.get(u'event', u'showinfo')))
         self.inomnium = strops.confopt_bool(cr.get(u'event', u'inomnium'))
         if self.inomnium:
-            self.seedsrc = 3    # read seeding from points standinds
+            self.seedsrc = 3  # read seeding from points standinds
 
         # re-load starters/results and traces
         self.onestart = False
         rlist = cr.get(u'event', u'startlist').split()
         for r in rlist:
-            nr=[r, u'', u'', u'', u'', u'', u'', None, None, None]
+            nr = [r, u'', u'', u'', u'', u'', u'', None, None, None]
             co = u''
             st = None
             ft = None
             sp = None
             if cr.has_option(u'riders', r):
                 ril = cr.get(u'riders', r)
-                if len(ril) >= 1:	# save comment for stimes
+                if len(ril) >= 1:  # save comment for stimes
                     co = ril[0]
-                if len(ril) >= 2:	# write heat into rec
+                if len(ril) >= 2:  # write heat into rec
                     nr[COL_SEED] = ril[1]
-                if len(ril) >= 4:	# Start ToD and others
+                if len(ril) >= 4:  # Start ToD and others
                     st = tod.mktod(ril[3])
-                    if st is not None:		# assigned in settimes
+                    if st is not None:  # assigned in settimes
                         self.onestart = True
-                if len(ril) >= 5:	# Finish ToD
+                if len(ril) >= 5:  # Finish ToD
                     ft = tod.mktod(ril[4])
-                if len(ril) >= 6:		# 100m ToD
+                if len(ril) >= 6:  # 100m ToD
                     sp = tod.mktod(ril[5])
             dbr = self.meet.rdb.getrider(r, self.series)
             if dbr is not None:
-                for i in range(1,4):
-                    nr[i] = self.meet.rdb.getvalue(dbr, i) # unicode
+                for i in range(1, 4):
+                    nr[i] = self.meet.rdb.getvalue(dbr, i)  # unicode
             nri = self.riders.append(nr)
             self.settimes(nri, st, ft, sp, doplaces=False, comment=co)
             if cr.has_option(u'traces', r):
@@ -252,18 +259,20 @@ class f200(object):
         curstart = tod.mktod(cr.get(u'event', u'start'))
         lstart = tod.mktod(cr.get(u'event', u'lstart'))
         if lstart is None:
-            lstart = curstart	# can still be None if start not set
+            lstart = curstart  # can still be None if start not set
         dorejoin = False
         fsstat = cr.get(u'event', u'fsstat')
         if fsstat not in [u'idle', u'finish']:
-            self.fs.setrider(cr.get(u'event', u'fsbib')) # load rider
-            if fsstat in [u'running', u'armfin', u'armint'] and curstart is not None:     
+            self.fs.setrider(cr.get(u'event', u'fsbib'))  # load rider
+            if fsstat in [u'running', u'armfin', u'armint'
+                          ] and curstart is not None:
                 self.fs.start(curstart)  # overrides to 'running'
                 dorejoin = True
 
         if not self.onestart and self.autospec:
-            self.meet.autostart_riders(self, self.autospec,
-                                             infocol=self.seedsrc)
+            self.meet.autostart_riders(self,
+                                       self.autospec,
+                                       infocol=self.seedsrc)
         if dorejoin:
             self.torunning(curstart, lstart)
         elif self.timerstat == u'idle':
@@ -312,9 +321,10 @@ class f200(object):
         # save out all starters
         for r in self.riders:
             # place is saved for info only
-            slice = [r[COL_COMMENT].decode(u'utf-8'),
-                     r[COL_SEED].decode(u'utf-8'),
-                     r[COL_PLACE].decode(u'utf-8')]
+            slice = [
+                r[COL_COMMENT].decode(u'utf-8'), r[COL_SEED].decode(u'utf-8'),
+                r[COL_PLACE].decode(u'utf-8')
+            ]
             tl = [r[COL_START], r[COL_FINISH], r[COL_100]]
             for t in tl:
                 if t is not None:
@@ -329,7 +339,7 @@ class f200(object):
 
     def sort_startlist(self, x, y):
         """Comparison function for seeding."""
-        if x[1] == y[1]:        # same seed? revert to bib ascending
+        if x[1] == y[1]:  # same seed? revert to bib ascending
             return cmp(x[2], y[2])
         else:
             return cmp(x[1], y[1])
@@ -349,9 +359,11 @@ class f200(object):
             auxmap = []
             cnt = 0
             for r in self.riders:
-                auxmap.append([cnt,
-                            strops.riderno_key(r[COL_SEED].decode(u'utf-8')),
-                            strops.riderno_key(r[COL_BIB].decode(u'utf-8'))])
+                auxmap.append([
+                    cnt,
+                    strops.riderno_key(r[COL_SEED].decode(u'utf-8')),
+                    strops.riderno_key(r[COL_BIB].decode(u'utf-8'))
+                ])
                 cnt += 1
             auxmap.sort(self.sort_startlist)
             self.riders.reorder([a[0] for a in auxmap])
@@ -379,15 +391,18 @@ class f200(object):
                     if rh[u'cat'] and u'tandem' in rh[u'cat'].lower():
                         ph = self.meet.newgetrider(rh[u'note'], self.series)
                         if ph is not None:
-                            info = [[u' ',ph[u'namestr'] + u' - Pilot', ph[u'ucicode']]]
-                hlist.append([str(count)+'.1', rno, rname, info])
-                                 # all f200 heats are one up
+                            info = [[
+                                u' ', ph[u'namestr'] + u' - Pilot',
+                                ph[u'ucicode']
+                            ]]
+                hlist.append([str(count) + '.1', rno, rname, info])
+                # all f200 heats are one up
                 count -= 1
         else:
             for r in range(0, placeholders):
                 rno = u''
                 rname = u''
-                hlist.append([str(count)+'.1', rno, rname, None])
+                hlist.append([str(count) + '.1', rno, rname, None])
                 count -= 1
 
         # sort the heatlist
@@ -397,7 +412,7 @@ class f200(object):
         lcnt = 0
         rec = []
         for r in hlist:
-            (h,l) = strops.heatsplit(r[0])
+            (h, l) = strops.heatsplit(r[0])
             if lh is not None and (h != lh or lcnt > 1):
                 lcnt = 0
                 ret.append(rec)
@@ -415,16 +430,17 @@ class f200(object):
         ret = []
         cnt = 0
         sec = report.dual_ittt_startlist()
-        sec.set_single()	# 200s are one-up
+        sec.set_single()  # 200s are one-up
 
-        headvec = [u'Event', self.evno, u':', self.event[u'pref'],
-                         self.event[u'info']]
+        headvec = [
+            u'Event', self.evno, u':', self.event[u'pref'], self.event[u'info']
+        ]
         if not program:
             headvec.append(u'- Start List')
         sec.heading = u' '.join(headvec)
         lapstring = strops.lapstring(self.event[u'laps'])
-        substr = u' '.join([lapstring, self.event[u'dist'],
-                             self.event[u'prog']]).strip()
+        substr = u' '.join(
+            [lapstring, self.event[u'dist'], self.event[u'prog']]).strip()
         if substr:
             sec.subheading = substr
         if self.event[u'reco']:
@@ -446,8 +462,9 @@ class f200(object):
             # clear page
             self.meet.txt_clear()
             self.meet.txt_title(u' '.join([
-                  u'Event', self.evno, u':', self.event[u'pref'],
-                   self.event[u'info']]))
+                u'Event', self.evno, u':', self.event[u'pref'],
+                self.event[u'info']
+            ]))
             self.meet.txt_line(1)
             self.meet.txt_line(7)
 
@@ -462,11 +479,14 @@ class f200(object):
                         clubstr = u'(' + tcs + u')'
                     namestr = strops.fitname(r[COL_FIRSTNAME].decode(u'utf-8'),
                                              r[COL_LASTNAME].decode(u'utf-8'),
-                                             24, trunc=True)
-                    placestr = u'   ' # 3 ch
+                                             24,
+                                             trunc=True)
+                    placestr = u'   '  # 3 ch
                     if r[COL_PLACE]:
-                        placestr = strops.truncpad(r[COL_PLACE].decode(u'utf-8') + u'.', 3)
-                    bibstr = strops.truncpad(r[COL_BIB].decode(u'utf-8'), 3, u'r')
+                        placestr = strops.truncpad(
+                            r[COL_PLACE].decode(u'utf-8') + u'.', 3)
+                    bibstr = strops.truncpad(r[COL_BIB].decode(u'utf-8'), 3,
+                                             u'r')
                     tmstr = u''
                     et = None
                     if r[COL_START] is not None and r[COL_FINISH] is not None:
@@ -474,16 +494,18 @@ class f200(object):
                         tmstr = u'200m: ' + et.rawtime(3).rjust(12)
                     cmtstr = u''
                     if et is not None:
-                        cmtstr = strops.truncpad(u'Average: '
-                                                + et.speedstr(200), 38, u'r')
+                        cmtstr = strops.truncpad(
+                            u'Average: ' + et.speedstr(200), 38, u'r')
                     elif r[COL_COMMENT]:
                         cmtstr = strops.truncpad(
-                             u'[' + r[COL_COMMENT].decode(u'utf-8').strip() + u']', 38, u'r')
-                    self.meet.txt_postxt(3,0,u'        Current Rider')
-                    self.meet.txt_postxt(4,0,u' '.join([placestr, bibstr,
-                                                         namestr, clubstr]))
-                    self.meet.txt_postxt(5,0,strops.truncpad(tmstr, 38, u'r'))
-                    self.meet.txt_postxt(6,0,cmtstr)
+                            u'[' + r[COL_COMMENT].decode(u'utf-8').strip() +
+                            u']', 38, u'r')
+                    self.meet.txt_postxt(3, 0, u'        Current Rider')
+                    self.meet.txt_postxt(
+                        4, 0, u' '.join([placestr, bibstr, namestr, clubstr]))
+                    self.meet.txt_postxt(5, 0,
+                                         strops.truncpad(tmstr, 38, u'r'))
+                    self.meet.txt_postxt(6, 0, cmtstr)
 
             # fill in leaderboard/startlist
             count = 0
@@ -499,20 +521,24 @@ class f200(object):
                 tcs = r[COL_CLUB].decode(u'utf-8')
                 if tcs and tcs <= 3:
                     clubstr = u' (' + tcs + u')'
- 
-                namestr = strops.truncpad(strops.fitname(r[COL_FIRSTNAME].decode(u'utf-8'),
-                              r[COL_LASTNAME].decode(u'utf-8'), 22-len(clubstr),
-                                  trunc=True)+clubstr, 22)
-                placestr = u'   ' # 3 ch
+
+                namestr = strops.truncpad(
+                    strops.fitname(r[COL_FIRSTNAME].decode(u'utf-8'),
+                                   r[COL_LASTNAME].decode(u'utf-8'),
+                                   22 - len(clubstr),
+                                   trunc=True) + clubstr, 22)
+                placestr = u'   '  # 3 ch
                 if r[COL_PLACE]:
-                    placestr = strops.truncpad(r[COL_PLACE].decode(u'utf-8') + u'.', 3)
+                    placestr = strops.truncpad(
+                        r[COL_PLACE].decode(u'utf-8') + u'.', 3)
                 bibstr = strops.truncpad(r[COL_BIB].decode(u'utf-8'), 3, u'r')
-                tmstr = u'       ' # 7 ch
+                tmstr = u'       '  # 7 ch
                 if r[COL_START] is not None and r[COL_FINISH] is not None:
                     tmstr = strops.truncpad(
-                           (r[COL_FINISH] - r[COL_START]).rawtime(3), 7, u'r')
-                self.meet.txt_postxt(curline, posoft, u' '.join([
-                      placestr, bibstr, namestr, tmstr]))
+                        (r[COL_FINISH] - r[COL_START]).rawtime(3), 7, u'r')
+                self.meet.txt_postxt(
+                    curline, posoft,
+                    u' '.join([placestr, bibstr, namestr, tmstr]))
                 curline += 1
 
     def shutdown(self, win=None, msg=u'Exiting'):
@@ -551,7 +577,7 @@ class f200(object):
         finlbl.set_text(u'Finish Channel:')
         fincombo = b.get_object(u'race_bchan_combo')
         fincombo.set_property(u'tooltip_text',
-                        u'Select timing channel for finish.')
+                              u'Select timing channel for finish.')
         fincombo.set_active(self.chan_F)
         stcombo = b.get_object(u'race_stchan_combo')
         stcombo.set_active(self.chan_S)
@@ -574,7 +600,7 @@ class f200(object):
         as_e.set_text(self.autospec)
 
         response = dlg.run()
-        if response == 1:       # id 1 set in glade for "Apply"
+        if response == 1:  # id 1 set in glade for "Apply"
             dval = di.get_text().decode(u'utf-8')
             if dval.isdigit():
                 self.distance = int(dval)
@@ -600,13 +626,14 @@ class f200(object):
             if nspec != self.autospec:
                 self.autospec = nspec
                 if self.autospec:
-                    self.meet.autostart_riders(self, self.autospec,
-                                             infocol=self.seedsrc)
+                    self.meet.autostart_riders(self,
+                                               self.autospec,
+                                               infocol=self.seedsrc)
 
             # xfer starters if not empty
             slist = strops.riderlist_split(
-              b.get_object(u'race_starters_entry').get_text().decode(u'utf-8'),
-              self.meet.rdb, self.series)
+                b.get_object(u'race_starters_entry').get_text().decode(
+                    u'utf-8'), self.meet.rdb, self.series)
 
             # if no starters yet - automatically seed by order entered
             if len(self.riders) == 0:
@@ -644,7 +671,7 @@ class f200(object):
                     else:
                         rank = pls
                 if r[COL_FINISH] is not None:
-                    time = (r[COL_FINISH]-r[COL_START]).truncate(3)
+                    time = (r[COL_FINISH] - r[COL_START]).truncate(3)
 
             yield [bib, rank, time, info]
 
@@ -653,12 +680,11 @@ class f200(object):
         self.placexfer()
         ret = []
         sec = report.section()
-        sec.heading = u'Event ' + self.evno + u': ' + u' '.join([
-                       self.event[u'pref'], self.event[u'info']
-                              ]).strip()
+        sec.heading = u'Event ' + self.evno + u': ' + u' '.join(
+            [self.event[u'pref'], self.event[u'info']]).strip()
         lapstring = strops.lapstring(self.event[u'laps'])
-        substr = u' '.join([lapstring, self.event[u'dist'],
-                             self.event[u'prog']]).strip()
+        substr = u' '.join(
+            [lapstring, self.event[u'dist'], self.event[u'prog']]).strip()
         sec.lines = []
         ftime = None
         rcount = 0
@@ -671,21 +697,24 @@ class f200(object):
                 LOG.warning(u'Rider not found %r', rno)
                 continue
 
-            rcat = None		# should check ev[u'cate']
+            rcat = None  # should check ev[u'cate']
             plink = u''
             rank = None
-            
+
             rname = rh[u'namestr']
             # consider partners here
             if rh[u'cat'] and u'tandem' in rh[u'cat'].lower():
                 ph = self.meet.newgetrider(rh[u'note'], self.series)
                 if ph is not None:
-                    plink = [u'', u'', ph[u'namestr'] + u' - Pilot', ph[u'ucicode'], u'', u'',u'']
+                    plink = [
+                        u'', u'', ph[u'namestr'] + u' - Pilot', ph[u'ucicode'],
+                        u'', u'', u''
+                    ]
             if self.event[u'cate']:
                 if rh[u'cat']:
                     rcat = rh[u'cat']
             if rh[u'ucicode']:
-                rcat = rh[u'ucicode']   # overwrite by force
+                rcat = rh[u'ucicode']  # overwrite by force
             rtime = None
             info = None
             dtime = None
@@ -698,7 +727,7 @@ class f200(object):
                         rank = pls
                     plcount += 1
                 if r[COL_FINISH] is not None:
-                    time = (r[COL_FINISH]-r[COL_START]).truncate(3)
+                    time = (r[COL_FINISH] - r[COL_START]).truncate(3)
                     if ftime is None:
                         ftime = time
                     else:
@@ -742,10 +771,10 @@ class f200(object):
     def split_trig(self, sp, t):
         """Register lap trigger."""
         bib = sp.getrider()
-        self.splits.insert(t-self.curstart, None, bib)
+        self.splits.insert(t - self.curstart, None, bib)
         rank = self.splits.rank(bib)
         self.log_split(sp.getrider(), self.curstart, t)
-        sp.intermed(t, 2)	# show split... delay ~2 sec
+        sp.intermed(t, 2)  # show split... delay ~2 sec
         if self.timerwin and type(self.meet.scbwin) is scbwin.scbtt:
             intstr = u' at 100m'
             if self.evtype == u'flying lap':
@@ -753,10 +782,11 @@ class f200(object):
             lapstr = strops.rank2ord(unicode(rank + 1)) + intstr
             self.meet.scbwin.setr1(u'(' + unicode(rank + 1) + u')')
             glib.timeout_add_seconds(2, self.clear_rank,
-                                        self.meet.scbwin.setr1)
-            # announce lap and rank to txt announcer 
-            self.meet.txt_postxt(5, 8, strops.truncpad(lapstr,17)
-                                      + u' ' + sp.get_time())
+                                     self.meet.scbwin.setr1)
+            # announce lap and rank to txt announcer
+            self.meet.txt_postxt(
+                5, 8,
+                strops.truncpad(lapstr, 17) + u' ' + sp.get_time())
         if self.autoarm:
             self.armfinish(sp)
 
@@ -771,7 +801,7 @@ class f200(object):
             self.settimes(ri, self.curstart, t, split)
         else:
             LOG.warning(u'Rider %r not in model, finish time not stored',
-                         sp.getrider())
+                        sp.getrider())
         self.log_elapsed(sp.getrider(), self.curstart, t, split)
         if self.timerwin and type(self.meet.scbwin) is scbwin.scbtt:
             place = self.riders.get_value(ri, COL_PLACE)
@@ -782,12 +812,11 @@ class f200(object):
                 elap = t - self.curstart
                 spstr = elap.speedstr(dist).strip()
                 glib.timeout_add_seconds(1, self.clear_200_ttb,
-                                            self.meet.scbwin,
-                                            u'Avg:',
-                                            spstr.rjust(12))
+                                         self.meet.scbwin, u'Avg:',
+                                         spstr.rjust(12))
             else:
                 glib.timeout_add_seconds(2, self.clear_200_ttb,
-                                            self.meet.scbwin)
+                                         self.meet.scbwin)
             self.meet.gemini.set_rank(place)
             self.meet.gemini.set_time((t - self.curstart).rawtime(2))
             self.meet.gemini.show_brt()
@@ -800,16 +829,16 @@ class f200(object):
         """Handle a timer event."""
         chan = timy.chan2id(e.chan)
         if self.timerstat == u'armstart':
-            if chan == self.chan_S:	# Start trig
+            if chan == self.chan_S:  # Start trig
                 self.torunning(e)
                 glib.timeout_add_seconds(2, self.armfinish, self.fs, True)
         elif self.timerstat == u'running':
-            if chan == self.chan_I:	# Intermediate
+            if chan == self.chan_I:  # Intermediate
                 stat = self.fs.getstatus()
                 if stat == u'armint':
                     self.split_trig(self.fs, e)
                 # else ignore spurious intermediate
-            elif chan == self.chan_F:	# Finish
+            elif chan == self.chan_F:  # Finish
                 stat = self.fs.getstatus()
                 if stat in [u'armfin', u'armint']:
                     self.fin_trig(self.fs, e)
@@ -855,8 +884,7 @@ class f200(object):
         if self.autoarm:
             self.armsplit(self.fs)
         if self.timerwin and type(self.meet.scbwin) is scbwin.scbtt:
-            glib.timeout_add_seconds(3, self.show_200_ttb,
-                    self.meet.scbwin)
+            glib.timeout_add_seconds(3, self.show_200_ttb, self.meet.scbwin)
 
     def clearplaces(self):
         """Clear rider places."""
@@ -877,12 +905,12 @@ class f200(object):
         istr = u''
         if info is not None:
             istr = unicode(info)
-        nr=[bib, u'', u'', u'', u'', istr, u'', None, None, None]
+        nr = [bib, u'', u'', u'', u'', istr, u'', None, None, None]
         ri = self.getrider(bib)
         if ri is None:  # adding a new record
             dbr = self.meet.rdb.getrider(bib, self.series)
             if dbr is not None:
-                for i in range(1,4):
+                for i in range(1, 4):
                     nr[i] = self.meet.rdb.getvalue(dbr, i)
             self.riders.append(nr)
         else:
@@ -915,17 +943,17 @@ class f200(object):
                 elif t[0] == tod.FAKETIMES[u'dnf']:
                     place = u'dnf'
             else:
-                place = self.results.rank(bib)+1
+                place = self.results.rank(bib) + 1
             i = self.getiter(bib)
             if i is not None:
-                if place == u'comment':	# superfluous but ok
+                if place == u'comment':  # superfluous but ok
                     place = self.riders.get_value(i, COL_COMMENT)
                 self.riders.set_value(i, COL_PLACE, unicode(place))
                 self.riders.swap(self.riders.get_iter(count), i)
                 count += 1
             else:
                 LOG.warning(u'Rider %r not found in model, check places', bib)
-            
+
     def getiter(self, bib):
         """Return temporary iterator to model row."""
         i = self.riders.get_iter_first()
@@ -935,8 +963,13 @@ class f200(object):
             i = self.riders.iter_next(i)
         return i
 
-    def settimes(self, iter, st=None, ft=None, split=None,
-                             doplaces=True, comment=None):
+    def settimes(self,
+                 iter,
+                 st=None,
+                 ft=None,
+                 split=None,
+                 doplaces=True,
+                 comment=None):
         """Transfer race times into rider model."""
         bib = self.riders.get_value(iter, COL_BIB).decode(u'utf-8')
         # clear result for this bib
@@ -952,10 +985,11 @@ class f200(object):
         if ft is not None:
             last100 = None
             if split is not None:
-                self.splits.insert(split - st, None, bib) # save first 100 split
-                last100 = ft - split	# and prepare to record second 100
+                self.splits.insert(split - st, None,
+                                   bib)  # save first 100 split
+                last100 = ft - split  # and prepare to record second 100
             self.results.insert(ft - st, last100, bib)
-        else:	# DNF/etc
+        else:  # DNF/etc
             self.results.insert(comment, None, bib)
         # copy annotation into model if provided, or clear
         if comment:
@@ -1018,9 +1052,9 @@ class f200(object):
         if self.timerstat == u'running':
             if sp.getstatus() in [u'running', u'finish']:
                 if sp.getstatus() == u'finish':
-                     self.meet.timer_log_msg(sp.getrider(), u'- False Finish -')
-                     self.meet.scbwin.setr1(u'')
-                     self.meet.scbwin.setr2(u'')
+                    self.meet.timer_log_msg(sp.getrider(), u'- False Finish -')
+                    self.meet.scbwin.setr1(u'')
+                    self.meet.scbwin.setr2(u'')
                 sp.toarmfin()
                 self.meet.main_timer.arm(self.chan_F)
             elif sp.getstatus() == u'armfin' and not force:
@@ -1048,22 +1082,21 @@ class f200(object):
                 first = r[COL_FIRSTNAME].decode(u'utf-8')
                 last = r[COL_LASTNAME].decode(u'utf-8')
                 club = r[COL_CLUB].decode(u'utf-8')
-                name = strops.fitname(first,
-                                      last,
-                                      name_w)
-            return u' '.join([strops.truncpad(r[COL_BIB].decode(u'utf-8'),
-                                              3, u'r'),
-                             strops.truncpad(name, name_w),
-                             strops.truncpad(club, 4, u'r')])
+                name = strops.fitname(first, last, name_w)
+            return u' '.join([
+                strops.truncpad(r[COL_BIB].decode(u'utf-8'), 3, u'r'),
+                strops.truncpad(name, name_w),
+                strops.truncpad(club, 4, u'r')
+            ])
         else:
             return u''
-        
+
     def showtimerwin(self):
         """Show timer window on scoreboard."""
         self.meet.scbwin = None
         self.meet.scbwin = scbwin.scbtt(self.meet.scb,
-                                self.meet.racenamecat(self.event),
-                                self.fmtridername(self.fs))
+                                        self.meet.racenamecat(self.event),
+                                        self.fmtridername(self.fs))
         self.meet.gemini.reset_fields()
         self.meet.gemini.set_bib(self.fs.getrider())
         self.meet.gemini.show_brt()
@@ -1117,7 +1150,7 @@ class f200(object):
         """Prepare name string for timer lane."""
         r = self.getrider(bib)
         if r is None:
-            if self.meet.get_clubmode():        # fill in starters
+            if self.meet.get_clubmode():  # fill in starters
                 LOG.warning(u'Adding non-starter %r', bib)
                 self.addrider(bib)
                 r = self.getrider(bib)
@@ -1147,11 +1180,11 @@ class f200(object):
                 tp.toidle()
         else:
             tp.toidle()
-    
+
     def time_context_menu(self, widget, event, data=None):
         """Popup menu for result list."""
-        self.context_menu.popup(None, None, None, event.button,
-                                event.time, selpath)
+        self.context_menu.popup(None, None, None, event.button, event.time,
+                                selpath)
 
     def treeview_button_press(self, treeview, event):
         """Set callback for mouse press on model view."""
@@ -1161,8 +1194,8 @@ class f200(object):
                 path, col, cellx, celly = pathinfo
                 treeview.grab_focus()
                 treeview.set_cursor(path, col, 0)
-                self.context_menu.popup(None, None, None,
-                                        event.button, event.time)
+                self.context_menu.popup(None, None, None, event.button,
+                                        event.time)
                 return True
         return False
 
@@ -1172,7 +1205,7 @@ class f200(object):
         if sel is not None:
             self.settimes(sel[1])
             self.log_clear(
-               self.riders.get_value(sel[1], COL_BIB).decode(u'utf-8'))
+                self.riders.get_value(sel[1], COL_BIB).decode(u'utf-8'))
             glib.idle_add(self.delayed_announce)
 
     def tod_context_rel_activate_cb(self, menuitem, data=None):
@@ -1209,7 +1242,7 @@ class f200(object):
         if sel is not None:
             bib = self.riders.get_value(sel[1], COL_BIB).decode(u'utf-8')
             if bib in self.traces:
-                # TODO: replace timy reprint with report 
+                # TODO: replace timy reprint with report
                 LOG.info(u'CREATE AND PRINT TRACE REPORT')
 
     def now_button_clicked_cb(self, button, entry=None):
@@ -1221,7 +1254,7 @@ class f200(object):
         """Run edit time dialog."""
         sel = self.view.get_selection().get_selected()
         if sel is not None:
-            i = sel[1]	# grab off row iter
+            i = sel[1]  # grab off row iter
             stod = self.riders.get_value(i, COL_START)
             st = u''
             if stod is not None:
@@ -1230,16 +1263,16 @@ class f200(object):
             ft = u''
             if ftod is not None:
                 ft = ftod.timestr()
-            ret = uiutil.edit_times_dlg(self.meet.window,st,ft)
+            ret = uiutil.edit_times_dlg(self.meet.window, st, ft)
             if ret[0] == 1:
                 stod = tod.mktod(ret[1])
                 ftod = tod.mktod(ret[2])
                 bib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
                 if stod is not None and ftod is not None:
-                    self.settimes(i, stod, ftod)	# set times
+                    self.settimes(i, stod, ftod)  # set times
                     self.log_elapsed(bib, stod, ftod, manual=True)
                 else:
-                    self.settimes(i)			# clear times
+                    self.settimes(i)  # clear times
                     self.log_clear(bib)
                 LOG.info(u'Race times manually adjusted for rider %r', bib)
             else:
@@ -1250,7 +1283,7 @@ class f200(object):
         """Delete selected row from race model."""
         sel = self.view.get_selection().get_selected()
         if sel is not None:
-            i = sel[1]	# grab off row iter
+            i = sel[1]  # grab off row iter
             self.riders.remove(i)
             glib.idle_add(self.delayed_announce)
 
@@ -1263,8 +1296,8 @@ class f200(object):
         slbl = u'100'
         if self.evtype == u'flying lap':
             slbl = u'int'
-        self.meet.timer_log_straight(bib, slbl, split-start, 3)
-        
+        self.meet.timer_log_straight(bib, slbl, split - start, 3)
+
     def log_elapsed(self, bib, start, finish, split=None, manual=False):
         """Print elapsed log info."""
         if manual:
@@ -1295,7 +1328,7 @@ class f200(object):
     def __init__(self, meet, event, ui=True):
         """Constructor."""
         self.meet = meet
-        self.event = event      # Note: now a treerowref
+        self.event = event  # Note: now a treerowref
         self.evno = event[u'evid']
         self.evtype = event[u'type']
         self.series = event[u'seri']
@@ -1326,18 +1359,19 @@ class f200(object):
         self.splits = tod.todlist(u'100')
         self.autospec = u''
         self.inomnium = False
-        self.seedsrc = 1        # default seeding is by rank in last round
+        self.seedsrc = 1  # default seeding is by rank in last round
 
-        self.riders = gtk.ListStore(gobject.TYPE_STRING,   # 0 bib
-                                    gobject.TYPE_STRING,   # 1 firstname
-                                    gobject.TYPE_STRING,   # 2 lastname
-                                    gobject.TYPE_STRING,   # 3 club
-                                    gobject.TYPE_STRING,   # 4 Comment
-                                    gobject.TYPE_STRING,   # 5 seed
-                                    gobject.TYPE_STRING,   # 6 place
-                                    gobject.TYPE_PYOBJECT, # 7 Start
-                                    gobject.TYPE_PYOBJECT, # 8 Finish
-                                    gobject.TYPE_PYOBJECT) # 9 100m 
+        self.riders = gtk.ListStore(
+            gobject.TYPE_STRING,  # 0 bib
+            gobject.TYPE_STRING,  # 1 firstname
+            gobject.TYPE_STRING,  # 2 lastname
+            gobject.TYPE_STRING,  # 3 club
+            gobject.TYPE_STRING,  # 4 Comment
+            gobject.TYPE_STRING,  # 5 seed
+            gobject.TYPE_STRING,  # 6 place
+            gobject.TYPE_PYOBJECT,  # 7 Start
+            gobject.TYPE_PYOBJECT,  # 8 Finish
+            gobject.TYPE_PYOBJECT)  # 9 100m
 
         uifile = os.path.join(metarace.UI_PATH, u'ittt.ui')
         LOG.debug(u'Building event interface from %r', uifile)
@@ -1352,10 +1386,10 @@ class f200(object):
         b.get_object(u'race_info_evno').set_text(self.evno)
         self.showev = b.get_object(u'race_info_evno_show')
         self.prefix_ent = b.get_object(u'race_info_prefix')
-        self.prefix_ent.connect(u'changed', self.editent_cb,u'pref')
+        self.prefix_ent.connect(u'changed', self.editent_cb, u'pref')
         self.prefix_ent.set_text(self.event[u'pref'])
         self.info_ent = b.get_object(u'race_info_title')
-        self.info_ent.connect(u'changed', self.editent_cb,u'info')
+        self.info_ent.connect(u'changed', self.editent_cb, u'info')
         self.info_ent.set_text(self.event[u'info'])
         self.traces = {}
 
@@ -1377,16 +1411,22 @@ class f200(object):
             t.set_reorderable(True)
             t.set_rules_hint(True)
             t.connect(u'button_press_event', self.treeview_button_press)
-     
+
             # TODO: show team name & club but pop up for rider list
             tmlbl = u'200m/Last 100m'
             if self.evtype == u'flying lap':
                 tmlbl = u'Time/Last 200m'
             uiutil.mkviewcoltxt(t, u'No.', COL_BIB, calign=1.0)
-            uiutil.mkviewcoltxt(t, u'First Name', COL_FIRSTNAME,
-                                   self.editcol_db, expand=True)
-            uiutil.mkviewcoltxt(t, u'Last Name', COL_LASTNAME,
-                                   self.editcol_db, expand=True)
+            uiutil.mkviewcoltxt(t,
+                                u'First Name',
+                                COL_FIRSTNAME,
+                                self.editcol_db,
+                                expand=True)
+            uiutil.mkviewcoltxt(t,
+                                u'Last Name',
+                                COL_LASTNAME,
+                                self.editcol_db,
+                                expand=True)
             uiutil.mkviewcoltxt(t, u'Club', COL_CLUB, self.editcol_db)
             uiutil.mkviewcoltxt(t, u'Seed', COL_SEED, self.editcol_db)
             uiutil.mkviewcoltod(t, tmlbl, cb=self.todstr)

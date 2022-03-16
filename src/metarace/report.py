@@ -1,4 +1,3 @@
-
 """Report generation and printing support."""
 
 from __future__ import division
@@ -35,84 +34,99 @@ XS_SUBTITLE = xlwt.easyxf(u'font: italic on')
 XS_MONOSPACE = xlwt.easyxf(u'font: name Courier')
 
 # Meta cell icon classes
-ICONMAP = {u'datestr':u'bi-calendar-date',
-           u'docstr':u'bi-signpost-split',
-           u'diststr':u'bi-flag', 
-           u'commstr':u'bi-person',
-           u'orgstr':u'bi-star',
-           u'download':u'bi-download',
-           u'default':u'bi-file-earmark'}
+ICONMAP = {
+    u'datestr': u'bi-calendar-date',
+    u'docstr': u'bi-signpost-split',
+    u'diststr': u'bi-flag',
+    u'commstr': u'bi-person',
+    u'orgstr': u'bi-star',
+    u'download': u'bi-download',
+    u'default': u'bi-file-earmark'
+}
 
 # "download as" file types
-FILETYPES = {u'pdf':u'PDF',
-             u'xls':u'Spreadsheet',
-             u'json':u'JSON'}
+FILETYPES = {u'pdf': u'PDF', u'xls': u'Spreadsheet', u'json': u'JSON'}
+
 
 # conversions
 def pt2mm(pt=1):
     """72pt -> 25.4mm (1 inch)"""
     return float(pt) * 25.4 / 72.0
 
+
 def mm2pt(mm=1):
     """25.4mm -> 72pt (1 inch)"""
     return float(mm) * 72.0 / 25.4
+
 
 def in2pt(inval=1):
     """1in -> 72pt"""
     return float(inval) * 72.0
 
+
 def cm2pt(cm=1):
     """2.54cm => 72pt (1 inch)"""
     return float(cm) * 72.0 / 2.54
+
 
 def pt2pt(pt=1):
     """Dummy conversion."""
     return pt
 
-# raw defaults
-FEPSILON = 0.0001				# float epsilon
-BODYFONT = u'serif 7.0'				# body text
-BODYOBLIQUE = u'serif italic 7.0'		# body text oblique
-BODYBOLDFONT = u'serif bold 7.0'		# bold body text
-BODYSMALL = u'serif 6.0'			# small body text
-MONOSPACEFONT = u'monospace bold 7.0'		# monospaced text
-SECTIONFONT = u'sans bold 7.0'			# section headings
-SUBHEADFONT = u'serif italic 7.0'		# section subheadings
-TITLEFONT = u'sans bold 8.0'			# page title
-SUBTITLEFONT = u'sans bold 7.5'			# page subtitle
-ANNOTFONT = u'sans oblique 6.0'			# header and footer annotations
-PROVFONT = u'sans bold Ultra-Condensed 90'	# provisonal underlay font
-GAMUTSTDFONT = u'sans bold condensed'		# default gamut standard font
-GAMUTOBFONT = u'sans bold condensed italic'	# default gamut oblique font
-LINE_HEIGHT = mm2pt(5.0)			# body text line height
-PAGE_OVERFLOW = mm2pt(3.0)			# tolerated section overflow
-SECTION_HEIGHT = mm2pt(5.3)			# height of section title
-TWOCOL_WIDTH = mm2pt(75.0)			# width of col on 2 col page
-THREECOL_WIDTH = mm2pt(50.0)			# width of col on 3 col page
-TABLESTYLE = u'table table-striped table-sm w-auto align-middle'	 # html table style
-BUTTONSTYLE = u'btn btn-primary btn-sm'	 # html normal button link
-WARNBUTTONSTYLE = u'btn btn-warning btn-sm'	 # html provisional button link
 
-UNITSMAP = { u'mm':mm2pt,
-             u'cm':cm2pt,
-             u'in':in2pt,
-             u'pt':pt2pt, }
+# raw defaults
+FEPSILON = 0.0001  # float epsilon
+BODYFONT = u'serif 7.0'  # body text
+BODYOBLIQUE = u'serif italic 7.0'  # body text oblique
+BODYBOLDFONT = u'serif bold 7.0'  # bold body text
+BODYSMALL = u'serif 6.0'  # small body text
+MONOSPACEFONT = u'monospace bold 7.0'  # monospaced text
+SECTIONFONT = u'sans bold 7.0'  # section headings
+SUBHEADFONT = u'serif italic 7.0'  # section subheadings
+TITLEFONT = u'sans bold 8.0'  # page title
+SUBTITLEFONT = u'sans bold 7.5'  # page subtitle
+ANNOTFONT = u'sans oblique 6.0'  # header and footer annotations
+PROVFONT = u'sans bold Ultra-Condensed 90'  # provisonal underlay font
+GAMUTSTDFONT = u'sans bold condensed'  # default gamut standard font
+GAMUTOBFONT = u'sans bold condensed italic'  # default gamut oblique font
+LINE_HEIGHT = mm2pt(5.0)  # body text line height
+PAGE_OVERFLOW = mm2pt(3.0)  # tolerated section overflow
+SECTION_HEIGHT = mm2pt(5.3)  # height of section title
+TWOCOL_WIDTH = mm2pt(75.0)  # width of col on 2 col page
+THREECOL_WIDTH = mm2pt(50.0)  # width of col on 3 col page
+TABLESTYLE = u'table table-striped table-sm w-auto align-middle'  # html table style
+BUTTONSTYLE = u'btn btn-primary btn-sm'  # html normal button link
+WARNBUTTONSTYLE = u'btn btn-warning btn-sm'  # html provisional button link
+
+UNITSMAP = {
+    u'mm': mm2pt,
+    u'cm': cm2pt,
+    u'in': in2pt,
+    u'pt': pt2pt,
+}
+
 
 def deg2rad(deg=1):
     """convert degrees to radians."""
-    return math.pi * float(deg)/180.0
+    return math.pi * float(deg) / 180.0
+
 
 def pi2rad(ang=1):
     """convert multiple of pi to radians."""
     return math.pi * float(ang)
 
+
 def rad2rad(ang=1):
     """Dummy converter."""
     return ang
 
-ANGUNITSMAP = { u'dg':deg2rad,
-                u'pi':pi2rad,
-                u'rd':rad2rad, }
+
+ANGUNITSMAP = {
+    u'dg': deg2rad,
+    u'pi': pi2rad,
+    u'rd': rad2rad,
+}
+
 
 def str2angle(anglestr=None):
     """From degrees, return an angle in radians -2pi -> 2pi"""
@@ -132,7 +146,8 @@ def str2angle(anglestr=None):
         except Exception as e:
             LOG.warning(u'Invalid angle %r ignored: %s', anglestr, e)
     return ANGUNITSMAP[ukey](fval)
-    
+
+
 def str2align(alignstr=None):
     """Return an alignment value 0.0 - 1.0."""
     if alignstr is None:
@@ -148,6 +163,7 @@ def str2align(alignstr=None):
         except Exception as e:
             LOG.warning(u'Invalid alignment %r ignored: %s', alignstr, e)
     return ret
+
 
 def str2len(lenstr=None):
     """Return a length in points from the supplied string."""
@@ -168,6 +184,7 @@ def str2len(lenstr=None):
             LOG.warning(u'Invalid length %r ignored: %s', lenstr, e)
     return UNITSMAP[ukey](fval)
 
+
 def str2dash(dashstr=None):
     ret = None
     if dashstr:
@@ -179,14 +196,15 @@ def str2dash(dashstr=None):
             ret = rvec
     return ret
 
-def str2colour(colstr = None):
+
+def str2colour(colstr=None):
     """Return a valid colour from supplied string."""
     ret = [0.0, 0.0, 0.0]
     if colstr:
         cvec = colstr.split(u',')
         if len(cvec) == 3:
             try:
-                for c in range(0,3):
+                for c in range(0, 3):
                     ret[c] = float(cvec[c])
                     if ret[c] < 0.0:
                         ret[c] = 0.0
@@ -196,6 +214,7 @@ def str2colour(colstr = None):
                 LOG.warning(u'Invalid colour %r ignored: %s', colstr, e)
     return ret
 
+
 def mksectionid(curset, prefix=None):
     """Return a unique id for the section."""
     if prefix is None:
@@ -204,36 +223,39 @@ def mksectionid(curset, prefix=None):
         prefix = prefix.lower().strip()
     if not prefix:
         prefix = u'sec'
-        testid = prefix + unicode(random.randint(10000,99999))
+        testid = prefix + unicode(random.randint(10000, 99999))
     else:
         testid = prefix
     while testid in curset:
-        testid = prefix + unicode(random.randint(10000,99999))
+        testid = prefix + unicode(random.randint(10000, 99999))
     return testid
+
 
 def vecmap(vec=[], maxkey=10):
     """Return a full map for the supplied vector."""
     ret = {}
-    for i in range(0,maxkey):
+    for i in range(0, maxkey):
         ret[i] = None
     if vec is not None:
-        for i in range(0,len(vec)):
+        for i in range(0, len(vec)):
             if vec[i]:
                 if isinstance(vec[i], basestring):
-                    ret[i] = vec[i].strip(u' \t') # just strip plain spaces
+                    ret[i] = vec[i].strip(u' \t')  # just strip plain spaces
                 else:
                     ret[i] = vec[i]
     return ret
 
+
 def vecmapstr(vec=[], maxkey=10):
     """Return a full map for the supplied vector, converted to strings."""
     ret = {}
-    for i in range(0,maxkey):
+    for i in range(0, maxkey):
         ret[i] = u''
-    for i in range(0,len(vec)):
+    for i in range(0, len(vec)):
         if vec[i]:
             ret[i] = unicode(vec[i]).strip()
     return ret
+
 
 def vec2htmllinkrow(vec=[], xtn=u'', rep=None):
     # evno -> column one
@@ -243,79 +265,87 @@ def vec2htmllinkrow(vec=[], xtn=u'', rep=None):
     # link
     # status
     # link
-    rowmap = vecmapstr(vec,7)
+    rowmap = vecmapstr(vec, 7)
     cols = []
     cols.append(htlib.td(htlib.escapetext(rowmap[0])))
-    if rowmap[6]:	# Startlist/Result links
-        cols.append(htlib.td(htlib.escapetext(rowmap[2]))) # DESCR
+    if rowmap[6]:  # Startlist/Result links
+        cols.append(htlib.td(htlib.escapetext(rowmap[2])))  # DESCR
         bstyle = rep.buttonstyle
         stxt = u''
-        if rowmap[4]:	# startlist is present
+        if rowmap[4]:  # startlist is present
             if u'provisional' in rowmap[3].lower():
                 bstyle = rep.warnbuttonstyle
-            stxt = htlib.a(u'Startlist',
-                           {u'href':rowmap[4]+xtn,
-                            u'class':bstyle})
+            stxt = htlib.a(u'Startlist', {
+                u'href': rowmap[4] + xtn,
+                u'class': bstyle
+            })
         rtxt = u''
-        if rowmap[6]:	# result is present
+        if rowmap[6]:  # result is present
             if u'provisional' in rowmap[5].lower():
                 bstyle = rep.warnbuttonstyle
-            rtxt = htlib.a(u'Result',
-                           {u'href':rowmap[6]+xtn,
-                            u'class':bstyle})
+            rtxt = htlib.a(u'Result', {
+                u'href': rowmap[6] + xtn,
+                u'class': bstyle
+            })
         cols.append(htlib.td(stxt))
         cols.append(htlib.td(rtxt))
-    else:		# Old-style trackmeet event index
+    else:  # Old-style trackmeet event index
         if rowmap[4]:
-            cols.append(htlib.td(htlib.a(htlib.escapetext(rowmap[2]),
-                                          {u'href':rowmap[4]+xtn})))
+            cols.append(
+                htlib.td(
+                    htlib.a(htlib.escapetext(rowmap[2]),
+                            {u'href': rowmap[4] + xtn})))
         else:
             cols.append(htlib.td(htlib.escapetext(rowmap[2])))
         cols.append(htlib.td(htlib.escapetext(rowmap[3])))
         cols.append(htlib.td(htlib.escapetext(rowmap[5])))
     return htlib.tr(cols)
 
+
 def vec2htmlrow(vec=[]):
     rowmap = vecmapstr(vec, 7)
     cols = []
-    cols.append(htlib.td(htlib.escapetext(rowmap[0])))	# Rank (left)
+    cols.append(htlib.td(htlib.escapetext(rowmap[0])))  # Rank (left)
     cols.append(htlib.td(htlib.escapetext(rowmap[1]),
-                           {u'class':u'text-end'}))	# No (right)
-    cols.append(htlib.td(htlib.escapetext(rowmap[2])))	# Name (left)
-    cols.append(htlib.td(htlib.escapetext(rowmap[3])))	# Cat/Code (left)
+                         {u'class': u'text-end'}))  # No (right)
+    cols.append(htlib.td(htlib.escapetext(rowmap[2])))  # Name (left)
+    cols.append(htlib.td(htlib.escapetext(rowmap[3])))  # Cat/Code (left)
     cols.append(htlib.td(htlib.escapetext(rowmap[4]),
-                           {u'class':u'text-end'}))	# time/gap (right)
+                         {u'class': u'text-end'}))  # time/gap (right)
     cols.append(htlib.td(htlib.escapetext(rowmap[5]),
-                           {u'class':u'text-end'}))	# time/gap (right)
-    cols.append(htlib.td(htlib.escapetext(rowmap[6])))	# Units (left)
+                         {u'class': u'text-end'}))  # time/gap (right)
+    cols.append(htlib.td(htlib.escapetext(rowmap[6])))  # Units (left)
     return htlib.tr(cols)
+
 
 def vec2htmlhead(vec=[]):
     rowmap = vecmapstr(vec, 7)
     cols = []
-    cols.append(htlib.th(htlib.escapetext(rowmap[0])))	# Rank (left)
+    cols.append(htlib.th(htlib.escapetext(rowmap[0])))  # Rank (left)
     cols.append(htlib.th(htlib.escapetext(rowmap[1]),
-                           {u'class':u'text-end'}))	# No (right)
-    cols.append(htlib.th(htlib.escapetext(rowmap[2])))	# Name (left)
-    cols.append(htlib.th(htlib.escapetext(rowmap[3])))	# Cat/Code (left)
+                         {u'class': u'text-end'}))  # No (right)
+    cols.append(htlib.th(htlib.escapetext(rowmap[2])))  # Name (left)
+    cols.append(htlib.th(htlib.escapetext(rowmap[3])))  # Cat/Code (left)
     cols.append(htlib.th(htlib.escapetext(rowmap[4]),
-                           {u'class':u'text-end'}))	# time/gap (right)
+                         {u'class': u'text-end'}))  # time/gap (right)
     cols.append(htlib.th(htlib.escapetext(rowmap[5]),
-                           {u'class':u'text-end'}))	# time/gap (right)
-    cols.append(htlib.th(htlib.escapetext(rowmap[6])))	# Units (left)
+                         {u'class': u'text-end'}))  # time/gap (right)
+    cols.append(htlib.th(htlib.escapetext(rowmap[6])))  # Units (left)
     return htlib.tr(cols)
+
 
 # Section Types
 class dual_ittt_startlist(object):
     """Two-up time trial for individual riders (eg track pursuit)."""
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.heading = None
         self.status = None
         self.subheading = None
         self.footer = None
-        self.colheader = None	# ignored for dual ittt
-        self.showheats = False	# show heat labels?
+        self.colheader = None  # ignored for dual ittt
+        self.showheats = False  # show heat labels?
         self.units = None
         self.lines = []
         self.fslbl = u'Front Straight'
@@ -360,9 +390,9 @@ class dual_ittt_startlist(object):
         """Return total height on page of section on report."""
         if self.h is None or len(self.lines) != self.lcount:
             self.h = report.line_height * len(self.lines)
-            if self.showheats:	# if heats are shown, double line height
+            if self.showheats:  # if heats are shown, double line height
                 self.h *= 2
-            for r in self.lines:	# account for any team members
+            for r in self.lines:  # account for any team members
                 tcnt = 0
                 if len(r) > 3 and isinstance(r[3], list):
                     tcnt = len(r[3])
@@ -398,9 +428,9 @@ class dual_ittt_startlist(object):
         chk.footer = self.footer
         chk.fslbl = self.fslbl
         chk.bslbl = self.bslbl
-        if len(self.lines) <= 4: # special case, keep four or less together
+        if len(self.lines) <= 4:  # special case, keep four or less together
             chk.lines = self.lines[0:]
-        else:			 # BUT, don't break before third rider
+        else:  # BUT, don't break before third rider
             chk.lines = self.lines[0:2]
         if chk.get_h(report) > remainder:
             # move entire section onto next page
@@ -435,7 +465,7 @@ class dual_ittt_startlist(object):
         seclines = len(self.lines)
         count = 0
         if seclines > 0:
-            while count < seclines and count < 3: # don't break until 3rd
+            while count < seclines and count < 3:  # don't break until 3rd
                 ret.lines.append(self.lines[count])
                 count += 1
         while count < seclines:
@@ -443,39 +473,39 @@ class dual_ittt_startlist(object):
                 # pop last line onto rem and break
                 rem.lines.append(ret.lines.pop(-1))
                 break
-            elif seclines - count <= 2: # push min 2 names over to next page
+            elif seclines - count <= 2:  # push min 2 names over to next page
                 break
             ret.lines.append(self.lines[count])
             count += 1
         while count < seclines:
             rem.lines.append(self.lines[count])
             count += 1
-        return(ret, rem)
+        return (ret, rem)
 
     def draw_pdf(self, report):
         """Output a single section to the page."""
         report.c.save()
         if self.heading is not None:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
         if self.subheading:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         dolanes = False
         dual = False
         if self.fslbl:
-            report.text_cent(report.midpagew-mm2pt(40), report.h, self.fslbl,
-                              report.fonts[u'subhead'])
+            report.text_cent(report.midpagew - mm2pt(40), report.h, self.fslbl,
+                             report.fonts[u'subhead'])
             dolanes = True
         if self.bslbl:
-            report.text_left(report.midpagew+mm2pt(40), report.h, self.bslbl,
-                              report.fonts[u'subhead'])
+            report.text_left(report.midpagew + mm2pt(40), report.h, self.bslbl,
+                             report.fonts[u'subhead'])
             dolanes = True
-            dual = True		# heading flags presense of back straight
+            dual = True  # heading flags presense of back straight
         if dolanes:
-            report.h += report.line_height # account for lane label h
+            report.h += report.line_height  # account for lane label h
         hof = report.h
         lineheight = report.line_height
         if self.showheats:
@@ -484,10 +514,10 @@ class dual_ittt_startlist(object):
             hof = report.ittt_heat(i, hof, dual, self.showheats)
             #hof += lineheight
             #if self.pairs:
-                #hof += lineheight
+            #hof += lineheight
         if self.footer:
             report.text_cent(report.midpagew, hof, self.footer,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             hof += report.line_height
         report.h = hof
         report.c.restore()
@@ -500,10 +530,11 @@ class dual_ittt_startlist(object):
             row += 1
         if self.subheading:
             worksheet.write(row, 2,
-                 self.subheading.replace(u'\t', u'  ').strip(), XS_SUBTITLE)
+                            self.subheading.replace(u'\t', u'  ').strip(),
+                            XS_SUBTITLE)
             row += 2
         else:
-            row += 1	# min one clear row between
+            row += 1  # min one clear row between
         dual = False
         if self.bslbl:
             dual = True
@@ -513,24 +544,24 @@ class dual_ittt_startlist(object):
                 nv = [None, None, None]
                 if self.showheats and r[0] and r[0] != u'-':
                     nv[0] = u'Heat ' + unicode(r[0])
-                if len(r) > 3:	# front straight
+                if len(r) > 3:  # front straight
                     nv[1] = r[1]
                     nv[2] = r[2]
-                rows.append(nv)	# allow empty
+                rows.append(nv)  # allow empty
                 if len(r) > 3 and isinstance(r[3], list):
                     for tm in r[3]:
-                        tv = [None,tm[0],tm[1]]
+                        tv = [None, tm[0], tm[1]]
                         rows.append(tv)
-                if len(r) > 7:	# back straight
+                if len(r) > 7:  # back straight
                     nv = [None, r[5], r[6]]
                     rows.append(nv)
                 elif dual:
                     rows.append([None, None, u'[No Rider]'])
                 if len(r) > 7 and isinstance(r[7], list):
                     for tm in r[7]:
-                        tv = [None,tm[0],tm[1]]
+                        tv = [None, tm[0], tm[1]]
                         rows.append(tv)
-                    
+
             for rw in rows:
                 l = vecmapstr(rw)
                 worksheet.write(row, 0, l[0], XS_LEFT)
@@ -553,8 +584,9 @@ class dual_ittt_startlist(object):
         if self.heading:
             f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()), 
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
         dual = False
         if self.bslbl:
             dual = True
@@ -564,41 +596,43 @@ class dual_ittt_startlist(object):
                 nv = [None, None, None]
                 if self.showheats and r[0] and r[0] != u'-':
                     nv[0] = u'Heat ' + unicode(r[0]) + u':'
-                if len(r) > 3:	# front straight
+                if len(r) > 3:  # front straight
                     nv[1] = r[1]
                     nv[2] = r[2]
                 rows.append(nv)
                 if len(r) > 3 and isinstance(r[3], list):
                     for tm in r[3]:
-                        tv = [None,tm[0],tm[1]]
+                        tv = [None, tm[0], tm[1]]
                         rows.append(tv)
-                if len(r) > 7:	# back straight
+                if len(r) > 7:  # back straight
                     nv = [None, r[5], r[6]]
                     rows.append(nv)
                 elif dual:
                     rows.append([None, None, u'[No Rider]'])
                 if len(r) > 7 and isinstance(r[7], list):
                     for tm in r[7]:
-                        tv = [None,tm[0],tm[1]]
+                        tv = [None, tm[0], tm[1]]
                         rows.append(tv)
             trows = []
             for l in rows:
                 trows.append(vec2htmlrow(l))
-            f.write(htlib.table(htlib.tbody(trows),
-                  {u'class':report.tablestyle}))
+            f.write(
+                htlib.table(htlib.tbody(trows), {u'class': report.tablestyle}))
             f.write(u'\n')
 
         if self.footer:
             f.write(self.footer.strip() + u'\n')
         return False
 
+
 class signon_list(object):
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.status = None
         self.heading = None
         self.subheading = None
-        self.colheader = None	# ignored for all signon
+        self.colheader = None  # ignored for all signon
         self.footer = None
         self.units = None
         self.lineheight = None
@@ -650,10 +684,10 @@ class signon_list(object):
         chk.subheading = self.subheading
         chk.footer = self.footer
         chk.lineheight = self.lineheight
-        if len(self.lines) <= 8: # special case, keep first <=8 together
+        if len(self.lines) <= 8:  # special case, keep first <=8 together
             chk.lines = self.lines[0:]
         else:
-            chk.lines = self.lines[0:4]	# but don't break until 4 names
+            chk.lines = self.lines[0:4]  # but don't break until 4 names
         if chk.get_h(report) > remainder:
             # move entire section onto next page
             return (pagebreak(), self)
@@ -677,7 +711,7 @@ class signon_list(object):
         seclines = len(self.lines)
         count = 0
         if seclines > 0:
-            while count < seclines and count < 4: # don't break until 4th
+            while count < seclines and count < 4:  # don't break until 4th
                 ret.lines.append(self.lines[count])
                 count += 1
         while count < seclines:
@@ -685,25 +719,25 @@ class signon_list(object):
                 # pop last line onto rem and break
                 rem.lines.append(ret.lines.pop(-1))
                 break
-            elif seclines - count <= 3: # push min 4 names over to next page
+            elif seclines - count <= 3:  # push min 4 names over to next page
                 break
             ret.lines.append(self.lines[count])
             count += 1
         while count < seclines:
             rem.lines.append(self.lines[count])
             count += 1
-        return(ret, rem)
+        return (ret, rem)
 
     def draw_pdf(self, report):
         """Output a single section to the page."""
         report.c.save()
         if self.heading:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
         if self.subheading:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
 
         colof = report.body_left
@@ -713,24 +747,23 @@ class signon_list(object):
         if len(self.lines) > 0:
             for i in self.lines[0:collen]:
                 if len(i) > 2:
-                    report.sign_box(i, colof, hof, self.lineheight,
-                                       colcnt%2)
+                    report.sign_box(i, colof, hof, self.lineheight, colcnt % 2)
                 hof += self.lineheight + self.lineheight
                 colcnt += 1
             hof = report.h
-            colof = report.body_right-report.twocol_width
+            colof = report.body_right - report.twocol_width
             #colof = report.midpagew+mm2pt(2.0)
             colcnt = 0
             for i in self.lines[collen:]:
                 if len(i) > 2:
                     report.sign_box(i, colof, hof, self.lineheight,
-                                       (colcnt+1)%2)
+                                    (colcnt + 1) % 2)
                 hof += self.lineheight + self.lineheight
                 colcnt += 1
         report.h += 2.0 * collen * self.lineheight
         if self.footer:
             report.text_cent(report.midpagew, report.h, self.footer,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
 
     def draw_xls(self, report, worksheet):
@@ -741,11 +774,12 @@ class signon_list(object):
             row += 1
         if self.subheading:
             worksheet.write(row, 2,
-                 self.subheading.replace(u'\t', u'  ').strip(), XS_SUBTITLE)
+                            self.subheading.replace(u'\t', u'  ').strip(),
+                            XS_SUBTITLE)
             row += 2
         else:
-            row += 1	# min one clear row between
- 
+            row += 1  # min one clear row between
+
         if len(self.lines) > 0:
             rows = []
             for r in self.lines:
@@ -774,8 +808,9 @@ class signon_list(object):
         if self.heading:
             f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()),
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
         if len(self.lines) > 0:
             rows = []
             for r in self.lines:
@@ -786,14 +821,16 @@ class signon_list(object):
             trows = []
             for l in rows:
                 trows.append(vec2htmlrow(l))
-            f.write(htlib.table(htlib.tbody(trows),
-                  {u'class':report.tablestyle}))
+            f.write(
+                htlib.table(htlib.tbody(trows), {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
             f.write(self.footer.strip() + u'\n')
         return False
 
+
 class twocol_startlist(object):
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.heading = None
@@ -806,7 +843,7 @@ class twocol_startlist(object):
         self.even = False
         self.preh = None
         self.h = None
-        
+
     def serialize(self, rep, sectionid=None):
         """Return a serializable map for JSON export."""
         ret = {}
@@ -828,7 +865,7 @@ class twocol_startlist(object):
             self.preh = 0.0
             collen = math.ceil(0.5 * len(self.lines))
             if self.even and collen % 2:
-                collen += 1	# force an even number of rows in first column.
+                collen += 1  # force an even number of rows in first column.
             self.h = report.line_height * collen
             if self.heading:
                 self.h += report.section_height
@@ -847,15 +884,15 @@ class twocol_startlist(object):
 
     def truncate(self, remainder, report):
         """Return a copy of the section up to page break."""
-        # program event sections do not break ... 
+        # program event sections do not break ...
         if self.get_h(report) <= (remainder + report.page_overflow):
             return (self, None)
         else:
-            if report.pagefrac() < FEPSILON:	# avoid error
+            if report.pagefrac() < FEPSILON:  # avoid error
                 # there's a whole page's worth of space here, but a
                 # break is required
-                bodyh = remainder - self.preh # preh comes from get_h
-                maxlines = 2 * int(bodyh / report.line_height) # floor
+                bodyh = remainder - self.preh  # preh comes from get_h
+                maxlines = 2 * int(bodyh / report.line_height)  # floor
                 # ret: content on current page
                 # rem: content on subsequent pages
                 ret = twocol_startlist()
@@ -885,11 +922,11 @@ class twocol_startlist(object):
         report.c.save()
         if self.heading:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
         if self.subheading:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
 
         #colof = report.body_left-mm2pt(10.0)
@@ -897,7 +934,7 @@ class twocol_startlist(object):
         hof = report.h
         collen = int(math.ceil(0.5 * len(self.lines)))
         if self.even and collen % 2:
-            collen += 1	# force an even number of rows in first column.
+            collen += 1  # force an even number of rows in first column.
         if len(self.lines) > 0:
             for i in self.lines[0:collen]:
                 if len(i) > 2:
@@ -905,7 +942,7 @@ class twocol_startlist(object):
                 hof += report.line_height
             hof = report.h
             #colof = report.midpagew-mm2pt(5.0)
-            colof = report.midpagew+mm2pt(2.0)
+            colof = report.midpagew + mm2pt(2.0)
             for i in self.lines[collen:]:
                 if len(i) > 2:
                     report.rms_rider(i, colof, hof)
@@ -921,7 +958,7 @@ class twocol_startlist(object):
             report.h += report.line_height
         if self.footer:
             report.text_cent(report.midpagew, report.h, self.footer,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         report.c.restore()
 
@@ -933,11 +970,12 @@ class twocol_startlist(object):
             row += 1
         if self.subheading:
             worksheet.write(row, 2,
-                 self.subheading.replace(u'\t', u'  ').strip(), XS_SUBTITLE)
+                            self.subheading.replace(u'\t', u'  ').strip(),
+                            XS_SUBTITLE)
             row += 2
         else:
-            row += 1	# min one clear row between
- 
+            row += 1  # min one clear row between
+
         if len(self.lines) > 0:
             rows = []
             for r in self.lines:
@@ -966,8 +1004,9 @@ class twocol_startlist(object):
         if self.heading:
             f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()),
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
         if len(self.lines) > 0:
             rows = []
             for r in self.lines:
@@ -978,14 +1017,16 @@ class twocol_startlist(object):
             trows = []
             for l in rows:
                 trows.append(vec2htmlrow(l))
-            f.write(htlib.table(htlib.tbody(trows),
-                  {u'class':report.tablestyle}))
+            f.write(
+                htlib.table(htlib.tbody(trows), {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
             f.write(self.footer.strip() + u'\n')
         return False
 
+
 class sprintround(object):
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.heading = None
@@ -994,7 +1035,7 @@ class sprintround(object):
         self.colheader = None
         self.units = None
         self.footer = None
-        self.lines = []		 # maps to 'heats', include riders?
+        self.lines = []  # maps to 'heats', include riders?
         self.lcount = 0
         self.h = None
 
@@ -1017,7 +1058,7 @@ class sprintround(object):
     def get_h(self, report):
         """Return total height on page of section on report."""
         if self.h is None or len(self.lines) != self.lcount:
-            self.h = report.line_height * len(self.lines) # one per line?
+            self.h = report.line_height * len(self.lines)  # one per line?
             if self.heading:
                 self.h += report.section_height
             if self.subheading:
@@ -1029,13 +1070,14 @@ class sprintround(object):
 
     def truncate(self, remainder, report):
         """Return a copy of the section up to page break."""
-        # program event sections do not break ... 
+        # program event sections do not break ...
         if self.get_h(report) <= (remainder + report.page_overflow):
             return (self, None)
         else:
             if report.pagefrac() < FEPSILON:
-                raise RuntimeWarning(u'Section ' + repr(self.heading)
-                          + u' will not fit on a page and will not break.')
+                raise RuntimeWarning(
+                    u'Section ' + repr(self.heading) +
+                    u' will not fit on a page and will not break.')
             # move entire section onto next page
             return (pagebreak(), self)
 
@@ -1044,11 +1086,11 @@ class sprintround(object):
         report.c.save()
         if self.heading is not None:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
         if self.subheading is not None:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                           report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         hof = report.h
         if len(self.lines) > 0:
@@ -1057,35 +1099,33 @@ class sprintround(object):
                 if i[0]:
                     heat = i[0]
                 if heat:
-                    report.text_left(report.body_left, hof,
-                                     heat, report.fonts[u'subhead']) 
+                    report.text_left(report.body_left, hof, heat,
+                                     report.fonts[u'subhead'])
                 report.sprint_rider(i[1], report.body_left + mm2pt(14), hof)
                 report.sprint_rider(i[2], report.midpagew + mm2pt(4), hof)
                 vstr = u'v'
-                if i[1][0] and i[2][0]:	# assume result in order...
+                if i[1][0] and i[2][0]:  # assume result in order...
                     vstr = u'def'
-                if i[2][0] == u' ':	# hack for bye
+                if i[2][0] == u' ':  # hack for bye
                     vstr = None
                 if vstr:
-                    report.text_cent(report.midpagew, hof,
-                                     vstr, report.fonts[u'subhead']) 
+                    report.text_cent(report.midpagew, hof, vstr,
+                                     report.fonts[u'subhead'])
                 time = u''
                 if len(i) > 3 and i[3]:
-                    time = i[3]	# probably already have a result
+                    time = i[3]  # probably already have a result
                 if time:
-                    report.text_right(report.body_right, hof,
-                                      time, report.fonts[u'body']) 
+                    report.text_right(report.body_right, hof, time,
+                                      report.fonts[u'body'])
                 else:
                     baseline = report.get_baseline(hof)
-                    report.drawline(report.body_right - mm2pt(10),
-                                    baseline,
-                                    report.body_right,
-                                    baseline)
+                    report.drawline(report.body_right - mm2pt(10), baseline,
+                                    report.body_right, baseline)
                 hof += report.line_height
         report.h = hof
         if self.footer:
             report.text_cent(report.midpagew, report.h, self.footer,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         report.c.restore()
 
@@ -1097,22 +1137,23 @@ class sprintround(object):
             row += 1
         if self.subheading:
             worksheet.write(row, 2,
-                 self.subheading.replace(u'\t', u'  ').strip(), XS_SUBTITLE)
+                            self.subheading.replace(u'\t', u'  ').strip(),
+                            XS_SUBTITLE)
             row += 2
         else:
-            row += 1	# min one clear row between
+            row += 1  # min one clear row between
         if len(self.lines) > 0:
             rows = []
-            for c in self.lines:	# each row is a pair/contest
+            for c in self.lines:  # each row is a pair/contest
                 # 'a' rider
-                rows.append([None, None, c[0], None, None])	# contest id)
+                rows.append([None, None, c[0], None, None])  # contest id)
                 av = [None, None, None, None, None]
                 av[0] = c[1][0]
                 av[1] = c[1][1]
                 av[2] = c[1][2]
                 av[3] = c[1][3]
                 if len(c) > 3 and c[3]:
-                    av[4] = c[3]	# place 200m time in info col
+                    av[4] = c[3]  # place 200m time in info col
                 rows.append(av)
                 # 'b' rider
                 bv = [None, None, None, None, None]
@@ -1143,20 +1184,21 @@ class sprintround(object):
         if self.heading:
             f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()),
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
         if len(self.lines) > 0:
             rows = []
-            for c in self.lines:	# each row is a pair/contest
+            for c in self.lines:  # each row is a pair/contest
                 # 'a' rider
-                rows.append([None, None, c[0], None, None])	# contest id)
+                rows.append([None, None, c[0], None, None])  # contest id)
                 av = [None, None, None, None, None]
                 av[0] = c[1][0]
                 av[1] = c[1][1]
                 av[2] = c[1][2]
                 av[3] = c[1][3]
                 if len(c) > 3 and c[3]:
-                    av[4] = c[3]	# place 200m time in info col
+                    av[4] = c[3]  # place 200m time in info col
                 rows.append(av)
                 # 'b' rider
                 bv = [None, None, None, None, None]
@@ -1168,14 +1210,16 @@ class sprintround(object):
             trows = []
             for l in rows:
                 trows.append(vec2htmlrow(l))
-            f.write(htlib.table(htlib.tbody(trows),
-                  {u'class':report.tablestyle}))
+            f.write(
+                htlib.table(htlib.tbody(trows), {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
             f.write(self.footer.strip() + u'\n')
         return u''
 
+
 class sprintfinal(object):
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.status = None
@@ -1184,10 +1228,10 @@ class sprintfinal(object):
         self.colheader = None
         self.units = None
         self.footer = None
-        self.lines = []		 # maps to 'contests'
+        self.lines = []  # maps to 'contests'
         self.lcount = 0
         self.h = None
-        
+
     def serialize(self, rep, sectionid=None):
         """Return a serializable map for JSON export."""
         ret = {}
@@ -1219,13 +1263,14 @@ class sprintfinal(object):
 
     def truncate(self, remainder, report):
         """Return a copy of the section up to page break."""
-        # program event sections do not break ... 
+        # program event sections do not break ...
         if self.get_h(report) <= (remainder + report.page_overflow):
             return (self, None)
         else:
             if report.pagefrac() < FEPSILON:
-                raise RuntimeWarning(u'Section ' + repr(self.heading)
-                          + u' will not fit on a page and will not break.')
+                raise RuntimeWarning(
+                    u'Section ' + repr(self.heading) +
+                    u' will not fit on a page and will not break.')
             # move entire section onto next page
             return (pagebreak(), self)
 
@@ -1234,36 +1279,36 @@ class sprintfinal(object):
         report.c.save()
         if self.heading is not None:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
         if self.subheading is not None:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                           report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         hof = report.h
         if len(self.lines) > 0:
             for i in self.lines:
                 hw = mm2pt(20)
                 hl = report.midpagew + hw
-                h1t = hl + 0.5*hw
+                h1t = hl + 0.5 * hw
                 h2t = h1t + hw
                 h12 = hl + hw
                 h3t = h2t + hw
                 h23 = h12 + hw
-                hr = hl + 3.0*hw
+                hr = hl + 3.0 * hw
 
                 # place heat headings
-                report.text_cent(h1t, hof, u'Heat 1', report.fonts[u'subhead']) 
-                report.text_cent(h2t, hof, u'Heat 2', report.fonts[u'subhead']) 
-                report.text_cent(h3t, hof, u'Heat 3', report.fonts[u'subhead']) 
+                report.text_cent(h1t, hof, u'Heat 1', report.fonts[u'subhead'])
+                report.text_cent(h2t, hof, u'Heat 2', report.fonts[u'subhead'])
+                report.text_cent(h3t, hof, u'Heat 3', report.fonts[u'subhead'])
                 hof += report.line_height
 
                 heat = u''
                 if i[0]:
                     heat = i[0]
                 if heat:
-                    report.text_left(report.body_left, hof,
-                                     heat, report.fonts[u'subhead']) 
+                    report.text_left(report.body_left, hof, heat,
+                                     report.fonts[u'subhead'])
 
                 ht = hof
                 bl = report.get_baseline(hof)
@@ -1274,33 +1319,33 @@ class sprintfinal(object):
                 report.drawline(h23, ht, h23, hb)
 
                 # draw all the "a" rider info
-                report.sprint_rider(i[1], report.body_left+hw, hof)
+                report.sprint_rider(i[1], report.body_left + hw, hof)
                 if i[1][4]:
-                    report.text_cent(h1t, hof, i[1][4], report.fonts[u'body']) 
+                    report.text_cent(h1t, hof, i[1][4], report.fonts[u'body'])
                 if i[1][5]:
                     report.text_cent(h2t, hof, i[1][5], report.fonts[u'body'])
                 if i[1][6]:
                     report.text_cent(h3t, hof, i[1][6], report.fonts[u'body'])
                 #if len(i[2]) > 7 and i[1][7]:
-                    #report.text_left(hl, hof, i[1][7], report.fonts[u'body'])
+                #report.text_left(hl, hof, i[1][7], report.fonts[u'body'])
                 hof += report.line_height
 
                 # draw all the "b" rider info
-                report.sprint_rider(i[2], report.body_left+hw, hof)
+                report.sprint_rider(i[2], report.body_left + hw, hof)
                 if i[2][4]:
-                    report.text_cent(h1t, hof, i[2][4], report.fonts[u'body']) 
+                    report.text_cent(h1t, hof, i[2][4], report.fonts[u'body'])
                 if i[2][5]:
                     report.text_cent(h2t, hof, i[2][5], report.fonts[u'body'])
                 if i[2][6]:
                     report.text_cent(h3t, hof, i[2][6], report.fonts[u'body'])
                 #if len(i[2]) > 7 and i[2][7]:
-                    #report.text_left(hl, hof, i[2][7], report.fonts[u'body'])
+                #report.text_left(hl, hof, i[2][7], report.fonts[u'body'])
                 hof += report.line_height
 
         report.h = hof
         if self.footer:
             report.text_cent(report.midpagew, report.h, self.footer,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         report.c.restore()
 
@@ -1312,31 +1357,32 @@ class sprintfinal(object):
             row += 1
         if self.subheading:
             worksheet.write(row, 2,
-                 self.subheading.replace(u'\t', u'  ').strip(), XS_SUBTITLE)
+                            self.subheading.replace(u'\t', u'  ').strip(),
+                            XS_SUBTITLE)
             row += 2
         else:
-            row += 1	# min one clear row between
+            row += 1  # min one clear row between
         if len(self.lines) > 0:
             rows = []
-            rows.append([None,None,None,u'Heat 1',u'Heat 2',u'Heat 3'])
-            for c in self.lines:	# each row is a pair/contest
+            rows.append([None, None, None, u'Heat 1', u'Heat 2', u'Heat 3'])
+            for c in self.lines:  # each row is a pair/contest
                 # 'a' rider
-                av = [c[1][j] for j in [0,1,2,4,5,6]]	# skip info col
+                av = [c[1][j] for j in [0, 1, 2, 4, 5, 6]]  # skip info col
                 av[0] = c[0]
                 rows.append(av)
                 # 'b' rider
-                bv = [c[2][j] for j in [0,1,2,4,5,6]]
+                bv = [c[2][j] for j in [0, 1, 2, 4, 5, 6]]
                 bv[0] = None
                 rows.append(bv)
                 rows.append([])
             for rw in rows:
                 l = vecmapstr(rw)
-                worksheet.write(row, 0, l[0], XS_LEFT)	# contest
-                worksheet.write(row, 1, l[1], XS_RIGHT)	# no
+                worksheet.write(row, 0, l[0], XS_LEFT)  # contest
+                worksheet.write(row, 1, l[1], XS_RIGHT)  # no
                 worksheet.write(row, 2, l[2], XS_LEFT)  # name
                 worksheet.write(row, 3, l[3], XS_RIGHT)  # heat 1
-                worksheet.write(row, 4, l[4], XS_RIGHT) # heat 2
-                worksheet.write(row, 5, l[5], XS_RIGHT) # heat 3
+                worksheet.write(row, 4, l[4], XS_RIGHT)  # heat 2
+                worksheet.write(row, 5, l[5], XS_RIGHT)  # heat 3
                 #worksheet.write(row, 6, l[6], XS_LEFT)	# comment?
                 row += 1
             row += 1
@@ -1351,34 +1397,37 @@ class sprintfinal(object):
         if self.heading:
             f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()),
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
         if len(self.lines) > 0:
             rows = []
-            rows.append([None,None,None,u'Heat 1',u'Heat 2',u'Heat 3'])
-            for c in self.lines:	# each row is a pair/contest
+            rows.append([None, None, None, u'Heat 1', u'Heat 2', u'Heat 3'])
+            for c in self.lines:  # each row is a pair/contest
                 # 'a' rider
                 #rows.append([None,None,u'Heat 1',u'Heat 2',u'Heat 3'])
-                av = [c[1][j] for j in [0,1,2,4,5,6]]	# skip info col
+                av = [c[1][j] for j in [0, 1, 2, 4, 5, 6]]  # skip info col
                 av[0] = c[0]
                 rows.append(av)
                 # 'b' rider
-                bv = [c[2][j] for j in [0,1,2,4,5,6]]
+                bv = [c[2][j] for j in [0, 1, 2, 4, 5, 6]]
                 bv[0] = None
                 rows.append(bv)
                 rows.append([])
             trows = []
             for l in rows:
                 trows.append(vec2htmlrow(l))
-            f.write(htlib.table(htlib.tbody(trows),
-                  {u'class':report.tablestyle}))
+            f.write(
+                htlib.table(htlib.tbody(trows), {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
             f.write(self.footer.strip() + u'\n')
         return u''
 
+
 class rttstartlist(object):
     """Time trial start list."""
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.heading = None
@@ -1411,7 +1460,7 @@ class rttstartlist(object):
         """Return total height on page of section on report."""
         if self.h is None or len(self.lines) != self.lcount:
             self.h = report.line_height * len(self.lines)
-            if self.colheader:	# colheader is written out with body
+            if self.colheader:  # colheader is written out with body
                 self.h += report.line_height
             if self.heading:
                 self.h += report.section_height
@@ -1434,9 +1483,9 @@ class rttstartlist(object):
         chk.subheading = self.subheading
         chk.colheader = self.colheader
         chk.footer = self.footer
-        if len(self.lines) <= 4: # special case, keep four or less together
+        if len(self.lines) <= 4:  # special case, keep four or less together
             chk.lines = self.lines[0:]
-        else:			 # BUT, don't break before third rider
+        else:  # BUT, don't break before third rider
             chk.lines = self.lines[0:2]
         if chk.get_h(report) > remainder:
             # move entire section onto next page
@@ -1461,7 +1510,7 @@ class rttstartlist(object):
         seclines = len(self.lines)
         count = 0
         if seclines > 0:
-            while count < seclines and count < 3: # don't break until 3rd
+            while count < seclines and count < 3:  # don't break until 3rd
                 ret.lines.append(self.lines[count])
                 count += 1
         while count < seclines:
@@ -1469,25 +1518,25 @@ class rttstartlist(object):
                 # pop last line onto rem and break
                 rem.lines.append(ret.lines.pop(-1))
                 break
-            elif seclines - count <= 2: # push min 2 names over to next page
+            elif seclines - count <= 2:  # push min 2 names over to next page
                 break
             ret.lines.append(self.lines[count])
             count += 1
         while count < seclines:
             rem.lines.append(self.lines[count])
             count += 1
-        return(ret, rem)
+        return (ret, rem)
 
     def draw_pdf(self, report):
         """Output a single section to the page."""
         report.c.save()
         if self.heading:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
         if self.subheading:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                           report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         cnt = 1
         if len(self.lines) > 0:
@@ -1498,15 +1547,15 @@ class rttstartlist(object):
                     if r[5] is not None and r[5].lower() == u'pilot':
                         r[5] = u'Pilot'
                     elif not (r[0] or r[1] or r[2] or r[3]):
-                        cnt = 0	# empty row?
+                        cnt = 0  # empty row?
                     else:
                         cnt += 1
                 else:
-                    cnt = 0	# blank all 'empty' lines
-                report.h += report.rttstart_row(report.h, r, cnt%2)
+                    cnt = 0  # blank all 'empty' lines
+                report.h += report.rttstart_row(report.h, r, cnt % 2)
         if self.footer:
             report.text_cent(report.midpagew, report.h, self.footer,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         report.c.restore()
 
@@ -1524,7 +1573,7 @@ class rttstartlist(object):
         if len(self.lines) > 0:
             rows = []
             if self.colheader:
-                rows.append(vecmapstr(self.colheader,7))
+                rows.append(vecmapstr(self.colheader, 7))
             for r in self.lines:
                 nv = r[0:6]
                 if len(nv) == 2:
@@ -1551,8 +1600,9 @@ class rttstartlist(object):
         if self.heading:
             f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()),
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
         if len(self.lines) > 0:
             rows = []
             if self.colheader:
@@ -1565,28 +1615,30 @@ class rttstartlist(object):
             trows = []
             for l in rows:
                 trows.append(vec2htmlrow(l))
-            f.write(htlib.table(htlib.tbody(trows),
-                  {u'class':report.tablestyle}))
+            f.write(
+                htlib.table(htlib.tbody(trows), {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
             f.write(self.footer.strip() + u'\n')
         return None
 
+
 class bullet_text(object):
     """List of bullet items, each one a non-breaking pango para."""
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.status = None
-        self.heading = None	# scalar
-        self.subheading = None	# scalar
+        self.heading = None  # scalar
+        self.subheading = None  # scalar
         self.footer = None
         self.units = None
         self.colheader = None
-        self.lines = []		# list of sections: [bullet,para]
-        self.lcount = 0		# last count of lines/len
-        self.bullet = u'\u2022'	# bullet type
-        self.width = None	# allow override of width
-        self.h = None		# computed height on page
+        self.lines = []  # list of sections: [bullet,para]
+        self.lcount = 0  # last count of lines/len
+        self.bullet = u'\u2022'  # bullet type
+        self.width = None  # allow override of width
+        self.h = None  # computed height on page
 
     def serialize(self, rep, sectionid=None):
         """Return a serializable map for JSON export."""
@@ -1608,8 +1660,8 @@ class bullet_text(object):
     def get_h(self, report):
         """Return total height on page of section on report."""
         if self.h is None or len(self.lines) != self.lcount:
-            if self.width is None:	# override by caller allowed
-                self.width = report.body_width - mm2pt(15+10)
+            if self.width is None:  # override by caller allowed
+                self.width = report.body_width - mm2pt(15 + 10)
             self.h = 0
             if self.heading:
                 self.h += report.section_height
@@ -1620,9 +1672,9 @@ class bullet_text(object):
             for line in self.lines:
                 bh = report.line_height
                 ph = 0
-                if line[1] and report.p is not None:	# empty or none not drawn
+                if line[1] and report.p is not None:  # empty or none not drawn
                     ph = report.paragraph_height(line[1], self.width)
-                self.h += max(bh, ph)	# enforce a minimum item height
+                self.h += max(bh, ph)  # enforce a minimum item height
             self.lcount = len(self.lines)
         return self.h
 
@@ -1637,7 +1689,7 @@ class bullet_text(object):
         chk = bullet_text()
         chk.heading = self.heading
         chk.subheading = self.subheading
-        chk.lines = self.lines[0:1]	# minimum one item before break
+        chk.lines = self.lines[0:1]  # minimum one item before break
         if chk.get_h(report) > remainder:
             # move entire section onto next page
             return (pagebreak(), self)
@@ -1662,55 +1714,56 @@ class bullet_text(object):
         count = 0
         if seclines > 0:
             ret.lines.append(self.lines[0])
-            count = 1 # case: min one line before break
-        while count < seclines: 	# visit every item
+            count = 1  # case: min one line before break
+        while count < seclines:  # visit every item
             if ret.get_h(report) > remainder:
                 # if overflow, undo last item and fall out to remainder
                 rem.lines.append(ret.lines.pop(-1))
                 break
-            elif seclines - count <= 1:	
-                break	# hanging item check (rm=1)
+            elif seclines - count <= 1:
+                break  # hanging item check (rm=1)
             ret.lines.append(self.lines[count])
             count += 1
         while count < seclines:
             # collect all remainder items in rem
             rem.lines.append(self.lines[count])
             count += 1
-        return(ret, rem)
+        return (ret, rem)
 
     def draw_pdf(self, report):
         """Output the bullet list to page."""
         report.c.save()
         if self.heading is not None:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
         if self.subheading is not None:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                           report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         if len(self.lines) > 0:
-            if self.width is None:	# override by caller allowed
-                self.width = report.body_width - mm2pt(15+10)
-            for l  in self.lines:
+            if self.width is None:  # override by caller allowed
+                self.width = report.body_width - mm2pt(15 + 10)
+            for l in self.lines:
                 bstr = self.bullet
                 if l[0] is not None:
-                    bstr = l[0]		# allow override even with ''
+                    bstr = l[0]  # allow override even with ''
                 # draw bullet
-                bh = report.line_height	# minimum item height is one line
+                bh = report.line_height  # minimum item height is one line
                 if bstr:
-                    report.text_left(report.body_left+mm2pt(5.0), report.h,
+                    report.text_left(report.body_left + mm2pt(5.0), report.h,
                                      bstr, report.fonts[u'body'])
                 # draw para
                 ph = 0
-                if l[1]:	# allow empty list item
-                    (pw,ph) = report.text_para(report.body_left+mm2pt(15.0),
-                                             report.h, l[1],
-                                             report.fonts[u'body'], self.width)
+                if l[1]:  # allow empty list item
+                    (pw, ph) = report.text_para(report.body_left + mm2pt(15.0),
+                                                report.h, l[1],
+                                                report.fonts[u'body'],
+                                                self.width)
                 report.h += max(ph, bh)
         if self.footer:
             report.text_cent(report.midpagew, report.h, self.footer,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         report.c.restore()
 
@@ -1731,9 +1784,9 @@ class bullet_text(object):
                 bstr = self.bullet
                 if l[0]:
                     bstr = l[0]
-                worksheet.write(row, 1, bstr, XS_LEFT)	# always one bullet
+                worksheet.write(row, 1, bstr, XS_LEFT)  # always one bullet
                 istr = u''
-                if l[1]: 
+                if l[1]:
                     istr = l[1]
                 for line in istr.split(u'\n'):
                     worksheet.write(row + oft, 2, line, XS_LEFT)
@@ -1748,33 +1801,36 @@ class bullet_text(object):
         if self.heading:
             f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()),
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
         if len(self.lines) > 0:
             ol = []
             for l in self.lines:
                 bstr = u''
                 if l[0]:
-                    bstr = u'('+l[0]+u') '
-                if l[1]: 
+                    bstr = u'(' + l[0] + u') '
+                if l[1]:
                     bstr += l[1]
                 ol.append(htlib.li(bstr.rstrip()))
             f.write(htlib.ul(ol))
             f.write(u'\n')
 
+
 class preformat_text(object):
     """Block of pre-formatted/monospaced plain text."""
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.status = None
-        self.heading = None	# scalar
-        self.subheading = None	# scalar
-        self.colheader = None	# scalar
+        self.heading = None  # scalar
+        self.subheading = None  # scalar
+        self.colheader = None  # scalar
         self.footer = None
         self.units = None
-        self.lines = []		# list of scalars
-        self.lcount = 0		# last count of lines/len
-        self.h = None		# computed height on page
+        self.lines = []  # list of scalars
+        self.lcount = 0  # last count of lines/len
+        self.h = None  # computed height on page
 
     def serialize(self, rep, sectionid=None):
         """Return a serializable map for JSON export."""
@@ -1796,7 +1852,7 @@ class preformat_text(object):
         """Return total height on page of section on report."""
         if self.h is None or len(self.lines) != self.lcount:
             cvec = self.lines[0:]
-            if self.colheader:	# colheader is written out with body
+            if self.colheader:  # colheader is written out with body
                 cvec.append(self.colheader)
             self.h = report.preformat_height(cvec)
             if self.heading:
@@ -1818,7 +1874,7 @@ class preformat_text(object):
         chk.heading = self.heading
         chk.subheading = self.subheading
         chk.colheader = self.colheader
-        if len(self.lines) == 3: # special case, keep 'threes' together
+        if len(self.lines) == 3:  # special case, keep 'threes' together
             chk.lines = self.lines[0:]
         else:
             chk.lines = self.lines[0:2]
@@ -1844,31 +1900,31 @@ class preformat_text(object):
         count = 0
         if seclines > 0:
             ret.lines.append(self.lines[0])
-            count = 1 # case: 3 lines broken on first line
-        while count < seclines: # case: push min two lines over break
+            count = 1  # case: 3 lines broken on first line
+        while count < seclines:  # case: push min two lines over break
             if ret.get_h(report) > remainder:
                 # pop last line onto rem and break
                 rem.lines.append(ret.lines.pop(-1))
                 break
-            elif seclines - count <= 2: # push min 2 lines over to next page
+            elif seclines - count <= 2:  # push min 2 lines over to next page
                 break
             ret.lines.append(self.lines[count])
             count += 1
         while count < seclines:
             rem.lines.append(self.lines[count])
             count += 1
-        return(ret, rem)
+        return (ret, rem)
 
     def draw_pdf(self, report):
         """Output a single section to the page."""
         report.c.save()
         if self.heading is not None:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
         if self.subheading is not None:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                           report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         if len(self.lines) > 0:
             rows = []
@@ -1876,9 +1932,11 @@ class preformat_text(object):
                 rows.append(self.colheader)
             rows.extend(self.lines)
             ust = u'\n'.join(rows)
-            (w, h) = report.text_cent(report.midpagew, report.h, ust,
-                               report.fonts[u'monospace'],
-                               halign=pango.ALIGN_LEFT)
+            (w, h) = report.text_cent(report.midpagew,
+                                      report.h,
+                                      ust,
+                                      report.fonts[u'monospace'],
+                                      halign=pango.ALIGN_LEFT)
             report.h += h
         report.c.restore()
 
@@ -1909,28 +1967,31 @@ class preformat_text(object):
         if self.heading:
             f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()), 
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
         if len(self.lines) > 0:
             ptxt = u''
             if self.colheader:
-                ptxt += htlib.escapetext( self.colheader.rstrip()) + u'\n'
+                ptxt += htlib.escapetext(self.colheader.rstrip()) + u'\n'
             for row in self.lines:
                 ptxt += htlib.escapetext(row.rstrip() + u'\n')
             f.write(htlib.pre(ptxt) + u'\n')
 
+
 class event_index(object):
     """Copy of plain section, but in text output text links."""
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.status = None
-        self.heading = None		# scalar
-        self.colheader = None		# scalar
-        self.subheading = None		# scalar
+        self.heading = None  # scalar
+        self.colheader = None  # scalar
+        self.subheading = None  # scalar
         self.footer = None
-        self.units = None		# scalar
-        self.lines = []			# list of column lists
-        self.lcount = 0			
+        self.units = None  # scalar
+        self.lines = []  # list of column lists
+        self.lcount = 0
         self.h = None
 
     def serialize(self, rep, sectionid=None):
@@ -1954,9 +2015,9 @@ class event_index(object):
         if self.h is None or len(self.lines) != self.lcount:
             # Set an estimate h for json export with no pdf
             self.h = report.line_height * len(self.lines)
-            if self.colheader:	# colheader is written out with body
+            if self.colheader:  # colheader is written out with body
                 self.h += report.line_height
-                cvec.append([u'-',u'-',u'-',u'-',u'-',u'-'])
+                cvec.append([u'-', u'-', u'-', u'-', u'-', u'-'])
             if self.heading:
                 self.h += report.section_height
             if self.subheading:
@@ -1977,7 +2038,7 @@ class event_index(object):
         chk.subheading = self.subheading
         chk.colheader = self.colheader
         chk.units = self.units
-        if len(self.lines) == 3: # special case, keep 'threes' together
+        if len(self.lines) == 3:  # special case, keep 'threes' together
             chk.lines = self.lines[0:]
         else:
             chk.lines = self.lines[0:2]
@@ -2005,31 +2066,31 @@ class event_index(object):
         count = 0
         if seclines > 0:
             ret.lines.append(self.lines[0])
-            count = 1 # case: 3 lines broken on first line
-        while count < seclines: # case: push min two lines over break
+            count = 1  # case: 3 lines broken on first line
+        while count < seclines:  # case: push min two lines over break
             if ret.get_h(report) > remainder:
                 # pop last line onto rem and break
                 rem.lines.append(ret.lines.pop(-1))
                 break
-            elif seclines - count <= 2: # push min 2 lines over to next page
+            elif seclines - count <= 2:  # push min 2 lines over to next page
                 break
             ret.lines.append(self.lines[count])
             count += 1
         while count < seclines:
             rem.lines.append(self.lines[count])
             count += 1
-        return(ret, rem)
+        return (ret, rem)
 
     def draw_pdf(self, report):
         """Output a single section to the page."""
         report.c.save()
         if self.heading:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
         if self.subheading:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                           report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         if len(self.lines) > 0:
             rows = []
@@ -2040,9 +2101,9 @@ class event_index(object):
             if self.units:
                 ust = self.units
                 if self.colheader:
-                    ust = u'\n'+ust 
+                    ust = u'\n' + ust
                 report.text_left(report.col_oft_units, report.h, ust,
-                               report.fonts[u'body'])
+                                 report.fonts[u'body'])
             report.output_column(rows, 0, u'l', report.col_oft_rank)
             #report.output_column(rows, 1, u'r', report.col_oft_no)
             new_h = report.output_column(rows, 2, u'l', report.col_oft_name)
@@ -2066,7 +2127,7 @@ class event_index(object):
         if len(self.lines) > 0:
             rows = []
             if self.colheader:
-                rows.append(vecmapstr(self.colheader,7))
+                rows.append(vecmapstr(self.colheader, 7))
             for r in self.lines:
                 nv = r[0:6]
                 if len(nv) == 2:
@@ -2095,8 +2156,9 @@ class event_index(object):
         if self.heading:
             f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()), 
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
 
         if len(self.lines) > 0:
             hdr = u''
@@ -2115,12 +2177,15 @@ class event_index(object):
             trows = []
             for l in rows:
                 trows.append(vec2htmllinkrow(l, xtn, report))
-            f.write(htlib.table([hdr, htlib.tbody(trows)],
-                  {u'class':report.tablestyle}))
+            f.write(
+                htlib.table([hdr, htlib.tbody(trows)],
+                            {u'class': report.tablestyle}))
             f.write(u'\n')
         return None
 
+
 class judge24rep(object):
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.heading = None
@@ -2157,7 +2222,7 @@ class judge24rep(object):
         if self.h is None or len(self.lines) != self.lcount:
             self.lcount = len(self.lines)
             self.h = report.line_height * self.lcount
-            if self.colheader:	# colheader is written out with body
+            if self.colheader:  # colheader is written out with body
                 self.h += report.line_height
             if self.heading:
                 self.h += report.section_height
@@ -2184,9 +2249,9 @@ class judge24rep(object):
         chk.start = self.start
         chk.finish = self.finish
         chk.laptimes = self.laptimes
-        if len(self.lines) <= 4: # special case, keep four or less together
+        if len(self.lines) <= 4:  # special case, keep four or less together
             chk.lines = self.lines[0:]
-        else:			 # BUT, don't break before third rider
+        else:  # BUT, don't break before third rider
             chk.lines = self.lines[0:2]
         if chk.get_h(report) > remainder:
             # move entire section onto next page
@@ -2219,7 +2284,7 @@ class judge24rep(object):
         seclines = len(self.lines)
         count = 0
         if seclines > 0:
-            while count < seclines and count < 3: # don't break until 3rd
+            while count < seclines and count < 3:  # don't break until 3rd
                 ret.lines.append(self.lines[count])
                 count += 1
         while count < seclines:
@@ -2227,25 +2292,25 @@ class judge24rep(object):
                 # pop last line onto rem and break
                 rem.lines.append(ret.lines.pop(-1))
                 break
-            elif seclines - count <= 2: # push min 2 names over to next page
+            elif seclines - count <= 2:  # push min 2 names over to next page
                 break
             ret.lines.append(self.lines[count])
             count += 1
         while count < seclines:
             rem.lines.append(self.lines[count])
             count += 1
-        return(ret, rem)
+        return (ret, rem)
 
     def draw_pdf(self, report):
         """Output a single section to the page."""
         report.c.save()
         if self.heading:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
         if self.subheading:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                           report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         cnt = 0
         if len(self.lines) > 0:
@@ -2254,26 +2319,33 @@ class judge24rep(object):
             sh = report.h
             if self.units:
                 report.text_left(report.col_oft_units, report.h, self.units,
-                               report.fonts[u'body'])
+                                 report.fonts[u'body'])
             stof = None
             for r in self.lines:
-                if len(r) > 6 and r[6] is not None and len(r[6]) > 0 and self.start is not None and self.finish is not None:
+                if len(r) > 6 and r[6] is not None and len(
+                        r[6]
+                ) > 0 and self.start is not None and self.finish is not None:
                     stof = self.start
                     if len(r) > 9 and r[9] is not None:
                         stof += r[9]
                     report.laplines24(report.h, r[6], stof, self.finish)
-                report.h += report.judges_row(report.h, r, cnt%2)
+                report.h += report.judges_row(report.h, r, cnt % 2)
                 #report.h += report.standard_row(report.h, r, cnt%2)
                 cnt += 1
-            eh = report.h	# - for the column shade box
-            if stof is not None and self.laptimes is not None and len(self.laptimes) > 0:
-                report.laplines24(sh, self.laptimes, stof, self.finish,
-                                    endh=eh, reverse=True)
-            report.drawbox(report.col_oft_time-mm2pt(15.0), sh,
-                           report.col_oft_time+mm2pt(1.0), eh, 0.07)
+            eh = report.h  # - for the column shade box
+            if stof is not None and self.laptimes is not None and len(
+                    self.laptimes) > 0:
+                report.laplines24(sh,
+                                  self.laptimes,
+                                  stof,
+                                  self.finish,
+                                  endh=eh,
+                                  reverse=True)
+            report.drawbox(report.col_oft_time - mm2pt(15.0), sh,
+                           report.col_oft_time + mm2pt(1.0), eh, 0.07)
         if self.footer:
             report.text_cent(report.midpagew, report.h, self.footer,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         report.c.restore()
 
@@ -2291,14 +2363,14 @@ class judge24rep(object):
         if len(self.lines) > 0:
             rows = []
             if self.colheader:
-                rows.append(vecmapstr(self.colheader,7))
+                rows.append(vecmapstr(self.colheader, 7))
             for r in self.lines:
                 nv = r[0:6]
                 if len(nv) == 2:
                     nv = [nv[0], None, nv[1]]
                 ol = vecmapstr(nv, 7)
                 #if len(r) > 6 and r[6]:
-                    #ol[7] = r[6]
+                #ol[7] = r[6]
                 rows.append(ol)
             if self.units:
                 if self.colheader:
@@ -2315,11 +2387,11 @@ class judge24rep(object):
                 worksheet.write(row, 6, l[6], XS_LEFT)
                 #of = 7
                 #if 7 in l:
-                  #st = self.start
-                  #for lt in l[7][1:]:
-                    #worksheet.write(row, of, (lt-st).rawtime(1), XS_RIGHT)
-                    #of += 1
-                    #st = lt
+                #st = self.start
+                #for lt in l[7][1:]:
+                #worksheet.write(row, of, (lt-st).rawtime(1), XS_RIGHT)
+                #of += 1
+                #st = lt
                 row += 1
             row += 1
         if self.footer:
@@ -2331,10 +2403,11 @@ class judge24rep(object):
     def draw_text(self, report, f, xtn):
         """Write out a section in html."""
         if self.heading:
-            f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n') 
+            f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()), 
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
 
         if len(self.lines) > 0:
             hdr = u''
@@ -2351,14 +2424,17 @@ class judge24rep(object):
             trows = []
             for l in rows:
                 trows.append(vec2htmlrow(l))
-            f.write(htlib.table([hdr, htlib.tbody(trows)],
-                  {u'class':report.tablestyle}))
+            f.write(
+                htlib.table([hdr, htlib.tbody(trows)],
+                            {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
             f.write(self.footer.strip() + u'\n')
         return None
 
+
 class judgerep(object):
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.heading = None
@@ -2395,7 +2471,7 @@ class judgerep(object):
         if self.h is None or len(self.lines) != self.lcount:
             self.lcount = len(self.lines)
             self.h = report.line_height * self.lcount
-            if self.colheader:	# colheader is written out with body
+            if self.colheader:  # colheader is written out with body
                 self.h += report.line_height
             if self.heading:
                 self.h += report.section_height
@@ -2422,9 +2498,9 @@ class judgerep(object):
         chk.start = self.start
         chk.finish = self.finish
         chk.laptimes = self.laptimes
-        if len(self.lines) <= 4: # special case, keep four or less together
+        if len(self.lines) <= 4:  # special case, keep four or less together
             chk.lines = self.lines[0:]
-        else:			 # BUT, don't break before third rider
+        else:  # BUT, don't break before third rider
             chk.lines = self.lines[0:2]
         if chk.get_h(report) > remainder:
             # move entire section onto next page
@@ -2457,7 +2533,7 @@ class judgerep(object):
         seclines = len(self.lines)
         count = 0
         if seclines > 0:
-            while count < seclines and count < 3: # don't break until 3rd
+            while count < seclines and count < 3:  # don't break until 3rd
                 ret.lines.append(self.lines[count])
                 count += 1
         while count < seclines:
@@ -2465,25 +2541,25 @@ class judgerep(object):
                 # pop last line onto rem and break
                 rem.lines.append(ret.lines.pop(-1))
                 break
-            elif seclines - count <= 2: # push min 2 names over to next page
+            elif seclines - count <= 2:  # push min 2 names over to next page
                 break
             ret.lines.append(self.lines[count])
             count += 1
         while count < seclines:
             rem.lines.append(self.lines[count])
             count += 1
-        return(ret, rem)
+        return (ret, rem)
 
     def draw_pdf(self, report):
         """Output a single section to the page."""
         report.c.save()
         if self.heading:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
         if self.subheading:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                           report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         cnt = 0
         if len(self.lines) > 0:
@@ -2492,24 +2568,30 @@ class judgerep(object):
             sh = report.h
             if self.units:
                 report.text_left(report.col_oft_units, report.h, self.units,
-                               report.fonts[u'body'])
+                                 report.fonts[u'body'])
             ft = self.finish
             if ft is None and self.start is not None:
                 ft = tod.now()
             for r in self.lines:
-                if len(r) > 6 and r[6] is not None and len(r[6]) > 0 and self.start is not None:
+                if len(r) > 6 and r[6] is not None and len(
+                        r[6]) > 0 and self.start is not None:
                     report.laplines(report.h, r[6], self.start, ft)
-                report.h += report.judges_row(report.h, r, cnt%2)
+                report.h += report.judges_row(report.h, r, cnt % 2)
                 cnt += 1
-            eh = report.h	# - for the column shade box
-            if self.start is not None and self.laptimes is not None and len(self.laptimes) > 0:
-                report.laplines(sh, self.laptimes, self.start, ft,
-                                    endh=eh, reverse=True)
-            report.drawbox(report.col_oft_time-mm2pt(15.0), sh,
-                           report.col_oft_time+mm2pt(1.0), eh, 0.07)
+            eh = report.h  # - for the column shade box
+            if self.start is not None and self.laptimes is not None and len(
+                    self.laptimes) > 0:
+                report.laplines(sh,
+                                self.laptimes,
+                                self.start,
+                                ft,
+                                endh=eh,
+                                reverse=True)
+            report.drawbox(report.col_oft_time - mm2pt(15.0), sh,
+                           report.col_oft_time + mm2pt(1.0), eh, 0.07)
         if self.footer:
             report.text_cent(report.midpagew, report.h, self.footer,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         report.c.restore()
 
@@ -2529,7 +2611,7 @@ class judgerep(object):
             rows = []
             if self.colheader:
                 revoft += 1
-                rows.append(vecmapstr(self.colheader,7))
+                rows.append(vecmapstr(self.colheader, 7))
             for r in self.lines:
                 nv = r[0:7]
                 if len(nv) == 2:
@@ -2560,12 +2642,13 @@ class judgerep(object):
                     if len(srcl) > 10 and srcl[10]:
                         # show cat label in units col
                         worksheet.write(row, 6, srcl[10], XS_LEFT)
-                    if len(srcl) > 6 and srcl[6] is not None and len(srcl[6]) > 0:
+                    if len(srcl) > 6 and srcl[6] is not None and len(
+                            srcl[6]) > 0:
                         # append each lap time to row
                         llt = st
                         roft = 7
                         for k in srcl[6]:
-                            worksheet.write(row, roft, (k-llt).rawtime(1),
+                            worksheet.write(row, roft, (k - llt).rawtime(1),
                                             XS_RIGHT)
                             llt = k
                             roft += 1
@@ -2580,10 +2663,11 @@ class judgerep(object):
     def draw_text(self, report, f, xtn):
         """Write out a section in html."""
         if self.heading:
-            f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n') 
+            f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()), 
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
 
         if len(self.lines) > 0:
             hdr = u''
@@ -2600,15 +2684,18 @@ class judgerep(object):
             trows = []
             for l in rows:
                 trows.append(vec2htmlrow(l))
-            f.write(htlib.table([hdr, htlib.tbody(trows)],
-                  {u'class':report.tablestyle}))
+            f.write(
+                htlib.table([hdr, htlib.tbody(trows)],
+                            {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
             f.write(self.footer.strip() + u'\n')
         return None
 
+
 class teampage(object):
     """One-page teams race startlist, with individuals in 3 columns."""
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.heading = None
@@ -2619,10 +2706,10 @@ class teampage(object):
         self.footer = None
         self.lines = []
         self.teammap = {}
-        self.expand = 0.0	# extra space between teams
-        self.scale = 1.0	# scale line height localy if required
+        self.expand = 0.0  # extra space between teams
+        self.scale = 1.0  # scale line height localy if required
         self.lcount = 0
-        self.height = None	# override height on page
+        self.height = None  # override height on page
         self.h = None
 
     def serialize(self, rep, sectionid=None):
@@ -2652,7 +2739,7 @@ class teampage(object):
         if self.h is None or len(self.lines) != self.lcount:
             self.lcount = len(self.lines)
             if self.height is None:
-                self.height = report.body_len	# default to whole page
+                self.height = report.body_len  # default to whole page
             self.h = self.height
         return self.h
 
@@ -2662,8 +2749,9 @@ class teampage(object):
             return (self, None)
         else:
             if report.pagefrac() < FEPSILON:
-                raise RuntimeWarning(u'Section ' + repr(self.heading)
-                          + u' will not fit on a page and will not break.')
+                raise RuntimeWarning(
+                    u'Section ' + repr(self.heading) +
+                    u' will not fit on a page and will not break.')
             # move entire section onto next page
             return (pagebreak(), self)
 
@@ -2674,12 +2762,12 @@ class teampage(object):
         rcount = 0
         if self.heading:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
             glen -= report.section_height
         if self.subheading:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                           report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
             glen -= report.section_height
         if self.footer:
@@ -2709,7 +2797,7 @@ class teampage(object):
                     if (chh - fnh) > FEPSILON:
                         tnwidth += mm2pt(0.4)
                         tnoft -= mm2pt(0.2)
-                        break;
+                        break
 
                 tnh = max(tnh, fnh)
                 th = self.scale * tnh
@@ -2722,7 +2810,7 @@ class teampage(object):
                         ds = dat['ds']
                     th += len(dat[u'riders']) * report.line_height
                 # space left in column?
-                if pageoft + th > endpage:	# would have overflowed
+                if pageoft + th > endpage:  # would have overflowed
                     pageoft = report.h
                     col += 1
                     if col > 2:
@@ -2730,36 +2818,45 @@ class teampage(object):
                 # draw code/name
                 left = report.col3t_loft[col]
                 if tname:
-                    report.text_para(left+tnoft, pageoft, tname, report.fonts[u'section'], tnwidth, pango.ALIGN_CENTER)
+                    report.text_para(left + tnoft, pageoft, tname,
+                                     report.fonts[u'section'], tnwidth,
+                                     pango.ALIGN_CENTER)
                 #if tcode:
-                    #tco = pageoft
-                    #if tnh > localline:
-                        #tco += 0.5 * (tnh - localline)
-                    #report.text_right(left + tcw - mm2pt(1.0), tco, tcode, report.fonts[u'section'])
+                #tco = pageoft
+                #if tnh > localline:
+                #tco += 0.5 * (tnh - localline)
+                #report.text_right(left + tcw - mm2pt(1.0), tco, tcode, report.fonts[u'section'])
                 pageoft += self.scale * tnh
                 #pageoft += 0.9 * tnh
-                
+
                 # optionally draw ds
                 if ds is not None:
-                    report.text_cent(left + tcw + 0.5*tnw, pageoft, u'DS: ' + ds, report.fonts[u'body'])
+                    report.text_cent(left + tcw + 0.5 * tnw, pageoft,
+                                     u'DS: ' + ds, report.fonts[u'body'])
                     pageoft += localline
                 # draw riders
-                rnw = tnw-tcw-mm2pt(1.0)
+                rnw = tnw - tcw - mm2pt(1.0)
                 for r in dat[u'riders']:
                     strike = False
-                    report.text_right(left + tcw - mm2pt(1.0), pageoft, r[1], report.fonts[u'body'])
-                    report.fit_text(left + tcw, pageoft, r[2], rnw, font=report.fonts[u'body'])
-                    report.text_left(left + tnw, pageoft, r[3], report.fonts[u'body'])
+                    report.text_right(left + tcw - mm2pt(1.0), pageoft, r[1],
+                                      report.fonts[u'body'])
+                    report.fit_text(left + tcw,
+                                    pageoft,
+                                    r[2],
+                                    rnw,
+                                    font=report.fonts[u'body'])
+                    report.text_left(left + tnw, pageoft, r[3],
+                                     report.fonts[u'body'])
                     if r[0]:
-                        report.drawline(left+mm2pt(0.5),
-                                      pageoft+(0.5*localline),
-                                      left+report.col3_width-mm2pt(0.5),
-                                      pageoft+(0.5*localline))
+                        report.drawline(left + mm2pt(0.5),
+                                        pageoft + (0.5 * localline),
+                                        left + report.col3_width - mm2pt(0.5),
+                                        pageoft + (0.5 * localline))
                     rcount += 1
                     pageoft += localline
                 pageoft += report.line_height + self.expand
             # place each team in the order delivered.
-        
+
         # advance report.h to end of page
         report.h += glen
         if self.footer or rcount > 0:
@@ -2770,7 +2867,7 @@ class teampage(object):
                 mv.append(self.footer)
             msg = u'\t'.join(mv)
             report.text_cent(report.midpagew, report.h, msg,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         report.c.restore()
 
@@ -2823,24 +2920,28 @@ class teampage(object):
         """Write out a section in html."""
         # These are not normally output on team page - but left as option
         if self.heading:
-            f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n') 
+            f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()), 
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
         if self.footer:
-            f.write(htlib.p(htlib.small(htlib.escapetext(self.footer.strip()))))
+            f.write(htlib.p(htlib.small(htlib.escapetext(
+                self.footer.strip()))))
         rcount = 0
         if len(self.lines) > 0:
             for t in self.lines:
-                f.write(htlib.h3([htlib.span(htlib.escapetext(t[1]),
-                                             {u'class':u'badge bg-primary'}),
-                                  htlib.escapetext(t[2])]
-                                )
-                       )
+                f.write(
+                    htlib.h3([
+                        htlib.span(htlib.escapetext(t[1]),
+                                   {u'class': u'badge bg-primary'}),
+                        htlib.escapetext(t[2])
+                    ]))
                 if t[1] in self.teammap:
                     dat = self.teammap[t[1]]
                     if u'ds' in dat and dat[u'ds']:
-                        f.write(htlib.p(htlib.escapetext(u'DS: ' + dat[u'ds'])))
+                        f.write(htlib.p(htlib.escapetext(u'DS: ' +
+                                                         dat[u'ds'])))
                     rows = []
                     for r in dat[u'riders']:
                         nv = r[0:6]
@@ -2851,15 +2952,21 @@ class teampage(object):
                     trows = []
                     for l in rows:
                         trows.append(vec2htmlrow(l))
-                    f.write(htlib.table([htlib.tbody(trows)],
-                          {u'class':report.tablestyle}))
+                    f.write(
+                        htlib.table([htlib.tbody(trows)],
+                                    {u'class': report.tablestyle}))
                     f.write(u'\n')
         if rcount > 0:
-            f.write(htlib.p(htlib.small(htlib.escapetext(u'{} starters.'.format(rcount)))))
+            f.write(
+                htlib.p(
+                    htlib.small(
+                        htlib.escapetext(u'{} starters.'.format(rcount)))))
         return None
+
 
 class gamut(object):
     """Whole view of the entire tour - aka crossoff."""
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.heading = None
@@ -2870,8 +2977,8 @@ class gamut(object):
         self.footer = None
         self.lines = []
         self.cellmap = {}
-        self.maxcol = 9		# depends on tour
-	self.minaspect = 2.0	# minimum ratio to retain
+        self.maxcol = 9  # depends on tour
+        self.minaspect = 2.0  # minimum ratio to retain
         self.lcount = 0
         self.grey = True
         self.h = None
@@ -2897,7 +3004,7 @@ class gamut(object):
         """Return total height on page of section on report."""
         if self.h is None or len(self.lines) != self.lcount:
             self.lcount = len(self.lines)
-            self.h = report.body_len # section always fills page
+            self.h = report.body_len  # section always fills page
         return self.h
 
     def truncate(self, remainder, report):
@@ -2906,8 +3013,9 @@ class gamut(object):
             return (self, None)
         else:
             if report.pagefrac() < FEPSILON:
-                raise RuntimeWarning(u'Section ' + repr(self.heading)
-                          + u' will not fit on a page and will not break.')
+                raise RuntimeWarning(
+                    u'Section ' + repr(self.heading) +
+                    u' will not fit on a page and will not break.')
             # move entire section onto next page
             return (pagebreak(), self)
 
@@ -2917,12 +3025,12 @@ class gamut(object):
         glen = self.h
         if self.heading:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
             glen -= report.section_height
         if self.subheading:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                           report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
             glen -= report.section_height
         if self.footer:
@@ -2932,10 +3040,10 @@ class gamut(object):
             # determine geometry
             lmargin = report.body_left + mm2pt(0.25) - mm2pt(10.0)
             rmargin = report.body_right + mm2pt(10.0)
-            if self.maxcol < 6:		# increase margins for teams of 6
+            if self.maxcol < 6:  # increase margins for teams of 6
                 lmargin += mm2pt(10.0)
                 rmargin -= mm2pt(10.0)
-            elif self.maxcol > 8:	# decrease margins for teams of 8
+            elif self.maxcol > 8:  # decrease margins for teams of 8
                 lmargin -= mm2pt(10.0)
                 rmargin += mm2pt(10.0)
             pwidth = rmargin - lmargin
@@ -2946,14 +3054,14 @@ class gamut(object):
                 cheight = cwidth / self.minaspect
             fnsz = cheight * 0.35
             gfonts = {}
-            gfonts[u'key'] = pango.FontDescription(report.gamutstdfont + u' ' 
-                                                   + unicode(fnsz))
+            gfonts[u'key'] = pango.FontDescription(report.gamutstdfont + u' ' +
+                                                   unicode(fnsz))
             fnsz = cheight * 0.13
-            gfonts[u'text'] = pango.FontDescription(report.gamutobfont + u' ' 
-                                                   + unicode(fnsz))
+            gfonts[u'text'] = pango.FontDescription(report.gamutobfont + u' ' +
+                                                    unicode(fnsz))
             fnsz = cheight * 0.20
-            gfonts[u'gcline'] = pango.FontDescription(report.gamutobfont + u' ' 
-                                                   + unicode(fnsz))
+            gfonts[u'gcline'] = pango.FontDescription(report.gamutobfont +
+                                                      u' ' + unicode(fnsz))
             al = 0.04
             ad = 0.12
             alph = ad
@@ -2964,33 +3072,33 @@ class gamut(object):
                         cmap = None
                         if c in self.cellmap:
                             cmap = self.cellmap[c]
-                        report.gamut_cell(report.h, colof, cheight, cwidth, 
-                                          c, alph, gfonts, cmap)
+                        report.gamut_cell(report.h, colof, cheight, cwidth, c,
+                                          alph, gfonts, cmap)
                     colof += cwidth
                 if alph == al:
                     alph = ad
                 else:
                     alph = al
                 report.h += cheight
-        
-	# divide up and then enforce aspect limits
-	# min aspect = ~1.2
-	# use a 0.5-1.0mm gap on each edge (r/b)
-	# max height of 15.0mm
-	# min height of ~9mm
-	# max width of 31.5
-	# min width of 19.8
+
+# divide up and then enforce aspect limits
+# min aspect = ~1.2
+# use a 0.5-1.0mm gap on each edge (r/b)
+# max height of 15.0mm
+# min height of ~9mm
+# max width of 31.5
+# min width of 19.8
 
         if self.footer:
             report.text_cent(report.midpagew, report.h, self.footer,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         # advance report.h to end of page
         report.c.restore()
 
     def draw_xls(self, report, worksheet):
         """Output program element to excel worksheet."""
-        return None	# SKIP on xls
+        return None  # SKIP on xls
         row = report.h
         if self.heading:
             worksheet.write(row, 2, self.heading.strip(), XS_TITLE)
@@ -3010,12 +3118,13 @@ class gamut(object):
 
     def draw_text(self, report, f, xtn):
         """Write out a section in html."""
-        return None	# Skip section on web output
+        return None  # Skip section on web output
         if self.heading:
-            f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n') 
+            f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()), 
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
 
         if len(self.lines) > 0:
             pass
@@ -3023,7 +3132,9 @@ class gamut(object):
             f.write(self.footer.strip() + u'\n')
         return None
 
+
 class threecol_section(object):
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.heading = None
@@ -3057,8 +3168,8 @@ class threecol_section(object):
         """Return total height on page of section on report."""
         if self.h is None or len(self.lines) != self.lcount:
             self.lcount = len(self.lines)
-            self.h = report.line_height * int(math.ceil(self.lcount/3.0))
-            if self.colheader:	# colheader is written out with body
+            self.h = report.line_height * int(math.ceil(self.lcount / 3.0))
+            if self.colheader:  # colheader is written out with body
                 self.h += report.line_height
             if self.heading:
                 self.h += report.section_height
@@ -3082,9 +3193,9 @@ class threecol_section(object):
         chk.colheader = self.colheader
         chk.footer = self.footer
         chk.units = self.units
-        if len(self.lines) <= 6: # special case, keep 2 lines of 3
+        if len(self.lines) <= 6:  # special case, keep 2 lines of 3
             chk.lines = self.lines[0:]
-        else:			 # BUT, don't break before third rider
+        else:  # BUT, don't break before third rider
             chk.lines = self.lines[0:6]
         if chk.get_h(report) > remainder:
             # move entire section onto next page
@@ -3111,7 +3222,7 @@ class threecol_section(object):
         seclines = len(self.lines)
         count = 0
         if seclines > 0:
-            while count < seclines and count < 6: # don't break until 6th
+            while count < seclines and count < 6:  # don't break until 6th
                 ret.lines.append(self.lines[count])
                 count += 1
         while count < seclines:
@@ -3119,53 +3230,53 @@ class threecol_section(object):
                 # pop last line onto rem and break
                 rem.lines.append(ret.lines.pop(-1))
                 break
-            elif seclines - count <= 6: # push min 6 names over to next page
+            elif seclines - count <= 6:  # push min 6 names over to next page
                 break
             ret.lines.append(self.lines[count])
             count += 1
         while count < seclines:
             rem.lines.append(self.lines[count])
             count += 1
-        return(ret, rem)
+        return (ret, rem)
 
     def draw_pdf(self, report):
         """Output a single section to the page."""
         report.c.save()
         if self.heading:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
         if self.subheading:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                           report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         cnt = 0
         if len(self.lines) > 0:
             if self.colheader:
-                report.h += report.standard_3row(report.h,
-                             self.colheader, self.colheader, self.colheader)
+                report.h += report.standard_3row(report.h, self.colheader,
+                                                 self.colheader,
+                                                 self.colheader)
             #sh = report.h
             #if self.units:	# NO UNITS?
-                #report.text_left(report.col_oft_units, report.h, self.units,
-                               #report.fonts[u'body'])
-         	#    lcount 
-            lcount = int(math.ceil(self.lcount/3.0))
-            for l in range(0,lcount):
+            #report.text_left(report.col_oft_units, report.h, self.units,
+            #report.fonts[u'body'])
+        #    lcount
+            lcount = int(math.ceil(self.lcount / 3.0))
+            for l in range(0, lcount):
                 r1 = self.lines[l]
                 r2 = None
-                if len(self.lines) > l+lcount:
-                    r2 = self.lines[l+lcount]	# for degenerate n<5
+                if len(self.lines) > l + lcount:
+                    r2 = self.lines[l + lcount]  # for degenerate n<5
                 r3 = None
-                if len(self.lines) > l+lcount+lcount:
-                    r3 = self.lines[l+lcount+lcount]
+                if len(self.lines) > l + lcount + lcount:
+                    r3 = self.lines[l + lcount + lcount]
                 grey = 0
                 if self.grey:
-                    grey = (l)%2
-                report.h += report.standard_3row(report.h,
-                               r1, r2, r3, grey)
+                    grey = (l) % 2
+                report.h += report.standard_3row(report.h, r1, r2, r3, grey)
         if self.footer:
             report.text_cent(report.midpagew, report.h, self.footer,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         report.c.restore()
 
@@ -3183,7 +3294,7 @@ class threecol_section(object):
         if len(self.lines) > 0:
             rows = []
             if self.colheader:
-                rows.append(vecmapstr(self.colheader,7))
+                rows.append(vecmapstr(self.colheader, 7))
             for r in self.lines:
                 nv = r[0:6]
                 if len(nv) == 2:
@@ -3217,10 +3328,11 @@ class threecol_section(object):
     def draw_text(self, report, f, xtn):
         """Write out a section in html."""
         if self.heading:
-            f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n') 
+            f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()), 
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
 
         if len(self.lines) > 0:
             hdr = u''
@@ -3240,14 +3352,17 @@ class threecol_section(object):
             trows = []
             for l in rows:
                 trows.append(vec2htmlrow(l))
-            f.write(htlib.table([hdr, htlib.tbody(trows)],
-                  {u'class':report.tablestyle}))
+            f.write(
+                htlib.table([hdr, htlib.tbody(trows)],
+                            {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
             f.write(self.footer.strip() + u'\n')
         return None
 
+
 class section(object):
+
     def __init__(self, secid=None):
         self.sectionid = secid
         self.heading = None
@@ -3283,9 +3398,9 @@ class section(object):
             self.lcount = len(self.lines)
             for l in self.lines:
                 if len(l) > 6 and l[6] and type(l[6]) is list:
-                    self.lcount+= 1
+                    self.lcount += 1
             self.h = report.line_height * self.lcount
-            if self.colheader:	# colheader is written out with body
+            if self.colheader:  # colheader is written out with body
                 self.h += report.line_height
             if self.heading:
                 self.h += report.section_height
@@ -3309,9 +3424,9 @@ class section(object):
         chk.colheader = self.colheader
         chk.footer = self.footer
         chk.units = self.units
-        if len(self.lines) <= 4: # special case, keep four or less together
+        if len(self.lines) <= 4:  # special case, keep four or less together
             chk.lines = self.lines[0:]
-        else:			 # BUT, don't break before third rider
+        else:  # BUT, don't break before third rider
             chk.lines = self.lines[0:2]
         if chk.get_h(report) > remainder:
             # move entire section onto next page
@@ -3338,7 +3453,7 @@ class section(object):
         seclines = len(self.lines)
         count = 0
         if seclines > 0:
-            while count < seclines and count < 3: # don't break until 3rd
+            while count < seclines and count < 3:  # don't break until 3rd
                 ret.lines.append(self.lines[count])
                 count += 1
         while count < seclines:
@@ -3346,25 +3461,25 @@ class section(object):
                 # pop last line onto rem and break
                 rem.lines.append(ret.lines.pop(-1))
                 break
-            elif seclines - count <= 2: # push min 2 names over to next page
+            elif seclines - count <= 2:  # push min 2 names over to next page
                 break
             ret.lines.append(self.lines[count])
             count += 1
         while count < seclines:
             rem.lines.append(self.lines[count])
             count += 1
-        return(ret, rem)
+        return (ret, rem)
 
     def draw_pdf(self, report):
         """Output a single section to the page."""
         report.c.save()
         if self.heading:
             report.text_cent(report.midpagew, report.h, self.heading,
-                           report.fonts[u'section'])
+                             report.fonts[u'section'])
             report.h += report.section_height
         if self.subheading:
             report.text_cent(report.midpagew, report.h, self.subheading,
-                           report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         cnt = 0
         if len(self.lines) > 0:
@@ -3373,29 +3488,29 @@ class section(object):
             #sh = report.h
             if self.units:
                 report.text_left(report.col_oft_units, report.h, self.units,
-                               report.fonts[u'body'])
+                                 report.fonts[u'body'])
             for r in self.lines:
                 if len(r) > 5:
                     if r[1] is not None and r[1].lower() == u'pilot':
-                        pass #r[1] = u''
+                        pass  #r[1] = u''
                     elif not (r[0] or r[1] or r[2] or r[3]):
-                        cnt = 1	# empty row?
+                        cnt = 1  # empty row?
                     else:
                         cnt += 1
                 else:
-                    cnt = 1	# blank all 'empty' lines
+                    cnt = 1  # blank all 'empty' lines
                 grey = 0
                 if self.grey:
-                    grey = (cnt+1)%2
+                    grey = (cnt + 1) % 2
                 report.h += report.standard_row(report.h, r, grey)
                 if len(r) > 6 and type(r[6]) is list:
-                    report.h += report.standard_row(report.h,r[6],grey)
+                    report.h += report.standard_row(report.h, r[6], grey)
             #eh = report.h	- for the column shade box
             #report.drawbox(report.col_oft_time-mm2pt(20.0), sh,
-                           #report.col_oft_time+mm2pt(1.0), eh, 0.07)
+            #report.col_oft_time+mm2pt(1.0), eh, 0.07)
         if self.footer:
             report.text_cent(report.midpagew, report.h, self.footer,
-                              report.fonts[u'subhead'])
+                             report.fonts[u'subhead'])
             report.h += report.line_height
         report.c.restore()
 
@@ -3413,7 +3528,7 @@ class section(object):
         if len(self.lines) > 0:
             rows = []
             if self.colheader:
-                rows.append(vecmapstr(self.colheader,7))
+                rows.append(vecmapstr(self.colheader, 7))
             for r in self.lines:
                 nv = r[0:6]
                 if len(nv) == 2:
@@ -3447,10 +3562,11 @@ class section(object):
     def draw_text(self, report, f, xtn):
         """Write out a section in html."""
         if self.heading:
-            f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n') 
+            f.write(htlib.h3(htlib.escapetext(self.heading.strip())) + u'\n')
         if self.subheading:
-            f.write(htlib.p(htlib.escapetext(self.subheading.strip()), 
-                            {u'class':u'lead'}) + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.subheading.strip()),
+                        {u'class': u'lead'}) + u'\n')
 
         if len(self.lines) > 0:
             hdr = u''
@@ -3470,15 +3586,18 @@ class section(object):
             trows = []
             for l in rows:
                 trows.append(vec2htmlrow(l))
-            f.write(htlib.table([hdr, htlib.tbody(trows)],
-                  {u'class':report.tablestyle}))
+            f.write(
+                htlib.table([hdr, htlib.tbody(trows)],
+                            {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
             f.write(self.footer.strip() + u'\n')
         return None
 
+
 class pagebreak(object):
     """Dummy 'section' for page breaks."""
+
     def __init__(self, threshold=None):
         self.sectionid = u'break'
         self.threshold = threshold
@@ -3503,10 +3622,18 @@ class pagebreak(object):
     def get_threshold(self):
         return self.threshold
 
+
 class image_elem(object):
     """Place an SVG image on the page."""
-    def __init__(self, x1=None, y1=None, x2=None, y2=None,
-                        halign=None, valign=None, source=None):
+
+    def __init__(self,
+                 x1=None,
+                 y1=None,
+                 x2=None,
+                 y2=None,
+                 halign=None,
+                 valign=None,
+                 source=None):
         if halign is None:
             halign = 0.5
         if valign is None:
@@ -3528,8 +3655,8 @@ class image_elem(object):
             # Pre-compute geometry
             bw = self.x2 - self.x1
             bh = self.y2 - self.y1
-            if math.fabs(bh) < 0.0001:	# avoid div zero
-                bh += 1.0	# but normally an error?
+            if math.fabs(bh) < 0.0001:  # avoid div zero
+                bh += 1.0  # but normally an error?
             ab = bw / bh
             iw = float(self.source.props.width)
             ih = float(self.source.props.height)
@@ -3537,11 +3664,11 @@ class image_elem(object):
             xoft = 0.0
             yoft = 0.0
             sf = 1.0
-            if ai > ab:     # 'wider' than box, scale to box w
+            if ai > ab:  # 'wider' than box, scale to box w
                 # xoft will be 0 for all aligns
                 sf = bw / iw
                 yoft = self.valign * (bh - ih * sf)
-            else:           # 'higher' than box, scale to box h
+            else:  # 'higher' than box, scale to box h
                 # yoft will be 0 for all aligns
                 sf = bh / ih
                 xoft = self.halign * (bw - iw * sf)
@@ -3557,10 +3684,20 @@ class image_elem(object):
             self.source.render_cairo(c)
             c.restore()
 
+
 class arc_elem(object):
     """Pace an optionally shaded arc on the page."""
-    def __init__(self, cx=None, cy=None, r=None, a1=None, a2=None, 
-                       fill=None, width=None, colour=None, dash=None):
+
+    def __init__(self,
+                 cx=None,
+                 cy=None,
+                 r=None,
+                 a1=None,
+                 a2=None,
+                 fill=None,
+                 width=None,
+                 colour=None,
+                 dash=None):
         self.cx = cx
         self.cy = cy
         self.r = r
@@ -3570,6 +3707,7 @@ class arc_elem(object):
         self.width = width
         self.colour = colour
         self.dash = dash
+
     def draw(self, c, p):
         c.save()
         #c.move_to(self.cx, self.cy)
@@ -3587,16 +3725,26 @@ class arc_elem(object):
                 c.fill()
         if outline:
             if self.colour is not None:
-                c.set_source_rgb(self.colour[0], self.colour[1], self.colour[2])
+                c.set_source_rgb(self.colour[0], self.colour[1],
+                                 self.colour[2])
             if self.dash is not None:
                 c.set_dash(self.dash)
             c.stroke()
         c.restore()
 
+
 class box_elem(object):
     """Place an optionally shaded box on the page."""
-    def __init__(self, x1=None, y1=None, x2=None, y2=None, fill=None,
-                        width=None, colour=None, dash=None):
+
+    def __init__(self,
+                 x1=None,
+                 y1=None,
+                 x2=None,
+                 y2=None,
+                 fill=None,
+                 width=None,
+                 colour=None,
+                 dash=None):
         self.x1 = x1
         self.y1 = y1
         self.x2 = x2
@@ -3625,16 +3773,25 @@ class box_elem(object):
                 c.fill()
         if outline:
             if self.colour is not None:
-                c.set_source_rgb(self.colour[0], self.colour[1], self.colour[2])
+                c.set_source_rgb(self.colour[0], self.colour[1],
+                                 self.colour[2])
             if self.dash is not None:
                 c.set_dash(self.dash)
             c.stroke()
         c.restore()
 
+
 class line_elem(object):
     """Places a line on the page."""
-    def __init__(self, x1=None, y1=None, x2=None, y2=None,
-                        width=None, colour=None, dash=None):
+
+    def __init__(self,
+                 x1=None,
+                 y1=None,
+                 x2=None,
+                 y2=None,
+                 width=None,
+                 colour=None,
+                 dash=None):
         self.x1 = x1
         self.y1 = y1
         self.x2 = x2
@@ -3656,10 +3813,18 @@ class line_elem(object):
         c.stroke()
         c.restore()
 
+
 class text_elem(object):
     """Places string of text on the page."""
-    def __init__(self, x=None, y=None, align=None, font=None,
-                        colour=None, source=None, report=None):
+
+    def __init__(self,
+                 x=None,
+                 y=None,
+                 align=None,
+                 font=None,
+                 colour=None,
+                 source=None,
+                 report=None):
         self.x = x
         self.y = y
         self.align = align
@@ -3667,6 +3832,7 @@ class text_elem(object):
         self.colour = colour
         self.source = source
         self.report = report
+
     def draw(self, c, p):
         msg = None
         if self.source:
@@ -3681,33 +3847,39 @@ class text_elem(object):
             if self.font is not None:
                 l.set_font_description(self.font)
             if self.colour is not None:
-                c.set_source_rgb(self.colour[0], self.colour[1], self.colour[2])
+                c.set_source_rgb(self.colour[0], self.colour[1],
+                                 self.colour[2])
             l.set_text(msg)
-            (tw,th) = l.get_pixel_size()
-            c.move_to(self.x-(self.align * tw), self.y)
+            (tw, th) = l.get_pixel_size()
+            c.move_to(self.x - (self.align * tw), self.y)
             p.update_layout(l)
             p.show_layout(l)
             c.restore()
 
+
 class group_elem(object):
     """Place each defined element on the page."""
+
     def __init__(self, report=None, elems=[]):
         self.report = report
         self.elems = elems
         self.indraw = False
+
     def draw(self, c, p):
         if self.indraw:
-            return	# Ignore recursion
+            return  # Ignore recursion
         self.indraw = True
         c.save()
         for e in self.elems:
             if e in self.report.elements:
-                self.report.elements[e].draw(c,p)
+                self.report.elements[e].draw(c, p)
         c.restore()
         self.indraw = False
 
+
 class report(object):
     """PDF/GTKPrint Report class."""
+
     def __init__(self, template=None):
 
         # load template	-> also declares page geometry variables
@@ -3717,16 +3889,16 @@ class report(object):
 
         # override timestamp
         self.strings[u'timestamp'] = (
-                     unicode(datetime.date.today().strftime(u'%A, %B %d %Y '))
-                     + tod.now().meridiem() )
+            unicode(datetime.date.today().strftime(u'%A, %B %d %Y ')) +
+            tod.now().meridiem())
 
         # Status and context values
         self.provisional = False
-        self.reportstatus = None	# optional flag for virtual etc
-        self.serialno = unicode(int(time.time())) # may be overidden
-        self.eventid = None		# stage no or other identifier
-        self.customlinks = []		# manual override links
-        self.navbar = u''		# meet navigation
+        self.reportstatus = None  # optional flag for virtual etc
+        self.serialno = unicode(int(time.time()))  # may be overidden
+        self.eventid = None  # stage no or other identifier
+        self.customlinks = []  # manual override links
+        self.navbar = u''  # meet navigation
         self.prevlink = None
         self.nextlink = None
         self.indexlink = None
@@ -3734,24 +3906,27 @@ class report(object):
         self.pagemarks = False
         self.s = None
         self.c = None
-        self.p = None	# these are filled as required by the caller
-        self.h = None		# position on page during write
-        self.curpage = None	# current page in report
-        self.sections = []	# source section data
-        self.pages = []		# paginated sections
+        self.p = None  # these are filled as required by the caller
+        self.h = None  # position on page during write
+        self.curpage = None  # current page in report
+        self.sections = []  # source section data
+        self.pages = []  # paginated sections
 
         # temporary col offset values...
-        self.col_oft_rank = self.body_left		# left align
-        self.col_oft_no = self.body_left + mm2pt(18)	# right align
-        self.col_oft_name = self.body_left + mm2pt(19)	# left align
-        self.col_oft_cat = self.body_right - mm2pt(62)	# ~left align
-        self.col_oft_time = self.body_right - mm2pt(20)	# right align
-        self.col_oft_xtra = self.body_right - mm2pt(2) # right align
-        self.col_oft_units = self.body_right - mm2pt(1)	# left
+        self.col_oft_rank = self.body_left  # left align
+        self.col_oft_no = self.body_left + mm2pt(18)  # right align
+        self.col_oft_name = self.body_left + mm2pt(19)  # left align
+        self.col_oft_cat = self.body_right - mm2pt(62)  # ~left align
+        self.col_oft_time = self.body_right - mm2pt(20)  # right align
+        self.col_oft_xtra = self.body_right - mm2pt(2)  # right align
+        self.col_oft_units = self.body_right - mm2pt(1)  # left
 
-    def reset_geometry(self, width=None, height=None,
-                             sidemargin=None, endmargin=None,
-                             printmargin=None):
+    def reset_geometry(self,
+                       width=None,
+                       height=None,
+                       sidemargin=None,
+                       endmargin=None,
+                       printmargin=None):
         """Overwrite any new values and then compute page geometry."""
         if width is not None:
             self.pagew = width
@@ -3774,7 +3949,7 @@ class report(object):
         self.body_left = self.sidemargin
         self.body_right = self.pagew - self.sidemargin
         self.body_width = self.body_right - self.body_left
-        self.col3_width = 0.90 * self.body_width/3.0
+        self.col3_width = 0.90 * self.body_width / 3.0
         self.col1_right = self.body_left + self.col3_width
         self.col1t_left = self.body_left + mm2pt(1)
         self.col1t_right = self.col1_right - mm2pt(1)
@@ -3786,7 +3961,9 @@ class report(object):
         self.col3t_left = self.col3_left + mm2pt(1)
         self.col3t_right = self.body_right - mm2pt(1)
         self.col3t_loft = [self.col1t_left, self.col2t_left, self.col3t_left]
-        self.col3t_roft = [self.col1t_right, self.col2t_right, self.col3t_right]
+        self.col3t_roft = [
+            self.col1t_right, self.col2t_right, self.col3t_right
+        ]
         self.body_top = self.endmargin
         self.body_bot = self.pageh - self.endmargin
         self.body_len = self.body_bot - self.body_top
@@ -3800,7 +3977,7 @@ class report(object):
         self.sidemargin = mm2pt(25.5)
         self.endmargin = mm2pt(36.2)
         self.printmargin = mm2pt(5.0)
-        self.minbreak = 0.75	# minimum page break threshold
+        self.minbreak = 0.75  # minimum page break threshold
 
         # Default empty template elements
         self.colours = {}
@@ -3822,9 +3999,9 @@ class report(object):
         self.fonts[u'annotation'] = pango.FontDescription(ANNOTFONT)
         self.gamutstdfont = GAMUTSTDFONT
         self.gamutobfont = GAMUTOBFONT
-	self.tablestyle = TABLESTYLE
-	self.buttonstyle = BUTTONSTYLE
-	self.warnbuttonstyle = WARNBUTTONSTYLE
+        self.tablestyle = TABLESTYLE
+        self.buttonstyle = BUTTONSTYLE
+        self.warnbuttonstyle = WARNBUTTONSTYLE
         self.strings = {}
         self.images = {}
         self.header = []
@@ -3880,11 +4057,9 @@ class report(object):
         if cr.has_option(u'page', u'elements'):
             self.header = cr.get(u'page', u'elements').split()
         if cr.has_option(u'page', u'coverpage'):
-            self.coverpage =  image_elem(0.0, 0.0,
-                                         self.pagew, self.pageh,
-                                         0.5, 0.5,
-                                         self.get_image(cr.get(u'page',
-                                                        u'coverpage')))
+            self.coverpage = image_elem(
+                0.0, 0.0, self.pagew, self.pageh, 0.5, 0.5,
+                self.get_image(cr.get(u'page', u'coverpage')))
 
         # read in font declarations
         for s in cr.options(u'fonts'):
@@ -3933,7 +4108,7 @@ class report(object):
                 with open(fname, u'rb') as f:
                     ret = f.read().decode(u'utf8')
             except Exception as e:
-                LOG.warning(u'Error reading HTML template %r: %s', fname, e) 
+                LOG.warning(u'Error reading HTML template %r: %s', fname, e)
         else:
             LOG.warning(u'Report HTML template %r not found.', fname)
         return ret
@@ -3963,7 +4138,7 @@ class report(object):
         ret = 0.0
         ref = self.pagew
         mid = self.midpagew
-        if orient == u'y':	# vertical orientation
+        if orient == u'y':  # vertical orientation
             ref = self.pageh
             mid = self.midpageh
 
@@ -3975,9 +4150,9 @@ class report(object):
         else:
             relpos = str2len(pstr)
             if relpos < 0.0:
-                ret = ref + relpos	# relative to bottom/right
+                ret = ref + relpos  # relative to bottom/right
             else:
-                ret = relpos		# relative to top/left
+                ret = relpos  # relative to top/left
         return ret
 
     def add_element(self, ekey, estr):
@@ -3989,12 +4164,12 @@ class report(object):
         elem = self.build_element(ekey, estr)
         if elem is not None:
             self.elements[ekey] = elem
-        
+
     def build_element(self, ekey, estr):
         """Build the element and add it to the element map."""
         ret = None
         emap = vecmap(estr.split(u','))
-  
+
         etype = emap[0].lower()
         if etype == u'line':
             width = str2len(emap[5])
@@ -4006,8 +4181,7 @@ class report(object):
             y1 = self.pagepoint(emap[2], u'y')
             x2 = self.pagepoint(emap[3], u'x')
             y2 = self.pagepoint(emap[4], u'y')
-            ret = line_elem(x1, y1, x2, y2,
-                                            width, colour, dash)
+            ret = line_elem(x1, y1, x2, y2, width, colour, dash)
         elif etype == u'image':
             x1 = self.pagepoint(emap[1], u'x')
             y1 = self.pagepoint(emap[2], u'y')
@@ -4016,8 +4190,7 @@ class report(object):
             halign = str2align(emap[5])
             valign = str2align(emap[6])
             source = self.get_image(emap[7])
-            ret = image_elem(x1, y1, x2, y2,
-                               halign, valign, source)
+            ret = image_elem(x1, y1, x2, y2, halign, valign, source)
         elif etype == u'box':
             fill = None
             if emap[5] and emap[5] in self.colours:
@@ -4031,8 +4204,7 @@ class report(object):
             y1 = self.pagepoint(emap[2], u'y')
             x2 = self.pagepoint(emap[3], u'x')
             y2 = self.pagepoint(emap[4], u'y')
-            ret = box_elem(x1, y1, x2, y2, fill,
-                               width, colour, dash)
+            ret = box_elem(x1, y1, x2, y2, fill, width, colour, dash)
         elif etype == u'arc':
             fill = None
             if emap[6] and emap[6] in self.colours:
@@ -4047,8 +4219,7 @@ class report(object):
             r = str2len(emap[3])
             a1 = str2angle(emap[4])
             a2 = str2angle(emap[5])
-            ret = arc_elem(cx, cy, r, a1, a2, fill,
-                               width, colour, dash)
+            ret = arc_elem(cx, cy, r, a1, a2, fill, width, colour, dash)
         elif etype == u'text':
             x = self.pagepoint(emap[1], u'x')
             y = self.pagepoint(emap[2], u'y')
@@ -4062,15 +4233,14 @@ class report(object):
             source = None
             if emap[6]:
                 source = emap[6].strip()
-            ret = text_elem(x, y, align, font, colour,
-                                  source, self)
-        elif etype == u'group':	# slightly special case
+            ret = text_elem(x, y, align, font, colour, source, self)
+        elif etype == u'group':  # slightly special case
             elist = estr.split(u',')[1:]
             glist = []
             for e in elist:
                 e = e.strip()
                 if e:
-                    glist.append(e)	# preserve ordering
+                    glist.append(e)  # preserve ordering
             ret = group_elem(self, glist)
         return ret
 
@@ -4086,14 +4256,14 @@ class report(object):
     def del_section(self, secid=None):
         """Crude section removal by section id component match."""
         if secid is None:
-            return	# breakout
+            return  # breakout
         cur = 0
         while len(self.sections) > cur:
             if secid in self.sections[cur].sectionid:
-                del(self.sections[cur])
+                del (self.sections[cur])
             else:
                 cur += 1
-            
+
     def set_provisional(self, flag=True):
         self.provisional = flag
 
@@ -4103,9 +4273,14 @@ class report(object):
     def output_json(self, file=None):
         """Output the JSON version."""
         if u'pagestr' in self.strings:
-            del self.strings[u'pagestr']	# remove spurious string data
-        ret = {u'report':{}, u'sections':{}, u'api':u'metarace.report',
-               u'apiversion':APIVERSION, u'libversion':metarace.VERSION}
+            del self.strings[u'pagestr']  # remove spurious string data
+        ret = {
+            u'report': {},
+            u'sections': {},
+            u'api': u'metarace.report',
+            u'apiversion': APIVERSION,
+            u'libversion': metarace.VERSION
+        }
         rep = ret[u'report']
         rep[u'provisional'] = self.provisional
         rep[u'reportstatus'] = self.reportstatus
@@ -4132,35 +4307,34 @@ class report(object):
         # Docstring?
         ws = wb.add_sheet(sheetname)
         # column widths
-        ws.col(0).width = int(7*256)
-        ws.col(1).width = int(5*256)
-        ws.col(2).width = int(36*256)
-        ws.col(3).width = int(13*256)
-        ws.col(4).width = int(9*256)
-        ws.col(5).width = int(7*256)
-        ws.col(6).width = int(3*256)
-        
+        ws.col(0).width = int(7 * 256)
+        ws.col(1).width = int(5 * 256)
+        ws.col(2).width = int(36 * 256)
+        ws.col(3).width = int(13 * 256)
+        ws.col(4).width = int(9 * 256)
+        ws.col(5).width = int(7 * 256)
+        ws.col(6).width = int(3 * 256)
+
         title = u''
         for s in [u'title', u'subtitle']:
             if s in self.strings and self.strings[s]:
                 title += self.strings[s] + u' '
-        ws.write(0,2,title.strip(),XS_TITLE)
-        self.h = 2	# Start of 'document'
+        ws.write(0, 2, title.strip(), XS_TITLE)
+        self.h = 2  # Start of 'document'
         for s in [u'datestr', u'docstr', u'diststr', u'commstr', u'orgstr']:
             if s in self.strings and self.strings[s]:
                 ws.write(self.h, 2, self.strings[s].strip(), XS_LEFT)
                 self.h += 1
         self.h += 1
         if self.provisional:
-            ws.write(self.h, 2, u'PROVISIONAL',
-                     XS_TITLE)
+            ws.write(self.h, 2, u'PROVISIONAL', XS_TITLE)
             self.h += 2
 
         # output all the sections...
         for s in self.sections:
             if type(s) is not pagebreak:
-                s.draw_xls(self, ws)	# call into section to draw
-        
+                s.draw_xls(self, ws)  # call into section to draw
+
         wb.save(file)
 
     def macrowrite(self, file=None, text=u''):
@@ -4170,7 +4344,8 @@ class report(object):
             if s in self.strings and self.strings[s]:
                 titlestr += self.strings[s] + u' '
         ret = text.replace(u'__REPORT_NAV__', self.navbar)
-        ret = ret.replace(u'__REPORT_TITLE__', htlib.escapetext(titlestr.strip()))
+        ret = ret.replace(u'__REPORT_TITLE__',
+                          htlib.escapetext(titlestr.strip()))
         for s in self.strings:
             mackey = u'__' + s.upper().strip() + u'__'
             if mackey in ret:
@@ -4181,38 +4356,41 @@ class report(object):
         """Output a html version of the report."""
         cw = file
         navbar = u''
-        for link in self.customlinks:	# to build custom toolbars
-            navbar += htlib.a(
-                       htlib.escapetext(link[0]),
-                       {u'href':link[1]+u'.html', u'class':u'nav-link'})
+        for link in self.customlinks:  # to build custom toolbars
+            navbar += htlib.a(htlib.escapetext(link[0]), {
+                u'href': link[1] + u'.html',
+                u'class': u'nav-link'
+            })
         if self.prevlink:
-            navbar += htlib.a(
-                       htlib.escapetext(u'\u2190 Previous'),
-                       {u'href':self.prevlink+u'.html',
-                        u'class':u'nav-link'})
+            navbar += htlib.a(htlib.escapetext(u'\u2190 Previous'), {
+                u'href': self.prevlink + u'.html',
+                u'class': u'nav-link'
+            })
         if self.indexlink:
-            hrf = self.indexlink+u'.html'
+            hrf = self.indexlink + u'.html'
             if hrf == u'index.html':
                 hrf = u'./'
-            navbar += htlib.a(
-                       htlib.escapetext(u'\u2191 Index'),
-                       {u'href':hrf,
-                        u'class':u'nav-link'})
-        if self.provisional:	# add refresh button
-            navbar += htlib.a(
-                        htlib.escapetext(u'Reload \u21bb'),
-                       {u'href':u'#',u'class':u'nav-link',
-                        u'onclick':u'return rl();'})
+            navbar += htlib.a(htlib.escapetext(u'\u2191 Index'), {
+                u'href': hrf,
+                u'class': u'nav-link'
+            })
+        if self.provisional:  # add refresh button
+            navbar += htlib.a(htlib.escapetext(u'Reload \u21bb'), {
+                u'href': u'#',
+                u'class': u'nav-link',
+                u'onclick': u'return rl();'
+            })
         if self.nextlink:
-            navbar += htlib.a(
-                       htlib.escapetext(u'Next \u2192'),
-                       {u'href':self.nextlink+u'.html',
-                        u'class':u'nav-link'})
-        if navbar:	# write out bar if non-empty
+            navbar += htlib.a(htlib.escapetext(u'Next \u2192'), {
+                u'href': self.nextlink + u'.html',
+                u'class': u'nav-link'
+            })
+        if navbar:  # write out bar if non-empty
             self.navbar = htlib.nav(
-                       htlib.div(navbar,
-                                 {u'class':u'container-fluid navbar-nav'}),
-                      {u'class':u'navbar navbar-expand navbar-dark sticky-top bg-dark mb-4'})
+                htlib.div(navbar, {u'class': u'container-fluid navbar-nav'}), {
+                    u'class':
+                    u'navbar navbar-expand navbar-dark sticky-top bg-dark mb-4'
+                })
 
         (top, sep, bot) = self.html_template.partition(u'__REPORT_CONTENT__')
 
@@ -4225,45 +4403,54 @@ class report(object):
         # macro output the footer of the template
         self.macrowrite(cw, bot)
 
-    def output_htmlintext(self, file=None, linkbase=u'', linktypes=[],
-                                           htmlxtn=u''):
+    def output_htmlintext(self,
+                          file=None,
+                          linkbase=u'',
+                          linktypes=[],
+                          htmlxtn=u''):
         """Output the html in text report body."""
         cw = file
 
         metalist = []
         for s in [u'datestr', u'docstr', u'diststr', u'commstr', u'orgstr']:
             if s in self.strings and self.strings[s]:
-                metalist.append((ICONMAP[s],
-                                 htlib.escapetext(self.strings[s].strip())))
+                metalist.append(
+                    (ICONMAP[s], htlib.escapetext(self.strings[s].strip())))
         if len(linktypes) > 0:
             linkmsg = u'Download as:'
             for xtn in linktypes:
                 xmsg = xtn
                 if xtn in FILETYPES:
                     xmsg = FILETYPES[xtn]
-                linkmsg += u' [' + htlib.a(xmsg,
-                                   {u'href':linkbase + u'.' + xtn}) + u']'
+                linkmsg += u' [' + htlib.a(
+                    xmsg, {u'href': linkbase + u'.' + xtn}) + u']'
             metalist.append((ICONMAP[u'download'], linkmsg))
         if len(metalist) > 0:
             pmark = None
-            if self.provisional:	 # add prov marker
-                pmark = u' ' + htlib.span(u'Provisional',{u'id':u'pgre', u'class':u'badge bg-warning'})
+            if self.provisional:  # add prov marker
+                pmark = u' ' + htlib.span(u'Provisional', {
+                    u'id': u'pgre',
+                    u'class': u'badge bg-warning'
+                })
             itemstr = u''
             for li in metalist:
                 litext = li[1]
                 if pmark is not None:
                     litext += pmark
-                itemstr += htlib.li([htlib.i(u'',{u'class':li[0]}),litext],
-                                    {u'class':u'list-group-item list-group-item-secondary'})
+                itemstr += htlib.li(
+                    [htlib.i(u'', {u'class': li[0]}), litext],
+                    {u'class': u'list-group-item list-group-item-secondary'})
                 pmark = None
-            cw.write(htlib.div(
-                         htlib.ul(itemstr, {u'class':u'list-group list-group-flush'}),
-                       {u'class':u'card bg-light mb-4 small'}) + u'\n')
+            cw.write(
+                htlib.div(
+                    htlib.ul(itemstr,
+                             {u'class': u'list-group list-group-flush'}),
+                    {u'class': u'card bg-light mb-4 small'}) + u'\n')
 
         # output all the sections...
         for s in self.sections:
             if type(s) is not pagebreak:
-                s.draw_text(self, cw, htmlxtn)	# call into section
+                s.draw_text(self, cw, htmlxtn)  # call into section
 
         cw.write(u'\n')
 
@@ -4300,17 +4487,17 @@ class report(object):
         if len(self.pages) > 0 and len(self.pages[-1]) == 0:
             del self.pages[-1]
         npages = self.get_pages()
-        
+
         # if coverpage present, output
         if docover and self.coverpage is not None:
             self.draw_cover()
-            self.c.show_page()	# start a new blank page
+            self.c.show_page()  # start a new blank page
 
         # output each page
         for i in range(0, npages):
             self.draw_page(i)
             if i < npages - 1:
-                self.c.show_page()	# start a new blank page
+                self.c.show_page()  # start a new blank page
 
         # finalise surface - may be a blank pdf if no content
         self.s.flush()
@@ -4333,10 +4520,10 @@ class report(object):
         """Draw a coverpage."""
         # clip page print extents
         self.c.save()
-        self.c.rectangle(self.printmargin, self.printmargin, 
-                         self.printw, self.printh)
+        self.c.rectangle(self.printmargin, self.printmargin, self.printw,
+                         self.printh)
         self.c.clip()
-        # draw page template 
+        # draw page template
         if self.provisional:
             self.draw_provisional()
 
@@ -4355,8 +4542,8 @@ class report(object):
 
         # clip page print extents
         self.c.save()
-        self.c.rectangle(self.printmargin, self.printmargin, 
-                         self.printw, self.printh)
+        self.c.rectangle(self.printmargin, self.printmargin, self.printw,
+                         self.printh)
         self.c.clip()
 
         # initialise status values
@@ -4374,8 +4561,8 @@ class report(object):
         # draw page content
         if self.get_pages() > page_nr:
             for s in self.pages[page_nr]:
-                s.draw_pdf(self)	# call into section to draw
-                self.h += self.line_height # inter-section gap
+                s.draw_pdf(self)  # call into section to draw
+                self.h += self.line_height  # inter-section gap
 
         # if requested, overlay page marks
         if self.pagemarks:
@@ -4396,7 +4583,7 @@ class report(object):
         l.set_wrap(pango.WRAP_WORD_CHAR)
         l.set_alignment(pango.ALIGN_LEFT)
         l.set_text(text)
-        (tw,th) = l.get_pixel_size()
+        (tw, th) = l.get_pixel_size()
         ret = th
         return ret
 
@@ -4412,20 +4599,20 @@ class report(object):
         l.set_wrap(pango.WRAP_WORD_CHAR)
         l.set_alignment(pango.ALIGN_LEFT)
         l.set_text(text)
-        (tw,th) = l.get_pixel_size()
+        (tw, th) = l.get_pixel_size()
         ret = th
         return ret
-    
+
     def preformat_height(self, rows):
         """Determine height of a block of preformatted text."""
         ret = 0
         if len(rows) > 0:
-            ostr = u'M' + u'L\n'*(len(rows)-1) + u'LM'
+            ostr = u'M' + u'L\n' * (len(rows) - 1) + u'LM'
             l = self.p.create_layout()
             if self.fonts[u'monospace'] is not None:
                 l.set_font_description(self.fonts[u'monospace'])
             l.set_text(ostr)
-            (tw,th) = l.get_pixel_size()
+            (tw, th) = l.get_pixel_size()
             ret = th
         return ret
 
@@ -4441,7 +4628,7 @@ class report(object):
             if self.fonts[u'body'] is not None:
                 l.set_font_description(self.fonts[u'body'])
             l.set_text(u'\n'.join(rvec))
-            (tw,th) = l.get_pixel_size()
+            (tw, th) = l.get_pixel_size()
             ret = th
         return ret
 
@@ -4453,7 +4640,7 @@ class report(object):
         for r in rows:
             nval = u''
             if len(r) == 2:
-                # special case... 
+                # special case...
                 if col == 2 and r[1]:
                     nval = unicode(r[1])
                     oneval = True
@@ -4466,13 +4653,13 @@ class report(object):
             rvec.append(nval)
         if oneval:
             if align == u'l':
-                (junk,ret) = self.text_left(oft, self.h, u'\n'.join(rvec),
-                                     self.fonts[u'body'])
+                (junk, ret) = self.text_left(oft, self.h, u'\n'.join(rvec),
+                                             self.fonts[u'body'])
             else:
-                (junk,ret) = self.text_right(oft, self.h, u'\n'.join(rvec),
-                                     self.fonts[u'body'])
+                (junk, ret) = self.text_right(oft, self.h, u'\n'.join(rvec),
+                                              self.fonts[u'body'])
         return ret
-            
+
     def newpage(self):
         """Called within paginate to add new page."""
         self.h = self.body_top
@@ -4486,7 +4673,7 @@ class report(object):
 
     def pagefrac(self):
         """Within paginate, fractional position on page."""
-        return (self.h-self.body_top) / self.body_len
+        return (self.h - self.body_top) / self.body_len
 
     def paginate(self):
         """Scan report content and paginate sections."""
@@ -4503,24 +4690,24 @@ class report(object):
                     if bpoint is None:
                         bpoint = self.minbreak
                     if self.pagefrac() > bpoint:
-                        curpage = self.newpage() # conditional break
+                        curpage = self.newpage()  # conditional break
                     s = None
                 else:
                     (o, s) = s.truncate(self.pagerem(), self)
                     if type(o) is pagebreak:
-                        curpage = self.newpage() # mandatory break
+                        curpage = self.newpage()  # mandatory break
                     else:
                         curpage.append(o)
                         self.h += o.get_h(self)
-                        if s is not None:	# section broken to new page
+                        if s is not None:  # section broken to new page
                             curpage = self.newpage()
                         else:
-                            self.h += self.line_height # inter sec gap
-        
+                            self.h += self.line_height  # inter sec gap
+
     def draw_pagemarks(self):
         """Draw page layout markings on current page."""
         dash = [mm2pt(1)]
-        self.c.save()	# start group
+        self.c.save()  # start group
         self.c.set_dash(dash)
         self.c.set_line_width(0.5)
         self.c.set_source_rgb(0.0, 0.0, 1.0)
@@ -4534,315 +4721,329 @@ class report(object):
         # Page width circles
         self.c.move_to(0, self.midpagew)
         self.c.arc(self.midpagew, self.midpagew, self.midpagew, math.pi, 0.0)
-        self.c.move_to(self.pagew, self.pageh-self.midpagew)
-        self.c.arc(self.midpagew, self.pageh-self.midpagew, self.midpagew,
-                     0.0, math.pi)
+        self.c.move_to(self.pagew, self.pageh - self.midpagew)
+        self.c.arc(self.midpagew, self.pageh - self.midpagew, self.midpagew,
+                   0.0, math.pi)
         self.c.stroke()
 
         # Body cropping from page geometry
         self.c.set_source_rgb(0.0, 1.0, 0.0)
         self.c.move_to(0, self.body_top)
         self.c.line_to(self.pagew, self.body_top)
-        self.c.move_to(self.body_left,0)
-        self.c.line_to(self.body_left,self.pageh)
+        self.c.move_to(self.body_left, 0)
+        self.c.line_to(self.body_left, self.pageh)
         self.c.move_to(0, self.body_bot)
         self.c.line_to(self.pagew, self.body_bot)
-        self.c.move_to(self.body_right,0)
-        self.c.line_to(self.body_right,self.pageh)
+        self.c.move_to(self.body_right, 0)
+        self.c.line_to(self.body_right, self.pageh)
         self.c.stroke()
 
-        self.c.restore() # end group
+        self.c.restore()  # end group
 
     def get_baseline(self, h):
         """Return the baseline for a given height."""
-        return h + 0.9 * self.line_height	# check baseline at other sz
+        return h + 0.9 * self.line_height  # check baseline at other sz
 
     def laplines24(self, h, laps, start, finish, endh=None, reverse=False):
         self.c.save()
         sp = self.col_oft_cat - mm2pt(20.0)
         fac = mm2pt(40.0) / float(86450)
-        top = h+0.15*self.line_height
-        bot = h+0.85*self.line_height
+        top = h + 0.15 * self.line_height
+        bot = h + 0.85 * self.line_height
         if reverse:
             self.c.set_source_rgba(0.5, 0.5, 0.5, 0.3)
         if endh is not None:
-            bot = endh-0.15*self.line_height
+            bot = endh - 0.15 * self.line_height
         lp = None
         for l in laps:
             lt = None
             if lp is not None and not reverse:
-                lt = l-lp
+                lt = l - lp
                 if lt < tod.tod(u'2:30'):
-                    self.c.set_source_rgba(0.0,0.0,0.0,1.0)
+                    self.c.set_source_rgba(0.0, 0.0, 0.0, 1.0)
                 elif lt < tod.tod(u'3:00'):
-                    self.c.set_source_rgba(0.1,0.1,0.1,1.0)
+                    self.c.set_source_rgba(0.1, 0.1, 0.1, 1.0)
                 elif lt < tod.tod(u'3:30'):
-                    self.c.set_source_rgba(0.3,0.3,0.3,1.0)
+                    self.c.set_source_rgba(0.3, 0.3, 0.3, 1.0)
                 elif lt < tod.tod(u'4:00'):
-                    self.c.set_source_rgba(0.5,0.5,0.5,1.0)
+                    self.c.set_source_rgba(0.5, 0.5, 0.5, 1.0)
                 elif lt < tod.tod(u'4:30'):
-                    self.c.set_source_rgba(0.6,0.6,0.6,1.0)
+                    self.c.set_source_rgba(0.6, 0.6, 0.6, 1.0)
                 elif lt < tod.tod(u'5:00'):
-                    self.c.set_source_rgba(0.7,0.7,0.7,1.0)
+                    self.c.set_source_rgba(0.7, 0.7, 0.7, 1.0)
                 else:
-                    self.c.set_source_rgba(0.8,0.8,0.8,1.0)
+                    self.c.set_source_rgba(0.8, 0.8, 0.8, 1.0)
             lp = l
-            el = l-start
+            el = l - start
             if int(el.as_seconds()) <= 86450:
-                toft = sp + float(el.timeval)*fac
+                toft = sp + float(el.timeval) * fac
                 self.drawline(toft, top, toft, bot)
         if reverse:
-            toft = sp + float(86400)*fac
+            toft = sp + float(86400) * fac
             self.drawline(toft, top, toft, bot)
         self.c.restore()
 
     def laplines(self, h, laps, start, finish, endh=None, reverse=False):
         sp = self.col_oft_cat - mm2pt(20.0)
-        fac = mm2pt(40.0) / float((finish - start).timeval) 
-        top = h+0.15*self.line_height
-        bot = h+0.85*self.line_height
+        fac = mm2pt(40.0) / float((finish - start).timeval)
+        top = h + 0.15 * self.line_height
+        bot = h + 0.85 * self.line_height
         if reverse:
             self.c.save()
             self.c.set_source_rgba(0.5, 0.5, 0.5, 0.3)
         if endh is not None:
-            bot = endh-0.15*self.line_height
+            bot = endh - 0.15 * self.line_height
         for l in laps:
             if l > start and l < finish:
-                toft = sp + float((l-start).timeval)*fac
+                toft = sp + float((l - start).timeval) * fac
                 self.drawline(toft, top, toft, bot)
         if reverse:
             self.c.restore()
-        
+
     def judges_row(self, h, rvec, zebra=None, strikethrough=False):
         """Output a standard section row, and return the row height."""
         if zebra:
-            self.drawbox(self.body_left-mm2pt(1), h,
-                         self.body_right+mm2pt(1), h+self.line_height, 0.07)
-        omap = vecmap(rvec,9)
+            self.drawbox(self.body_left - mm2pt(1), h,
+                         self.body_right + mm2pt(1), h + self.line_height,
+                         0.07)
+        omap = vecmap(rvec, 9)
         strikeright = self.col_oft_rank
         if omap[0]:
-            if not omap[8]:	# Photo-finish
+            if not omap[8]:  # Photo-finish
                 font = self.fonts[u'body']
-                if not omap[7]:	# Placed
+                if not omap[7]:  # Placed
                     font = self.fonts[u'bodyoblique']
-                self.text_left(self.col_oft_rank, h,
-                                omap[0], font)
+                self.text_left(self.col_oft_rank, h, omap[0], font)
             else:
                 font = self.fonts[u'bodysmall']
-                self.text_left(self.col_oft_rank, h,
-                                u'\U0001f4f7', font)
+                self.text_left(self.col_oft_rank, h, u'\U0001f4f7', font)
         if omap[1]:
-            self.text_right(self.col_oft_no, h,
-                            omap[1], self.fonts[u'body'])
+            self.text_right(self.col_oft_no, h, omap[1], self.fonts[u'body'])
             strikeright = self.col_oft_rank
         if omap[2]:
             maxnamew = (self.col_oft_cat - mm2pt(35.0)) - self.col_oft_name
-            (tw,th) = self.fit_text(self.col_oft_name, h, omap[2],
-                                    maxnamew, font = self.fonts[u'body'])
+            (tw, th) = self.fit_text(self.col_oft_name,
+                                     h,
+                                     omap[2],
+                                     maxnamew,
+                                     font=self.fonts[u'body'])
             strikeright = self.col_oft_name + tw
         if len(rvec) > 10 and rvec[10]:
             catw = mm2pt(8.0)
-            (tw,th) = self.fit_text(self.col_oft_cat-mm2pt(34.0), h, rvec[10],
-                                    catw, font = self.fonts[u'body'])
+            (tw, th) = self.fit_text(self.col_oft_cat - mm2pt(34.0),
+                                     h,
+                                     rvec[10],
+                                     catw,
+                                     font=self.fonts[u'body'])
             strikeright = self.col_oft_cat
         if omap[3]:
-            (tw,th) = self.text_left(self.col_oft_cat-mm2pt(25.0), h,
-                            omap[3], self.fonts[u'body'])
+            (tw, th) = self.text_left(self.col_oft_cat - mm2pt(25.0), h,
+                                      omap[3], self.fonts[u'body'])
             strikeright = self.col_oft_cat + tw
         if omap[4]:
-            self.text_right(self.col_oft_time, h,
-                            omap[4], self.fonts[u'body'])
+            self.text_right(self.col_oft_time, h, omap[4], self.fonts[u'body'])
             strikeright = self.col_oft_time
         if omap[5]:
-            self.text_right(self.col_oft_xtra, h,
-                            omap[5], self.fonts[u'body'])
+            self.text_right(self.col_oft_xtra, h, omap[5], self.fonts[u'body'])
             strikeright = self.col_oft_xtra
         if strikethrough:
-            self.drawline(self.body_left+mm2pt(1),
-                          h+(0.5*self.line_height),
-                          strikeright,
-                          h+(0.5*self.line_height))
+            self.drawline(self.body_left + mm2pt(1),
+                          h + (0.5 * self.line_height), strikeright,
+                          h + (0.5 * self.line_height))
         return self.line_height
 
-    def gamut_cell(self, h, x, height, width, key, alpha=0.05, fonts={},
-                                            data=None):
+    def gamut_cell(self,
+                   h,
+                   x,
+                   height,
+                   width,
+                   key,
+                   alpha=0.05,
+                   fonts={},
+                   data=None):
         """Draw a gamut cell and add data if available."""
-        self.drawbox(x, h, x+width-mm2pt(0.5),h+height-mm2pt(0.5), alpha)
+        self.drawbox(x, h, x + width - mm2pt(0.5), h + height - mm2pt(0.5),
+                     alpha)
         if key:
-            self.text_left(x+mm2pt(0.5), h-(0.07*height), key, fonts[u'key'])
+            self.text_left(x + mm2pt(0.5), h - (0.07 * height), key,
+                           fonts[u'key'])
         if data is not None:
             if data[u'name']:
-                self.fit_text(x+0.4*width, h+(0.05*height), data[u'name'],
-                              0.55*width, align=1.0, font=fonts[u'text'])
+                self.fit_text(x + 0.4 * width,
+                              h + (0.05 * height),
+                              data[u'name'],
+                              0.55 * width,
+                              align=1.0,
+                              font=fonts[u'text'])
             if data[u'gcline']:
-                self.text_right(x+width-mm2pt(1.0), h+(0.30*height),
+                self.text_right(x + width - mm2pt(1.0), h + (0.30 * height),
                                 data[u'gcline'], fonts[u'gcline'])
             if data[u'ltext']:
-                self.text_left(x+mm2pt(0.5), h+(0.66*height),
-                                data[u'ltext'], fonts[u'text'])
+                self.text_left(x + mm2pt(0.5), h + (0.66 * height),
+                               data[u'ltext'], fonts[u'text'])
             if data[u'rtext']:
-                self.text_right(x+width-mm2pt(1.0), h+(0.66*height),
+                self.text_right(x + width - mm2pt(1.0), h + (0.66 * height),
                                 data[u'rtext'], fonts[u'text'])
             if data[u'dnf']:
-                self.drawline(x+mm2pt(0.5), h+height-mm2pt(1.0),
-                              x+width-mm2pt(1.0), h+mm2pt(0.5), width=1.5)
+                self.drawline(x + mm2pt(0.5),
+                              h + height - mm2pt(1.0),
+                              x + width - mm2pt(1.0),
+                              h + mm2pt(0.5),
+                              width=1.5)
         return height
 
     def standard_3row(self, h, rv1, rv2, rv3, zebra=None, strikethrough=False):
         """Output a standard 3 col section row, and return the row height."""
         if zebra:
-            self.drawbox(self.body_left-mm2pt(1), h,
-                         self.col1_right+mm2pt(1), h+self.line_height, 0.07)
-            self.drawbox(self.col2_left-mm2pt(1), h,
-                         self.col2_right+mm2pt(1), h+self.line_height, 0.07)
-            self.drawbox(self.col3_left-mm2pt(1), h,
-                         self.body_right+mm2pt(1), h+self.line_height, 0.07)
-        omap1 = vecmap(rv1,7)
-        omap2 = vecmap(rv2,7)
-        omap3 = vecmap(rv3,7)
+            self.drawbox(self.body_left - mm2pt(1), h,
+                         self.col1_right + mm2pt(1), h + self.line_height,
+                         0.07)
+            self.drawbox(self.col2_left - mm2pt(1), h,
+                         self.col2_right + mm2pt(1), h + self.line_height,
+                         0.07)
+            self.drawbox(self.col3_left - mm2pt(1), h,
+                         self.body_right + mm2pt(1), h + self.line_height,
+                         0.07)
+        omap1 = vecmap(rv1, 7)
+        omap2 = vecmap(rv2, 7)
+        omap3 = vecmap(rv3, 7)
 
         # 3 column references
         if omap1[2]:
-            self.text_left(self.col1t_left, h,
-                            omap1[2], self.fonts[u'body'])
+            self.text_left(self.col1t_left, h, omap1[2], self.fonts[u'body'])
         if omap1[4]:
-            self.text_right(self.col1t_left+0.60*self.col3_width, h,
+            self.text_right(self.col1t_left + 0.60 * self.col3_width, h,
                             omap1[4], self.fonts[u'body'])
         if omap1[5]:
-            self.text_right(self.col1t_right, h,
-                            omap1[5], self.fonts[u'body'])
+            self.text_right(self.col1t_right, h, omap1[5], self.fonts[u'body'])
         if strikethrough:
-            self.drawline(self.col1t_left+mm2pt(1),
-                          h+(0.5*self.line_height),
-                          self.col1t_right-mm2pt(1),
-                          h+(0.5*self.line_height))
+            self.drawline(self.col1t_left + mm2pt(1),
+                          h + (0.5 * self.line_height),
+                          self.col1t_right - mm2pt(1),
+                          h + (0.5 * self.line_height))
         if omap2[2]:
-            self.text_left(self.col2t_left, h,
-                            omap2[2], self.fonts[u'body'])
+            self.text_left(self.col2t_left, h, omap2[2], self.fonts[u'body'])
         if omap2[4]:
-            self.text_right(self.col2t_left+0.60*self.col3_width, h,
+            self.text_right(self.col2t_left + 0.60 * self.col3_width, h,
                             omap2[4], self.fonts[u'body'])
         if omap2[5]:
-            self.text_right(self.col2t_right, h,
-                            omap2[5], self.fonts[u'body'])
+            self.text_right(self.col2t_right, h, omap2[5], self.fonts[u'body'])
         if strikethrough:
-            self.drawline(self.col2t_left+mm2pt(1),
-                          h+(0.5*self.line_height),
-                          self.col2t_right-mm2pt(1),
-                          h+(0.5*self.line_height))
+            self.drawline(self.col2t_left + mm2pt(1),
+                          h + (0.5 * self.line_height),
+                          self.col2t_right - mm2pt(1),
+                          h + (0.5 * self.line_height))
         if omap3[2]:
-            self.text_left(self.col3t_left, h,
-                            omap3[2], self.fonts[u'body'])
+            self.text_left(self.col3t_left, h, omap3[2], self.fonts[u'body'])
         if omap3[4]:
-            self.text_right(self.col3t_left+0.60*self.col3_width, h,
+            self.text_right(self.col3t_left + 0.60 * self.col3_width, h,
                             omap3[4], self.fonts[u'body'])
         if omap3[5]:
-            self.text_right(self.col3t_right, h,
-                            omap3[5], self.fonts[u'body'])
+            self.text_right(self.col3t_right, h, omap3[5], self.fonts[u'body'])
         if strikethrough:
-            self.drawline(self.col3t_left+mm2pt(1),
-                          h+(0.5*self.line_height),
-                          self.col3t_right-mm2pt(1),
-                          h+(0.5*self.line_height))
+            self.drawline(self.col3t_left + mm2pt(1),
+                          h + (0.5 * self.line_height),
+                          self.col3t_right - mm2pt(1),
+                          h + (0.5 * self.line_height))
 
         return self.line_height
 
     def standard_row(self, h, rvec, zebra=None, strikethrough=False):
         """Output a standard section row, and return the row height."""
         if zebra:
-            self.drawbox(self.body_left-mm2pt(1), h,
-                         self.body_right+mm2pt(1), h+self.line_height, 0.07)
-        omap = vecmap(rvec,7)
+            self.drawbox(self.body_left - mm2pt(1), h,
+                         self.body_right + mm2pt(1), h + self.line_height,
+                         0.07)
+        omap = vecmap(rvec, 7)
         strikeright = self.col_oft_rank
         if omap[0]:
-            self.text_left(self.col_oft_rank, h,
-                            omap[0], self.fonts[u'body'])
+            self.text_left(self.col_oft_rank, h, omap[0], self.fonts[u'body'])
         if omap[1]:
-            self.text_right(self.col_oft_no, h,
-                            omap[1], self.fonts[u'body'])
+            self.text_right(self.col_oft_no, h, omap[1], self.fonts[u'body'])
             strikeright = self.col_oft_rank
         if omap[2]:
             maxnamew = self.col_oft_cat - self.col_oft_name
             if not omap[3]:
                 maxnamew = self.col_oft_time - self.col_oft_name - mm2pt(20)
-            (tw,th) = self.fit_text(self.col_oft_name, h, omap[2],
-                                    maxnamew, font = self.fonts[u'body'])
+            (tw, th) = self.fit_text(self.col_oft_name,
+                                     h,
+                                     omap[2],
+                                     maxnamew,
+                                     font=self.fonts[u'body'])
             strikeright = self.col_oft_name + tw
         if omap[3]:
-            (tw,th) = self.text_left(self.col_oft_cat, h,
-                            omap[3], self.fonts[u'body'])
+            (tw, th) = self.text_left(self.col_oft_cat, h, omap[3],
+                                      self.fonts[u'body'])
             strikeright = self.col_oft_cat + tw
         if omap[4]:
-            self.text_right(self.col_oft_time, h,
-                            omap[4], self.fonts[u'body'])
+            self.text_right(self.col_oft_time, h, omap[4], self.fonts[u'body'])
             strikeright = self.col_oft_time
         if omap[5]:
-            self.text_right(self.col_oft_xtra, h,
-                            omap[5], self.fonts[u'body'])
+            self.text_right(self.col_oft_xtra, h, omap[5], self.fonts[u'body'])
             strikeright = self.col_oft_xtra
         if strikethrough:
-            self.drawline(self.body_left+mm2pt(1),
-                          h+(0.5*self.line_height),
-                          strikeright,
-                          h+(0.5*self.line_height))
+            self.drawline(self.body_left + mm2pt(1),
+                          h + (0.5 * self.line_height), strikeright,
+                          h + (0.5 * self.line_height))
         return self.line_height
 
     def rttstart_row(self, h, rvec, zebra=None, strikethrough=False):
         """Output a time trial start row, and return the row height."""
         if zebra:
-            self.drawbox(self.body_left-mm2pt(1), h,
-                         self.body_right+mm2pt(1), h+self.line_height, 0.07)
-        omap = vecmap(rvec,7)
-        strikeright = self.col_oft_name+mm2pt(16)
+            self.drawbox(self.body_left - mm2pt(1), h,
+                         self.body_right + mm2pt(1), h + self.line_height,
+                         0.07)
+        omap = vecmap(rvec, 7)
+        strikeright = self.col_oft_name + mm2pt(16)
         if omap[0]:
-            self.text_right(self.col_oft_name+mm2pt(1), h,
-                            omap[0], self.fonts[u'body'])
+            self.text_right(self.col_oft_name + mm2pt(1), h, omap[0],
+                            self.fonts[u'body'])
         if omap[4]:
-            self.text_left(self.col_oft_name+mm2pt(2), h,
-                            omap[4], self.fonts[u'body'])
+            self.text_left(self.col_oft_name + mm2pt(2), h, omap[4],
+                           self.fonts[u'body'])
         if omap[1]:
-            self.text_right(self.col_oft_name+mm2pt(16), h,
-                            omap[1], self.fonts[u'body'])
+            self.text_right(self.col_oft_name + mm2pt(16), h, omap[1],
+                            self.fonts[u'body'])
         if omap[2]:
-            maxnamew = self.col_oft_cat - self.col_oft_name # both oft by 20
+            maxnamew = self.col_oft_cat - self.col_oft_name  # both oft by 20
             if not omap[3]:
                 maxnamew = self.col_oft_xtra - self.col_oft_name
-            (tw,th) = self.fit_text(self.col_oft_name+mm2pt(20), h,
-                                    omap[2], maxnamew,
-                                    font=self.fonts[u'body'])
+            (tw, th) = self.fit_text(self.col_oft_name + mm2pt(20),
+                                     h,
+                                     omap[2],
+                                     maxnamew,
+                                     font=self.fonts[u'body'])
             #(tw,th) = self.text_left(self.col_oft_name+mm2pt(20), h,
-                            #omap[2], self.fonts[u'body'])
-            strikeright = self.col_oft_name+mm2pt(20) + tw
+            #omap[2], self.fonts[u'body'])
+            strikeright = self.col_oft_name + mm2pt(20) + tw
         if omap[3]:
-            (tw,th) = self.text_left(self.col_oft_cat+mm2pt(20), h,
-                            omap[3], self.fonts[u'body'])
-            strikeright = self.col_oft_cat+mm2pt(20) + tw
+            (tw, th) = self.text_left(self.col_oft_cat + mm2pt(20), h, omap[3],
+                                      self.fonts[u'body'])
+            strikeright = self.col_oft_cat + mm2pt(20) + tw
         if omap[5]:
-            self.text_right(self.col_oft_xtra, h,
-                            omap[5], self.fonts[u'body'])
-            strikeright = self.body_right-mm2pt(1)
+            self.text_right(self.col_oft_xtra, h, omap[5], self.fonts[u'body'])
+            strikeright = self.body_right - mm2pt(1)
         if strikethrough:
-            self.drawline(self.body_left+mm2pt(1),
-                          h+(0.5*self.line_height),
-                          strikeright,
-                          h+(0.5*self.line_height))
+            self.drawline(self.body_left + mm2pt(1),
+                          h + (0.5 * self.line_height), strikeright,
+                          h + (0.5 * self.line_height))
         return self.line_height
-        
-    def ittt_lane(self, rvec, w, h, drawline = True):
+
+    def ittt_lane(self, rvec, w, h, drawline=True):
         """Draw a single lane."""
         baseline = self.get_baseline(h)
-        if rvec[0] is None:	# rider no None implies no rider
-            self.text_left(w+mm2pt(8), h, u'[No Rider]', self.fonts[u'body'])
+        if rvec[0] is None:  # rider no None implies no rider
+            self.text_left(w + mm2pt(8), h, u'[No Rider]', self.fonts[u'body'])
         else:
-            if rvec[0]:		# non-empty rider no implies full info
-                self.text_right(w+mm2pt(7), h, rvec[0], self.fonts[u'body'])
-                self.text_left(w+mm2pt(8), h, rvec[1], self.fonts[u'body'])
-            else:		# otherwise draw placeholder lines
-                self.drawline(w, baseline, w+mm2pt(7), baseline)
-                self.drawline(w+mm2pt(8), baseline, w+mm2pt(58), baseline)
+            if rvec[0]:  # non-empty rider no implies full info
+                self.text_right(w + mm2pt(7), h, rvec[0], self.fonts[u'body'])
+                self.text_left(w + mm2pt(8), h, rvec[1], self.fonts[u'body'])
+            else:  # otherwise draw placeholder lines
+                self.drawline(w, baseline, w + mm2pt(7), baseline)
+                self.drawline(w + mm2pt(8), baseline, w + mm2pt(58), baseline)
             if drawline:
-                self.drawline(w+mm2pt(59), baseline, w+mm2pt(75), baseline)
-            
+                self.drawline(w + mm2pt(59), baseline, w + mm2pt(75), baseline)
+
     def ittt_heat(self, hvec, h, dual=False, showheat=True):
         """Output a single time trial heat."""
         if showheat:
@@ -4851,32 +5052,36 @@ class report(object):
                 self.text_left(self.body_left, h, u'Heat ' + unicode(hvec[0]),
                                self.fonts[u'subhead'])
             h += self.line_height
-        rcnt = 1	# assume one row unless team members
+        rcnt = 1  # assume one row unless team members
         tcnt = 0
-        if len(hvec) > 3:	# got a front straight
+        if len(hvec) > 3:  # got a front straight
             self.ittt_lane([hvec[1], hvec[2]], self.body_left, h)
-            if type(hvec[3]) is list:	# additional 'team' rows
+            if type(hvec[3]) is list:  # additional 'team' rows
                 tcnt = len(hvec[3])
                 tof = h + self.line_height
                 for t in hvec[3]:
-                    self.ittt_lane([t[0], t[1]], self.body_left,
-                                    tof, drawline=False) 
+                    self.ittt_lane([t[0], t[1]],
+                                   self.body_left,
+                                   tof,
+                                   drawline=False)
                     tof += self.line_height
-        if len(hvec) > 7: 	# got a back straight
+        if len(hvec) > 7:  # got a back straight
             if hvec[5] is not None:
                 self.text_cent(self.midpagew, h, u'v', self.fonts[u'subhead'])
-            self.ittt_lane([hvec[5], hvec[6]], self.midpagew+mm2pt(5), h)
-            if type(hvec[7]) is list:	# additional 'team' rows
+            self.ittt_lane([hvec[5], hvec[6]], self.midpagew + mm2pt(5), h)
+            if type(hvec[7]) is list:  # additional 'team' rows
                 tcnt = max(tcnt, len(hvec[7]))
                 tof = h + self.line_height
                 for t in hvec[7]:
-                    self.ittt_lane([t[0], t[1]], self.midpagew+mm2pt(5),
-                                    tof, drawline=False)
+                    self.ittt_lane([t[0], t[1]],
+                                   self.midpagew + mm2pt(5),
+                                   tof,
+                                   drawline=False)
                     tof += self.line_height
         elif dual:
             # No rider, but other heats are dual so add marker
-            self.ittt_lane([None, None], self.midpagew+mm2pt(5), h)
-        h += (rcnt+tcnt)*self.line_height
+            self.ittt_lane([None, None], self.midpagew + mm2pt(5), h)
+        h += (rcnt + tcnt) * self.line_height
 
         return h
 
@@ -4884,65 +5089,75 @@ class report(object):
         baseline = self.get_baseline(h)
         # ignore rank in sprint round - defer to other markup
         doline = True
-        if rvec[1]:	# rider no
-            self.text_right(w+mm2pt(5.0), h, rvec[1], self.fonts[u'body'])
+        if rvec[1]:  # rider no
+            self.text_right(w + mm2pt(5.0), h, rvec[1], self.fonts[u'body'])
             doline = False
-        if rvec[2]:	# rider name
-            self.text_left(w+mm2pt(6.0), h, rvec[2], self.fonts[u'body'])
+        if rvec[2]:  # rider name
+            self.text_left(w + mm2pt(6.0), h, rvec[2], self.fonts[u'body'])
             doline = False
         if doline:
-            self.drawline(w+mm2pt(1.0), baseline, w+mm2pt(50), baseline)
+            self.drawline(w + mm2pt(1.0), baseline, w + mm2pt(50), baseline)
         # ignore cat/xtra in sprint rounds
 
     def sign_box(self, rvec, w, h, lineheight, zebra):
-        baseline = h+lineheight+lineheight
+        baseline = h + lineheight + lineheight
         if zebra:
-            self.drawbox(w, h,
-                         w+self.twocol_width, baseline, 0.07)
-        self.drawline(w, baseline, w+self.twocol_width, baseline)
-        if len(rvec)>1 and rvec[1]:	# rider no
-            self.text_right(w+mm2pt(7.0), h, rvec[1], self.fonts[u'body'])
-        if len(rvec)>2 and rvec[2]:	# rider name
-            self.fit_text(w+mm2pt(9.0), h, rvec[2],
-                           self.twocol_width-mm2pt(9.0), 
-                           font=self.fonts[u'body'])
+            self.drawbox(w, h, w + self.twocol_width, baseline, 0.07)
+        self.drawline(w, baseline, w + self.twocol_width, baseline)
+        if len(rvec) > 1 and rvec[1]:  # rider no
+            self.text_right(w + mm2pt(7.0), h, rvec[1], self.fonts[u'body'])
+        if len(rvec) > 2 and rvec[2]:  # rider name
+            self.fit_text(w + mm2pt(9.0),
+                          h,
+                          rvec[2],
+                          self.twocol_width - mm2pt(9.0),
+                          font=self.fonts[u'body'])
             if rvec[0] == 'dns':
                 mgn = mm2pt(1.5)
-                self.drawline(w+mgn, h+mgn,
-                               w+self.twocol_width-mgn, baseline-mgn)
+                self.drawline(w + mgn, h + mgn, w + self.twocol_width - mgn,
+                              baseline - mgn)
 
     def rms_rider(self, rvec, w, h):
         baseline = self.get_baseline(h)
-        if len(rvec)>0 and rvec[0] is not None:
+        if len(rvec) > 0 and rvec[0] is not None:
             self.text_left(w, h, rvec[0], self.fonts[u'body'])
         else:
-            self.drawline(w, baseline, w+mm2pt(4), baseline)
+            self.drawline(w, baseline, w + mm2pt(4), baseline)
         doline = True
-        if len(rvec)>1 and rvec[1]:     # rider no
-            self.text_right(w+mm2pt(10.0), h, rvec[1], self.fonts[u'body'])
+        if len(rvec) > 1 and rvec[1]:  # rider no
+            self.text_right(w + mm2pt(10.0), h, rvec[1], self.fonts[u'body'])
             doline = False
-        if len(rvec)>2 and rvec[2]:     # rider name
+        if len(rvec) > 2 and rvec[2]:  # rider name
             #self.text_left(w+mm2pt(11.0), h, rvec[2], self.fonts[u'body'])
-            self.fit_text(w+mm2pt(11.0), h, rvec[2], mm2pt(50), 
-                                    font=self.fonts[u'body'])
+            self.fit_text(w + mm2pt(11.0),
+                          h,
+                          rvec[2],
+                          mm2pt(50),
+                          font=self.fonts[u'body'])
             doline = False
         if doline:
-            self.drawline(w+mm2pt(8.0), baseline, w+mm2pt(60), baseline)
-        if len(rvec)>3 and rvec[3]:     # cat/hcap/draw/etc
-            self.text_left(w+mm2pt(62.0), h, rvec[3], self.fonts[u'bodyoblique'])
+            self.drawline(w + mm2pt(8.0), baseline, w + mm2pt(60), baseline)
+        if len(rvec) > 3 and rvec[3]:  # cat/hcap/draw/etc
+            self.text_left(w + mm2pt(62.0), h, rvec[3],
+                           self.fonts[u'bodyoblique'])
 
-    def text_right(self, w, h, msg, font=None,
-                         strikethrough=False, maxwidth=None):
+    def text_right(self,
+                   w,
+                   h,
+                   msg,
+                   font=None,
+                   strikethrough=False,
+                   maxwidth=None):
         l = self.p.create_layout()
         l.set_alignment(pango.ALIGN_RIGHT)
         if font is not None:
             l.set_font_description(font)
         l.set_text(msg)
-        (tw,th) = l.get_pixel_size()
-        self.c.move_to(w-tw, h)
+        (tw, th) = l.get_pixel_size()
+        self.c.move_to(w - tw, h)
         self.p.update_layout(l)
         self.p.show_layout(l)
-        return (tw,th)
+        return (tw, th)
 
     def drawbox(self, x1, y1, x2, y2, alpha=0.1):
         self.c.save()
@@ -4954,7 +5169,7 @@ class report(object):
         self.c.close_path()
         self.c.fill()
         self.c.restore()
-       
+
     def drawline(self, x1, y1, x2, y2, width=0.5):
         self.c.save()
         self.c.set_line_width(width)
@@ -4963,8 +5178,14 @@ class report(object):
         self.c.stroke()
         self.c.restore()
 
-    def fit_text(self, w, h, msg, maxwidth, align=0, font=None,
-                       strikethrough=False):
+    def fit_text(self,
+                 w,
+                 h,
+                 msg,
+                 maxwidth,
+                 align=0,
+                 font=None,
+                 strikethrough=False):
         if msg is not None:
             self.c.save()
             l = self.p.create_layout()
@@ -4972,37 +5193,49 @@ class report(object):
             if font is not None:
                 l.set_font_description(font)
             l.set_text(msg)
-            (tw,th) = l.get_pixel_size()
+            (tw, th) = l.get_pixel_size()
             oft = 0.0
             if align != 0 and tw < maxwidth:
-                oft = align * (maxwidth - tw)   # else squish
-            self.c.move_to(w+oft, h)  # move before applying conditional scale
+                oft = align * (maxwidth - tw)  # else squish
+            self.c.move_to(w + oft,
+                           h)  # move before applying conditional scale
             if tw > maxwidth:
-                self.c.scale(float(maxwidth)/float(tw),1.0)
+                self.c.scale(float(maxwidth) / float(tw), 1.0)
                 tw = maxwidth
             self.p.update_layout(l)
             self.p.show_layout(l)
             if strikethrough:
-                self.drawline(w, h+(0.85*th), w+tw, h+(0.15*th))
+                self.drawline(w, h + (0.85 * th), w + tw, h + (0.15 * th))
             self.c.restore()
-            return (tw,th)
+            return (tw, th)
 
-    def text_left(self, w, h, msg, font=None,
-                        strikethrough=False, maxwidth=None):
+    def text_left(self,
+                  w,
+                  h,
+                  msg,
+                  font=None,
+                  strikethrough=False,
+                  maxwidth=None):
         l = self.p.create_layout()
         l.set_alignment(pango.ALIGN_LEFT)
         if font is not None:
             l.set_font_description(font)
         l.set_text(msg)
-        (tw,th) = l.get_pixel_size()
+        (tw, th) = l.get_pixel_size()
         self.c.move_to(w, h)
         self.p.update_layout(l)
         self.p.show_layout(l)
         if strikethrough:
-            self.drawline(w, h+(th/2), w+tw, h+(th/2))
-        return (tw,th)
+            self.drawline(w, h + (th / 2), w + tw, h + (th / 2))
+        return (tw, th)
 
-    def text_para(self, w, h, text, font=None, width=None, halign=pango.ALIGN_LEFT):
+    def text_para(self,
+                  w,
+                  h,
+                  text,
+                  font=None,
+                  width=None,
+                  halign=pango.ALIGN_LEFT):
         if width is None:
             width = self.body_width
         l = self.p.create_layout()
@@ -5012,11 +5245,11 @@ class report(object):
         l.set_wrap(pango.WRAP_WORD_CHAR)
         l.set_alignment(halign)
         l.set_text(text)
-        (tw,th) = l.get_pixel_size()
+        (tw, th) = l.get_pixel_size()
         self.c.move_to(w, h)
         self.p.update_layout(l)
         self.p.show_layout(l)
-        return (tw,th)
+        return (tw, th)
 
     def text_cent(self, w, h, msg, font=None, halign=pango.ALIGN_CENTER):
         l = self.p.create_layout()
@@ -5024,37 +5257,38 @@ class report(object):
         if font is not None:
             l.set_font_description(font)
         l.set_text(msg)
-        (tw,th) = l.get_pixel_size()
-        self.c.move_to(w-(0.5 * tw), h)
+        (tw, th) = l.get_pixel_size()
+        self.c.move_to(w - (0.5 * tw), h)
         self.p.update_layout(l)
         self.p.show_layout(l)
-        return (tw,th)
+        return (tw, th)
 
     def text_path(self, w, h, msg, font=None):
         l = self.p.create_layout()
         if font is not None:
             l.set_font_description(font)
         l.set_text(msg)
-        (tw,th) = l.get_pixel_size()
-        self.c.move_to(w-(0.5 * tw), h)
+        (tw, th) = l.get_pixel_size()
+        self.c.move_to(w - (0.5 * tw), h)
         self.p.update_layout(l)
         self.p.layout_path(l)
         self.c.fill()
-        return (tw,th)
+        return (tw, th)
 
     def draw_provisional(self):
         self.c.save()
-        self.c.set_source_rgb(1.0,1.0,1.0)
-        self.text_cent(self.midpagew, self.body_top - mm2pt(5), 
-                       u'PROVISIONAL', self.fonts[u'body'])
+        self.c.set_source_rgb(1.0, 1.0, 1.0)
+        self.text_cent(self.midpagew, self.body_top - mm2pt(5), u'PROVISIONAL',
+                       self.fonts[u'body'])
         self.c.set_source_rgb(0.90, 0.90, 0.90)
-        self.c.rectangle(self.body_left-20, self.body_top-20,
+        self.c.rectangle(self.body_left - 20, self.body_top - 20,
                          self.body_right - self.body_left + 40,
                          self.body_bot - self.body_top + 40)
         self.c.clip()
         self.c.translate(self.midpagew, self.midpageh)
         self.c.rotate(0.95532)
-        self.text_path(0, -380,
-          u'PROVISIONAL\nPROVISIONAL\nPROVISIONAL\nPROVISIONAL\nPROVISIONAL',
-                       self.fonts[u'provisional'])
+        self.text_path(
+            0, -380,
+            u'PROVISIONAL\nPROVISIONAL\nPROVISIONAL\nPROVISIONAL\nPROVISIONAL',
+            self.fonts[u'provisional'])
         self.c.restore()

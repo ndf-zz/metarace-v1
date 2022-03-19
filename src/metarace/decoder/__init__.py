@@ -12,28 +12,28 @@ from metarace import tod
 
 LOG = logging.getLogger(u'metarace.decoder')
 LOG.setLevel(logging.DEBUG)
-RFID_LOG_LEVEL = 15
-logging.addLevelName(RFID_LOG_LEVEL, u'RFID')
+DECODER_LOG_LEVEL = 15
+logging.addLevelName(DECODER_LOG_LEVEL, u'DECODER')
 PHOTOTHRESH = tod.tod(u'0.03')
-DEFAULT_RFID_HANDLER = u'null'
+DEFAULT_HANDLER = u'null'
 
 
 def mkdevice(portstr=u'', curdev=None):
     """Return a decoder handle for the provided port specification."""
     # Note: If possible, returns the current device
     ret = curdev
-    devtype = DEFAULT_RFID_HANDLER
+    devtype = DEFAULT_HANDLER
     (a, b, c) = portstr.partition(u':')
     if b:
         a = a.lower()
-        if a in RFID_HANDLERS:
+        if a in HANDLERS:
             devtype = a
         a = c  # shift port into a
     devport = a
     if curdev is None:
-        curdev = RFID_HANDLERS[devtype]()
+        curdev = HANDLERS[devtype]()
         curdev.setport(devport)
-    elif type(curdev) is RFID_HANDLERS[devtype]:
+    elif type(curdev) is HANDLERS[devtype]:
         LOG.debug(u'Requested device %r is same type',
                   curdev.__class__.__name__)
         curdev.setport(devport)
@@ -42,7 +42,7 @@ def mkdevice(portstr=u'', curdev=None):
         wasalive = curdev.running()
         if wasalive:
             curdev.exit(u'Change device type')
-        curdev = RFID_HANDLERS[devtype]()
+        curdev = HANDLERS[devtype]()
         curdev.setport(devport)
         LOG.debug(u'Switching device type to %r', curdev.__class__.__name__)
         if wasalive:
@@ -184,7 +184,6 @@ class decoder(threading.Thread):
 
     def _trig(self, impulse):
         """Return a timing impulse to the host application."""
-        LOG.log(RFID_LOG_LEVEL, unicode(impulse))
         self._cb(impulse)
 
     def _replay(self, file):
@@ -223,7 +222,7 @@ from rrs import rrs
 from rru import rru
 from thbc import thbc
 
-RFID_HANDLERS = {
+HANDLERS = {
     u'null': decoder,
     u'thbc': thbc,
     u'rrs': rrs,

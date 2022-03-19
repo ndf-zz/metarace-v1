@@ -10,8 +10,10 @@ import serial
 import time
 from random import randint
 
-from . import decoder
+from . import (decoder, DECODER_LOG_LEVEL)
 from metarace import tod
+from metarace import sysconf
+from metarace import strops
 
 LOG = logging.getLogger(u'metarace.decoder.rru')
 LOG.setLevel(logging.DEBUG)
@@ -25,7 +27,9 @@ RRU_REFTHRESH = 0x2a30000  # 2 x 86400 x 256
 RRU_ENCODING = u'iso8859-1'
 RRU_MARKER = u'_____127'  # trigger marker
 RRU_EOL = u'\n'
-RRU_IOTIMEOUT = 1.0  # Serial port I/O read timeout in seconds
+# Serial port I/O read timeout in seconds
+RRU_IOTIMEOUT = 1.0
+# List of handled responses from decoder
 REPLIES = [
     u'ASCII',
     u'CONFSET',
@@ -39,36 +43,47 @@ REPLIES = [
     u'PASSINGGET',
     u'PASSINGINFOGET',
     u'BEACONGET',
+    u'PREWARN',
 ]
+# Documented configuration parameter. If default is not None, the
+# value will be set in _sane().
 CONFINFO = {
     u'01': {
         u'label': u'Push Pre-Warn',
+        u'default': None,
         u'00': u'disabled',
         u'01': u'enabled'
     },
     u'02': {
         u'label': u'Blink/beep on repeated passing',
+        u'default': None,
         u'00': u'disabled',
         u'01': u'enabled'
     },
     u'03': {
         u'label': u'Impulse input or beep output',
+        u'default': None,
         u'00': u'impulse-in',
         u'01': u'beep-out'
     },
     u'04': {
         u'label': u'Auto-shutdown on power loss',
+        # force disabled since USB cable connection often fails
+        u'default': u'00',
         u'00': u'disabled',
         u'01': u'enabled'
     },
     u'05': {
         u'label': u'Operation Mode',
+        # assume usb-timing is required unless explicity configured otherwise
+        u'default': u'06',
         u'05': u'usb-kiosk',
         u'06': u'usb-timing',
         u'07': u'usb-store&copy'
     },
     u'06': {
         u'label': u'Channel ID',
+        u'default': None,
         u'00': u'1',
         u'01': u'2',
         u'02': u'3',
@@ -80,6 +95,7 @@ CONFINFO = {
     },
     u'07': {
         u'label': u'Loop ID',
+        u'default': None,
         u'00': u'1',
         u'01': u'2',
         u'02': u'3',
@@ -90,38 +106,79 @@ CONFINFO = {
         u'07': u'8'
     },
     u'08': {
-        u'label': u'Loop Power'
+        u'label': u'Loop Power',
+        u'default': None
     },
     u'09': {
-        u'label': u'Blink dead-time'
+        u'label': u'Blink dead-time',
+        u'default': None
     },
     u'0a': {
         u'label': u'Charging via USB',
+        u'default': None,
         u'00': u'disabled',
         u'01': u'enabled'
     },
     u'0b': {
         u'label': u'Use DTR',
+        # always use DTR, unless configured otherwise
+        u'default': u'01',
         u'00': u'disabled',
         u'01': u'enabled'
     },
     u'0c': {
         u'label': u'Alternate Channel Switching',
+        u'default': None,
         u'00': u'disabled',
         u'01': u'automatic',
         u'02': u'force'
     },
     u'0d': {
         u'label': u'Box Mode',
+        u'default': None,
         u'31': u'check',
         u'32': u'deep-sleep',
         u'33': u'health-check',
         u'34': u'tracking',
+        u'41': u'usb-timing',
     },
+    u'a0': {
+        u'label': u'Tray Scan Power',
+        u'default': None,
+    },
+    u'a1': {
+        u'label': u'Tray Scan interval',
+        u'default': None,
+    },
+    u'a2': {
+        u'label': u'Tray Scan ramp up delay',
+        u'default': None,
+    },
+    u'a3': {
+        u'label': u'Tray Scan row to column delay',
+        u'default': None,
+    },
+    u'a4': {
+        u'label': u'Repeat Row and Column cycle for another N repetition',
+        u'default': None,
+    },
+    u'b1': {
+        u'label': u'CheckSum',
+        u'default': None,
+        u'0': u'disabled',
+        u'1': u'enabled',
+    },
+    u'b2': {
+        u'label': u'Push Passings',
+        u'default': None,
+        u'0': u'disabled',
+        u'1': u'enabled',
+    }
 }
+# Labels for decoder information options
 INFOLBLS = {
     u'01': u'Decoder ID',
-    u'02': u'Firmware Version',
+    u'02': u'Firmware Major Version',
     u'03': u'Hardware Version',
     u'04': u'Box Type',
     u'05': u'Battery Voltage',
@@ -130,6 +187,7 @@ INFOLBLS = {
     u'09': u'Internal Temperature',
     u'0a': u'Supply Voltage',
     u'0b': u'Loop Status',
+    u'0c': u'Firmware Minor Version',
 }
 BOX_TYPES = {
     u'0a': u'active-ext',
@@ -151,6 +209,7 @@ LOOP_STATES = {
 
 
 def randkey(junk):
+    """Return a random integer for shuffling."""
     return randint(0, 0xffffff)
 
 
@@ -159,9 +218,6 @@ class rru(decoder):
 
     def __init__(self):
         decoder.__init__(self)
-        self.looppower = 37  # percentage ish
-        self.loopid = 1  # id number 1-8
-        self.loopchannel = 1  # channel id 1-8
         self._sitenoise = {
             1: 100,
             2: 100,
@@ -172,6 +228,7 @@ class rru(decoder):
             7: 100,
             8: 100
         }
+        self._config = {}
         self._boxname = u'rru'
         self._rrustamp = None
         self._rruht = None
@@ -182,6 +239,7 @@ class rru(decoder):
         self._lastpassing = 0
         self._lastrequest = None
         self._request_pending = False
+        self._allowstored = False
         self._refcount = 0
 
     # API overrides
@@ -193,35 +251,18 @@ class rru(decoder):
         self._flush()
         self._cqueue.put_nowait((u'_port', device))
 
-    def sane(self):
-        for m in [
-                u'ASCII',  # Decoder protocol
-                u'INFOGET;01',  # Decoder ID
-                u'CONFSET;05;06',  # Operation Mode usb-timing
-                u'CONFSET;0b;01',  # Use DTR enabled
-                u'CONFSET;01;00',  # Push Pre-Warn enabled
-                u'CONFSET;02;00',  # Blink on repeated... disabled
-                u'CONFSET;04;00',  # Auto-shutdown ... disabled
-                u'CONFSET;0a;01',  # Charging via USB enabled
-                u'CONFSET;06;{0:02x}'.format(self.loopchannel - 1),
-                u'CONFSET;07;{0:02x}'.format(self.loopid - 1),
-                u'CONFSET;08;{0:02x}'.format(self.looppower),
-                u'EPOCHREFGET',  # Request current epoch ref setting
-                u'TIMESTAMPGET',  # Request number of ticks on decoder
-                u'CONFSET;03;00',  # Impulse input (must follow op mode)
-        ]:
-            self.write(m)
-
     def status(self):
-        """Request status from decoder."""
-        for c in range(0, 0x0f):
-            m = u'INFOGET;{0:02x}'.format(c)
-            self.write(m)
+        """Request status info from decoder."""
+        for c in sorted(CONFINFO):
+            self.write(u''.join([u'CONFGET;', c]))
+        for c in sorted(INFOLBLS):
+            self.write(u''.join([u'INFOGET;', c]))
         self.write(u'BEACONGET')
         self.write(u'PASSINGINFOGET')
         self.write(u'TIMESTAMPGET')
 
     def clear(self, data=None):
+        """Clear internal passing memory."""
         self._cqueue.put_nowait((u'_reset', data))
 
     # Device-specific functions
@@ -243,7 +284,49 @@ class rru(decoder):
         s.port = port
         s.open()
         self._io = s
-        self.sane()
+        self._sane()
+
+    def _sane(self, data=None):
+        """Load system config and then check decoder is properly configured"""
+        setconfs = {}
+        if sysconf.has_option(u'rru', u'allowstored'):
+            self._allowstored = strops.confopt_bool(sysconf.get(u'rru', u'allowstored'))
+            LOG.info(u'Allow stored passings: %r', self._allowstored)
+        if sysconf.has_option(u'rru', u'decoderconfig'):
+            setconfs = sysconf.get(u'rru', u'decoderconfig')
+            LOG.debug(u'Loaded %r config options from sysconf', len(setconfs))
+        self._config = {}
+        for opt in CONFINFO:
+            ko = CONFINFO[opt]
+            kn = ko[u'label']
+            if kn in setconfs and setconfs[kn] is not None:
+                self._config[opt] = setconfs[kn]
+            elif ko[u'default'] is not None:
+                self._config[opt] = ko[u'default']
+
+        # Set protocol
+        self.write(u'ASCII')
+        # Fetch decoder ID
+        self.write(u'INFOGET;01')
+        # Set options, ordering ensures Box mode is set before impulse in
+        for opt in [
+                u'05', u'01', u'02', u'04', u'07', u'08', u'09', u'0a', u'0b',
+                u'0c', u'0d', u'a0', u'a1', u'a2', u'a3', u'a4', u'b1', u'b2',
+                u'03'
+        ]:
+            if opt in self._config and self._config[opt] is not None:
+                self.write(u';'.join([u'CONFSET', opt, self._config[opt]]))
+        # Check if site survey is required
+        if u'06' in self._config and self._config[u'06'] is not None:
+            if self._config[u'06'].lower() == u'auto':
+                LOG.debug(u'Requesting site survey')
+                self.write(u'SITESURVEY')
+            else:
+                self.write(u';'.join([u'CONFSET', u'06', self._config[u'06']]))
+        # Request current epoch ref setting
+        self.write(u'EPOCHREFGET')
+        # Request current number of ticks
+        self.write(u'TIMESTAMPGET')
 
     def _sync(self, data=None):
         LOG.debug(u'Performing blocking DTR sync')
@@ -282,18 +365,21 @@ class rru(decoder):
         self._write(u'RESET')
         while True:
             m = self._readline()
-            #LOG.debug(u'RECV: %r', m)
+            LOG.debug(u'RECV: %r', m)
             if m == u'AUTOBOOT':
                 break
+        self._rrustamp = None
+        self._lastrequest = 0
         self._lastpassing = 0
-        self.sane()
+        # Queue 'sane' config options before sync request
+        self._sane()
         self.sync()
 
     def _write(self, msg):
         if self._io is not None:
             ob = (msg + RRU_EOL)
             self._io.write(ob.encode(RRU_ENCODING))
-            #LOG.debug(u'SEND: %r', ob)
+            LOG.debug(u'SEND: %r', ob)
 
     def _tstotod(self, ts):
         """Convert a race result timestamp to time of day."""
@@ -312,7 +398,7 @@ class rru(decoder):
         return ret
 
     def _confmsg(self, cid, val):
-        """Display config response."""
+        """Handle config response."""
         lbl = cid
         vbl = val
         if cid in CONFINFO:
@@ -321,7 +407,20 @@ class rru(decoder):
                 lbl = option[u'label']
             if val in option:
                 vbl = option[val]
-        LOG.debug(u'Config %r: %r', lbl, vbl)
+        if cid in self._config:
+            # check decoder has the desired value
+            if val != self._config[cid]:
+                if self._curreply == u'CONFSET':
+                    LOG.error(u'Error setting config %r, desired:%r actual:%r',
+                              lbl, self._config[cid], val)
+                else:
+                    LOG.info(u'Updating config %r: %r => %r', lbl, val,
+                             self._config[cid])
+                    self.write(u';'.join([u'CONFSET', cid, self._config[cid]]))
+            else:
+                LOG.debug(u'Config %r: %r', lbl, vbl)
+        else:
+            LOG.debug(u'Config %r: %r', lbl, vbl)
 
     def _infomsg(self, pid, val):
         """Show and save decoder info message."""
@@ -415,15 +514,19 @@ class rru(decoder):
             if tagid == RRU_MARKER:
                 tagid = u''
 
+            bv = None
             if battery and tagid:
                 try:
                     bv = int(battery, 16) / 10
                     if bv < RRU_LOWBATT:
-                        LOG.warning(u'Low battery on %r: %0.1fV', tagid, bv)
+                        LOG.warning(u'Low battery %s: %0.1fV', tagid, bv)
                 except Exception as e:
                     LOG.debug(u'%s reading battery voltage: %s',
                               e.__class__.__name__, e)
 
+            hitcount = 0
+            twofour = -90
+            lstringth = 0
             if hits and rssi and tagid:
                 try:
                     hitcount = int(hits, 16)
@@ -431,36 +534,33 @@ class rru(decoder):
                     twofour = -90 + ((rssival & 0x70) >> 2)
                     lstrength = 1 + (rssival & 0x0f)
                     if lstrength < 5 or twofour < -82 or hitcount < 4:
-                        LOG.warning(u'%r Hits:%d RSSI:%ddBm Loop:%ddB', tagid,
-                                    hitcount, twofour, lstrength)
-                    else:
-                        LOG.debug(u'%r Hits:%d RSSI:%ddBm Loop:%ddB', tagid,
-                                  hitcount, twofour, lstrength)
+                        LOG.warning(
+                            u'Poor read %s: Hits:%d RSSI:%ddBm Loop:%ddB',
+                            tagid, hitcount, twofour, lstrength)
                 except Exception as e:
                     LOG.debug(u'%s reading hits/RSSI: %s',
                               e.__class__.__name__, e)
 
+            # emit a decoder log line TBD
+            LOG.log(DECODER_LOG_LEVEL, u';'.join(mv))
+
             # accept valid passings and trigger callback
-            if not activestore:
-                t = self._tstotod(timestr)
-                if t is not None:
-                    t.index = istr
-                    t.chan = loopid
-                    t.refid = tagid
-                    t.source = self._boxname
+            t = self._tstotod(timestr)
+            if t is not None:
+                t.index = istr
+                t.chan = loopid
+                t.refid = tagid
+                t.source = self._boxname
+                if not activestore or self._allowstored:
                     self._trig(t)
-            else:
-                LOG.info(
-                    u'Stored passing: %r', u';'.join([
-                        istr, tagid, u'0000-00-00', timestr, self._boxname,
-                        loopid
-                    ]))
+                else:
+                    pass
             self._lastpassing += 1
         elif len(mv) == 2:
             resp = int(mv[0], 16)
             rcount = int(mv[1], 16)
             if resp != self._lastrequest:
-                LOG.error(u'Communication error Req: %r != Resp: %r',
+                LOG.error(u'Sequence mismatch request: %r, response: %r',
                           self._lastrequest, resp)
                 self._lastpassing = 0
             elif rcount > 0:
@@ -486,7 +586,7 @@ class rru(decoder):
         """Handle an empty PASSINGGET response."""
         resp = int(reqid, 16)
         if resp != self._lastrequest:
-            LOG.error(u'Communication error Req: %r != Resp: %r',
+            LOG.error(u'Protocol mismatch request: %r, response: %r',
                       self._lastrequest, resp)
             newid = int(minid, 16)
             LOG.info(u'Reset index to min: %r', newid)
@@ -513,10 +613,12 @@ class rru(decoder):
                 cv = nv
         LOG.debug(u'Site survey: %s', u' '.join(lv))
         if ch is not None:
-            LOG.info(u'Selected loop channel %r (%d%%)', ch, cv)
+            LOG.info(u'Selected channel %r (%d%%)', ch, cv)
             self.loopchannel = ch
             m = u'CONFSET;06;{0:02x}'.format(self.loopchannel - 1)
             self.write(m)
+        else:
+            LOG.warning(u'Unable to find a suitable channel')
 
     def _handlereply(self, mv):
         """Process the body of a decoder response."""
@@ -553,8 +655,11 @@ class rru(decoder):
         """Handle the next line of response from decoder."""
         mv = l.split(u';')
         if len(mv) > 0:
-            if mv[0] == u'#P':  # pushed passing overrides cmd/reply logic
+            if mv[0] == u'#P':
+                # pushed passing overrides cmd/reply logic
                 self._passingmsg(mv[1:])
+            elif mv[0] == u'PREWARN':
+                self._curreply = mv[0]
             elif mv[0] == u'EOR':
                 if self._curreply in [u'PASSINGGET', u'PASSINGIDERROR']:
                     self._request_pending = False
@@ -625,8 +730,11 @@ class rru(decoder):
                                 refetch = True
                                 break
                         else:
-                            #LOG.debug(u'RECV: %r', l)
+                            LOG.debug(u'RECV: %r', l)
                             self._procline(l)
+                            if self._curreply == u'PREWARN':
+                                # Note: this does not work
+                                refetch = True
                             if l == u'EOR':
                                 break
                     if refetch:

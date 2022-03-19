@@ -7,7 +7,7 @@ import logging
 import socket
 import datetime
 
-from . import decoder
+from . import (decoder, DECODER_LOG_LEVEL)
 from metarace import tod
 
 LOG = logging.getLogger(u'metarace.decoder.rrs')
@@ -36,20 +36,9 @@ class rrs(decoder):
         self._dorefetch = True
         self._fetchpending = False
         self._pending_command = None
+        self._allowstored = False
 
     # API overrides
-    def sane(self):
-        for m in [
-                u'GETPROTOCOL',
-                u'SETPROTOCOL;{}'.format(RRS_PROTOCOL),
-                u'SETPUSHPREWARNS;0',
-                u'SETPUSHPASSINGS;1;0',
-                u'GETCONFIG;GENERAL;BOXNAME',
-                u'GETSTATUS',
-                u'PASSINGS',
-        ]:
-            self.write(m)
-
     def sync(self, data=None):
         self.stop_session(data)
         self._cqueue.put_nowait((u'_sync', data))
@@ -82,6 +71,22 @@ class rrs(decoder):
                 LOG.debug(u'%s: shutdown socket: %s', e.__class__.__name__, e)
             cp.close()
 
+    def _sane(self, data=None):
+        if sysconf.has_option(u'rrs', u'allowstored'):
+            self._allowstored = strops.confopt_bool(
+                sysconf.get(u'rrs', u'allowstored'))
+            LOG.info(u'Allow stored passings: %r', self._allowstored)
+        for m in [
+                u'GETPROTOCOL',
+                u'SETPROTOCOL;{}'.format(RRS_PROTOCOL),
+                u'SETPUSHPREWARNS;0',
+                u'SETPUSHPASSINGS;1;0',
+                u'GETCONFIG;GENERAL;BOXNAME',
+                u'GETSTATUS',
+                u'PASSINGS',
+        ]:
+            self.write(m)
+
     def _port(self, port):
         """Re-establish connection to supplied device port."""
         self._close()
@@ -101,6 +106,7 @@ class rrs(decoder):
         self._write(syncmd)
 
     def _replay(self, file):
+        """RRS-specific replay"""
         if file.isdigit():
             LOG.debug(u'Replay passings from %r', file)
             cmd = u'GETFILE;{:d}'.format(file)
@@ -152,7 +158,7 @@ class rrs(decoder):
                 try:
                     bv = float(battery)
                     if bv < RRS_LOWBATT:
-                        LOG.warning(u'Low battery on %r: %0.1fV', tagid, bv)
+                        LOG.warning(u'Low battery %s: %0.1fV', tagid, bv)
                 except Exception as e:
                     LOG.debug(u'%s reading battery voltage: %s',
                               e.__class__.__name__, e)
@@ -164,28 +170,27 @@ class rrs(decoder):
                     twofour = -90 + ((rssival & 0x70) >> 2)
                     lstrength = 1 + (rssival & 0x0f)
                     if lstrength < 5 or twofour < -82 or hitcount < 4:
-                        LOG.warning(u'%r Hits:%d RSSI:%ddBm Loop:%ddB', tagid,
-                                    hitcount, twofour, lstrength)
-                    else:
-                        LOG.debug(u'%r Hits:%d RSSI:%ddBm Loop:%ddB', tagid,
-                                  hitcount, twofour, lstrength)
+                        LOG.warning(
+                            u'Poor read %s: Hits:%d RSSI:%ddBm Loop:%ddB',
+                            tagid, hitcount, twofour, lstrength)
                 except Exception as e:
                     LOG.debug(u'%s reading hits/RSSI: %s',
                               e.__class__.__name__, e)
 
-            if not activestore and (date.startswith(u'0000-00-')
-                                    or date == today):
-                t = tod.mktod(timestr)
-                if t is not None:
-                    t.index = istr
-                    t.chan = loopid
-                    t.refid = tagid
-                    t.source = bname
+            # emit a decoder log line TBD
+            LOG.log(DECODER_LOG_LEVEL, u';'.join(pv))
+
+            # accept valid passings and trigger callback
+            t = tod.mktod(timestr)
+            if t is not None:
+                t.index = istr
+                t.chan = loopid
+                t.refid = tagid
+                t.source = bname
+                if not activestore or self._allowstored:
                     self._trig(t)
-            else:
-                LOG.info(
-                    u'Stored passing: %r',
-                    u';'.join([istr, tagid, date, timestr, bname, loopid]))
+                else:
+                    pass
         else:
             LOG.info(u'Non-passing message: %r', pv)
 

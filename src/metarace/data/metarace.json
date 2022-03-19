@@ -1,49 +1,102 @@
 {
-  "export":{
-    "command": "echo",
-    "arguments":[
+  "export": {
+    "arguments": [
       "{srcdir}",
       "{dstdir}"
-    ]
-  },
-  "sender":{
-    "portspec": "/dev/ttyUSB0",
-    "serialbaud": 115200,
-    "encoding": "utf-8",
-    "pagelen": 8,
-    "linelen": 32,
-    "protocol": "dhi"
-  },
-  "telegraph":{
-    "host": null,
-    "usetls": false,
-    "debug": false,
-    "username": null,
-    "password": null,
-    "deftopic": null,
-    "qos": 0
-  },
-  "txt_announce": {
-    "topic": "metarace/trackmeet/text",
-    "motd": null,
-    "fontsize": 20,
-    "fullscreen": false
-  },
-  "timy": {
-    "baudrate":38400,
-    "ctsrts":false,
-    "chandelay":{}
+    ],
+    "command": "echo"
   },
   "rms": {
-    "dofastestlap": false,
-    "clubmode": false,
-    "autofinish": true,
-    "showuciids": false,
-    "minlap": "20.0",
     "allowspares": false,
-    "gapthresh": "1.1200",
     "autoexport": false,
-    "timelimit": null,
-    "showdowntimes": true
+    "autofinish": true,
+    "clubmode": false,
+    "dofastestlap": false,
+    "gapthresh": "1.1200",
+    "minlap": "20.0",
+    "showdowntimes": true,
+    "showuciids": false,
+    "timelimit": null
+  },
+  "rrs": {
+    "allowstored": false
+  },
+  "rru": {
+    "allowstored": false,
+    "decoderconfig": {
+      "Alternate Channel Switching": "01",
+      "Auto-shutdown on power loss": "00",
+      "Blink/beep on repeated passing": "01",
+      "Channel ID": null,
+      "Charging via USB": "01",
+      "Impulse input or beep output": "00",
+      "Loop ID": null,
+      "Loop Power": "25",
+      "Operation Mode": "06",
+      "Push Pre-Warn": "00",
+      "Use DTR": "01"
+    }
+  },
+  "sender": {
+    "encoding": "utf-8",
+    "linelen": 32,
+    "pagelen": 8,
+    "portspec": "/dev/ttyUSB0",
+    "protocol": "dhi",
+    "serialbaud": 115200
+  },
+  "telegraph": {
+    "debug": false,
+    "deftopic": null,
+    "host": null,
+    "password": null,
+    "qos": 0,
+    "username": null,
+    "usetls": false
+  },
+  "thbc": {
+    "decoderconfig": {
+      "Active Loop": true,
+      "BOX Tone": 1044,
+      "BXX Tone": 657,
+      "CEL Tone": 888,
+      "CELL Sync": false,
+      "CELL Sync Hour": 0,
+      "CELL Sync Min": 30,
+      "Detect Max": false,
+      "Distant Fibre": false,
+      "Distant rs485": false,
+      "GPS Sync": false,
+      "MAN Tone": 444,
+      "Protocol": 0,
+      "STA Tone": 520,
+      "Serial Print": false,
+      "Sync Interval": 60,
+      "Sync Pulse": false,
+      "Time of Day": true,
+      "Timezone Hour": 11,
+      "Timezone Min": 0
+    },
+    "ipconfig": {
+      "Gateway": "0.0.0.0",
+      "Host": "192.168.95.255",
+      "IP": "192.168.95.130",
+      "Netmask": "255.255.255.0"
+    },
+    "levels": [
+      "20",
+      "20"
+    ]
+  },
+  "timy": {
+    "baudrate": 38400,
+    "chandelay": {},
+    "ctsrts": false
+  },
+  "txt_announce": {
+    "fontsize": 20,
+    "fullscreen": false,
+    "motd": null,
+    "topic": "metarace/trackmeet/text"
   }
 }

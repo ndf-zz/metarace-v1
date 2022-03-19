@@ -290,7 +290,8 @@ class rru(decoder):
         """Load system config and then check decoder is properly configured"""
         setconfs = {}
         if sysconf.has_option(u'rru', u'allowstored'):
-            self._allowstored = strops.confopt_bool(sysconf.get(u'rru', u'allowstored'))
+            self._allowstored = strops.confopt_bool(
+                sysconf.get(u'rru', u'allowstored'))
             LOG.info(u'Allow stored passings: %r', self._allowstored)
         if sysconf.has_option(u'rru', u'decoderconfig'):
             setconfs = sysconf.get(u'rru', u'decoderconfig')

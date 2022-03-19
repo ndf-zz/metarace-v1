@@ -2354,7 +2354,6 @@ class rms(object):
 
     def rfidtrig(self, e):
         """Process transponder passing event."""
-        LOG.debug(u'RFID passing: %s', e)
 
         # check for impulse/trigger
         if e.refid in [u'', u'255']:

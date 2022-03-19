@@ -8,7 +8,7 @@ import serial
 import socket
 import time
 
-from . import decoder
+from . import (decoder, DECODER_LOG_LEVEL)
 from metarace import sysconf
 from metarace import tod
 from metarace import crc_algorithms
@@ -211,7 +211,7 @@ class thbc(decoder):
             nt = tod.now()
             diff = nt - nt.truncate(0)
         self._write(self._set_time_cmd(nt))
-        LOG.debug(u'Set time: %r', nt.meridian())
+        LOG.debug(u'Set time: %r', nt.meridiem())
 
     def _ipcfg(self, data=None):
         """Alter the attached decoder's IP address."""
@@ -390,6 +390,8 @@ class thbc(decoder):
                                       chan=pvec[0],
                                       refid=rstr,
                                       source=self.unitno)
+                        # Log a hardware-specific passing
+                        LOG.log(DECODER_LOG_LEVEL, msg.strip())
                         if ack:
                             self._write(ACKCMD)  # Acknowledge if ok
                         self._cksumerr = 0

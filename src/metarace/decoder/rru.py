@@ -270,6 +270,7 @@ class rru(decoder):
     def _port(self, port):
         """Re-establish connection to supplied device port."""
         self._close()
+        self._rdbuf = b''
         LOG.debug(u'Connecting to %r', port)
         s = serial.Serial(baudrate=RRU_BAUD,
                           rtscts=False,
@@ -750,5 +751,5 @@ class rru(decoder):
             except Exception as e:
                 LOG.critical(u'%s: %s', e.__class__.__name__, e)
                 self._running = False
-        self.setcb()  # make sure callback is unrefed
+        self.setcb()
         LOG.debug(u'Exiting')

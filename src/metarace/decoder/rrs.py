@@ -92,6 +92,7 @@ class rrs(decoder):
         self._close()
         addr = (port, RRS_TCP_PORT)
         LOG.debug(u'Connecting to %r', addr)
+        self._rdbuf = b''
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         s.settimeout(RRS_IOTIMEOUT)
@@ -340,6 +341,7 @@ class rrs(decoder):
                 self._close()
                 LOG.error(u'%s: %s', e.__class__.__name__, e)
             except Exception as e:
-                LOG.error(u'%s: %s', e.__class__.__name__, e)
+                LOG.critical(u'%s: %s', e.__class__.__name__, e)
+                self._running = False
         self.setcb()
         LOG.debug(u'Exiting')

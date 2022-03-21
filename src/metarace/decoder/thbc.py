@@ -1,6 +1,6 @@
 """Tag Heuer/Chronelec Decoder Interface."""
 
-# For connections to multiple decoders, use thcbhub
+# For connections to multiple decoders, use thbchub
 
 import Queue
 import logging
@@ -95,7 +95,7 @@ DEFAULT_IPCFG = {
     u'IP': u'192.168.0.10',
     u'Netmask': u'255.255.255.0',
     u'Gateway': u'0.0.0.0',
-    u'Host': u'192.168.0.255'  # default is broadcast :/
+    u'Host': u'192.168.0.255'
 }
 DEFPORT = u'/dev/ttyS0'
 
@@ -113,7 +113,6 @@ def thbc_sum(msgstr=b''):
     ret = 0
     for ch in msgstr:
         ret = ret + ord(ch)
-        #ret = ret + ch	# py3
     return '{0:04d}'.format(ret)
 
 
@@ -142,9 +141,10 @@ class thbc(decoder):
 
     def __init__(self):
         decoder.__init__(self)
-        self.unitno = u''  # fetched on reload
-        self._decoderconfig = {}  # fetched on reload
-        self._decoderipconfig = {}  # fetched on reload
+        self._boxname = u'thbc'
+        self._version = u''
+        self._decoderconfig = {}
+        self._decoderipconfig = {}
         self._io = None
         self._cksumerr = 0
         self._rdbuf = b''  # bytestring read buffer
@@ -191,13 +191,14 @@ class thbc(decoder):
         """Re-establish connection to supplied device port."""
         self._close()
         s = None
+        self._rdbuf = b''
         if u'/' not in port and u'.' in port:
             LOG.debug(u'Attempting UDP on %r', port)
             s = dgram(port, THBC_UDP_PORT)
         else:
             # assume device file
             s = serial.Serial(port, THBC_BAUD, rtscts=False, timeout=0.2)
-        self.unitno = u''
+        self._boxname = u'thbc'
         self._io = s
         self._write(QUECMD)
 
@@ -227,7 +228,7 @@ class thbc(decoder):
     def _sane(self, data=None):
         """Check decoder config against system settings."""
         doconf = False
-        if self.unitno:  # set if config message parsed ok
+        if self._boxname != u'thbc':
             if sysconf.has_option(u'thbc', u'decoderconfig'):
                 oconf = sysconf.get(u'thbc', u'decoderconfig')
                 for flag in self._decoderconfig:
@@ -240,7 +241,7 @@ class thbc(decoder):
 
         # re-write config if required
         if doconf:
-            LOG.info(u'Re-configuring %r', self.unitno)
+            LOG.info(u'Re-configuring %r', self._boxname)
             self._set_config()
 
         # force decoder levels
@@ -249,7 +250,7 @@ class thbc(decoder):
             self._setlvl(box=lvl[0], sta=lvl[1])
 
     def _v3_cmd(self, cmdstr=b''):
-        """Pack and send a v3 command: Note does not queue."""
+        """Pack and send a v3 command directly to port."""
         crc = thbc_crc(cmdstr)
         crcstr = chr(crc >> 8) + chr(crc & 0xff)  # Py2
         self._write(ESCAPE + cmdstr + crcstr + b'>')
@@ -353,14 +354,14 @@ class thbc(decoder):
             ]:
                 self._decoderconfig[flag] = bool(ibuf[flag])
 
-        self.unitno = u''
+        self._boxname = u''
         for c in msg[43:47]:
-            self.unitno += unichr(ord(c) + ord('0'))  # py2 :/
+            self._boxname += unichr(ord(c) + ord('0'))
+        self._version=unicode(hexval2val(ibuf[47]))
         stalvl = hex(ord(msg[25]))  # ? question this
         boxlvl = hex(ord(msg[26]))
-        LOG.info(u'%r connected', self.unitno)
-
-        # Decoder info
+        LOG.info(u'Info Decoder ID: %s', self._boxname)
+        LOG.debug(u'Info Firmware Version: %r', self._version)
         LOG.debug(u'Levels: STA=%r, BOX=%r', stalvl, boxlvl)
         self._decoderipconfig[u'IP'] = socket.inet_ntoa(msg[27:31])
         self._decoderipconfig[u'Mask'] = socket.inet_ntoa(msg[31:35])
@@ -389,7 +390,7 @@ class thbc(decoder):
                                       index=istr,
                                       chan=pvec[0],
                                       refid=rstr,
-                                      source=self.unitno)
+                                      source=self._boxname)
                         # Log a hardware-specific passing
                         LOG.log(DECODER_LOG_LEVEL, msg.strip())
                         if ack:
@@ -413,7 +414,7 @@ class thbc(decoder):
                 data = msg[1:22]
                 pvec = data.decode(THBC_ENCODING).split()
                 if len(pvec) == 5:
-                    LOG.info(u'%r@%s Noise:%s/%s Levels:%s/%s', self.unitno,
+                    LOG.info(u'%r@%s Noise:%s/%s Levels:%s/%s', self._boxname,
                              pvec[0], pvec[1], pvec[2], pvec[3], pvec[4])
                 else:
                     LOG.info(u'Invalid status: %r', msg)
@@ -481,7 +482,8 @@ class thbc(decoder):
                 self._close()
                 LOG.error(u'%s: %s', e.__class__.__name__, e)
             except Exception as e:
-                LOG.error(u'%s: %s', e.__class__.__name__, e)
+                LOG.critical(u'%s: %s', e.__class__.__name__, e)
+                self._running = False
         self.setcb()
         LOG.debug(u'Exiting')
 

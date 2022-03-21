@@ -342,11 +342,11 @@ class roadmeet(object):
             tcombo.set_sensitive(False)
 
         # fetch event result categories
-        ocats = u''
+        ocats = []
         cat_ent = b.get_object(u'cat_entry')
         if self.curevent is not None:
-            ocats = u' '.join(self.curevent.get_catlist())
-            cat_ent.set_text(ocats)
+            ocats = self.curevent.get_catlist()
+            cat_ent.set_text(u' '.join(ocats))
             cba = b.get_object(u'cat_but_auto')
             cba.connect(u'clicked', self.cat_but_auto_clicked, cat_ent)
 
@@ -426,6 +426,7 @@ class roadmeet(object):
             if self.curevent is not None:
                 ncats = cat_ent.get_text().decode(u'utf-8').split()
                 if ncats != ocats:
+                    LOG.debug(u'Result cats changed %r -> %r', ocats, ncats)
                     self.curevent.loadcats(ncats)
                     reload = True
             if dotype:

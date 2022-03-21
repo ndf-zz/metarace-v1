@@ -34,17 +34,22 @@ def mkdevice(portstr=u'', curdev=None):
         curdev = HANDLERS[devtype]()
         curdev.setport(devport)
     elif type(curdev) is HANDLERS[devtype]:
-        LOG.debug(u'Requested device %r is same type',
-                  curdev.__class__.__name__)
+        LOG.debug(u'Requested decoder is %s', curdev.__class__.__name__)
         curdev.setport(devport)
     else:
+        LOG.debug(u'Changing decoder type from %s to %s',
+                  curdev.__class__.__name__, devtype)
         curdev.setcb(None)
         wasalive = curdev.running()
         if wasalive:
-            curdev.exit(u'Change device type')
+            curdev.exit(u'Change decoder type')
+            LOG.debug(u'Waiting for %s decoder to exit',
+                      curdev.__class__.__name__)
+            curdev.join()
+        curdev = None
         curdev = HANDLERS[devtype]()
         curdev.setport(devport)
-        LOG.debug(u'Switching device type to %r', curdev.__class__.__name__)
+        LOG.debug(u'Starting %s decoder', curdev.__class__.__name__)
         if wasalive:
             curdev.start()
     return curdev
@@ -150,7 +155,7 @@ class decoder(threading.Thread):
 
     def _exit(self, msg):
         """Handle request to exit."""
-        LOG.info(u'Request to exit: %r', msg)
+        LOG.debug(u'Request to exit: %r', msg)
         self._close()
         self._flush()
         self._running = False

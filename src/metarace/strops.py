@@ -94,6 +94,11 @@ def cmp_dnf(x, y):
     return cmp(DNFCODEMAP[x], DNFCODEMAP[y])
 
 
+def rand_key(data=None):
+    """Return a random integer key for shuffling."""
+    return randint(0,0xffffffff)
+
+
 def riderno_key(bib):
     """Return a comparison key for sorting rider number strings."""
     return bibstr_key(bib)
@@ -143,8 +148,8 @@ def bibstr_key(bibstr=u''):
     return sval | (bval & 0xfff)
 
 
-def randstr():
-    """Return a string of random digits."""
+def randstr(data=None):
+    """Return a string of 6 random digits."""
     return unicode(randint(10000, 99999))
 
 

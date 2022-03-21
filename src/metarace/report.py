@@ -12,7 +12,6 @@ import math
 import xlwt
 import json
 import time
-import random
 import logging
 import metarace
 from metarace import tod
@@ -223,11 +222,11 @@ def mksectionid(curset, prefix=None):
         prefix = prefix.lower().strip()
     if not prefix:
         prefix = u'sec'
-        testid = prefix + unicode(random.randint(10000, 99999))
+        testid = prefix + strops.randstr()
     else:
         testid = prefix
     while testid in curset:
-        testid = prefix + unicode(random.randint(10000, 99999))
+        testid = prefix + strops.randstr()
     return testid
 
 

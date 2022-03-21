@@ -8,7 +8,6 @@ import decimal
 import logging
 import serial
 import time
-from random import randint
 
 from . import (decoder, DECODER_LOG_LEVEL)
 from metarace import tod
@@ -21,8 +20,8 @@ LOG.setLevel(logging.DEBUG)
 RRU_BAUD = 19200
 RRU_PASSLEN = 12
 RRU_BEACONLEN = 17
-RRU_LOWBATT = 2.0  # Warn if battery voltage is below this many volts
-RRU_REFCHECK = 3600  # check ref after this many timeouts
+RRU_LOWBATT = 2.1  # Warn if battery voltage is below this many volts
+RRU_REFCHECK = 1800  # check ref after this many timeouts
 RRU_REFTHRESH = 0x2a30000  # 2 x 86400 x 256
 RRU_ENCODING = u'iso8859-1'
 RRU_MARKER = u'_____127'  # trigger marker
@@ -206,11 +205,6 @@ LOOP_STATES = {
     u'02': u'Limit',
     u'03': u'Overvoltage Error'
 }
-
-
-def randkey(junk):
-    """Return a random integer for shuffling."""
-    return randint(0, 0xffffff)
 
 
 class rru(decoder):
@@ -410,7 +404,7 @@ class rru(decoder):
                 vbl = option[val]
         if cid in self._config:
             # check decoder has the desired value
-            if val != self._config[cid]:
+            if val != self._config[cid] and self._config[cid] != u'auto':
                 if self._curreply == u'CONFSET':
                     LOG.error(u'Error setting config %r, desired:%r actual:%r',
                               lbl, self._config[cid], val)
@@ -572,9 +566,12 @@ class rru(decoder):
     def _beaconmsg(self, mv):
         """Receive a beacon from the decoder."""
         if len(mv) == RRU_BEACONLEN:
-            # transponder averages
+            # noise/transponder averages
+            chid = int(mv[5], 16) + 1
+            chnoise = 10.0 * int(mv[12],16)
             tlqi = int(mv[13], 16) / 2.56
             trssi = -90 + int(mv[14], 16)
+            LOG.info(u'Info Ch {0} Noise: {1:0.0f}%'.format(chid, chnoise))
             LOG.info(u'Info Avg LQI: {0:0.0f}%'.format(tlqi))
             LOG.info(u'Info Avg RSSI: {}dBm'.format(trssi))
         elif len(mv) == 1:
@@ -606,7 +603,7 @@ class rru(decoder):
         ch = None
         cv = 55  # don't accept any channel with noise over 50%
         lv = []
-        for c in sorted(self._sitenoise, key=randkey):
+        for c in sorted(self._sitenoise, key=strops.rand_key):
             nv = self._sitenoise[c]
             lv.append(u'{}:{:d}%'.format(c, nv))
             if nv < cv:
@@ -751,6 +748,7 @@ class rru(decoder):
                 self._close()
                 LOG.error(u'%s: %s', e.__class__.__name__, e)
             except Exception as e:
-                LOG.error(u'%s: %s', e.__class__.__name__, e)
+                LOG.critical(u'%s: %s', e.__class__.__name__, e)
+                self._running = False
         self.setcb()  # make sure callback is unrefed
         LOG.debug(u'Exiting')

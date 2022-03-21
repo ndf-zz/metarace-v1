@@ -24,16 +24,16 @@
   "rru": {
     "allowstored": false,
     "decoderconfig": {
-      "Alternate Channel Switching": "01",
+      "Alternate Channel Switching": null,
       "Auto-shutdown on power loss": "00",
-      "Blink/beep on repeated passing": "01",
+      "Blink/beep on repeated passing": null,
       "Channel ID": null,
-      "Charging via USB": "01",
-      "Impulse input or beep output": "00",
+      "Charging via USB": null,
+      "Impulse input or beep output": null,
       "Loop ID": null,
-      "Loop Power": "25",
+      "Loop Power": null,
       "Operation Mode": "06",
-      "Push Pre-Warn": "00",
+      "Push Pre-Warn": null,
       "Use DTR": "01"
     }
   },

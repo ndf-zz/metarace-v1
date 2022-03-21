@@ -1092,22 +1092,18 @@ class roadmeet(object):
         return False
 
     def shutdown(self, msg=u''):
-        """Cleanly shutdown threads and close application."""
+        """Shutdown worker threads and close application."""
         self.started = False
+        self.announce.exit(msg)
         self.timer.exit(msg)
         self.alttimer.exit(msg)
-        self.announce.exit(msg)
-        LOG.info(u'Waiting for workers to exit')
+        LOG.info(u'Waiting for workers')
         if self.mirror is not None:
             LOG.debug(u'Result export')
             self.mirror.join()
             self.mirror = None
         LOG.debug(u'Telegraph/announce')
         self.announce.join()
-        LOG.debug(u'Main timer')
-        self.timer.join()
-        LOG.debug(u'Alt timer')
-        self.alttimer.join()
 
     def start(self):
         """Start the timer and rfu threads."""

@@ -140,6 +140,7 @@ class timy(threading.Thread):
 
         """
         threading.Thread.__init__(self)
+        self.daemon = True
         self.__port = None
         self.__cqueue = Queue.Queue()  # command queue
         self.__rdbuf = u''

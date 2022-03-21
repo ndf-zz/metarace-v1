@@ -252,6 +252,7 @@ class sender(threading.Thread):
     def __init__(self, port=None):
         """Constructor."""
         threading.Thread.__init__(self)
+        self.daemon = True
         self.name = u'sender'
         self.port = None
         self.linelen = LINELEN  # overridden by mksender

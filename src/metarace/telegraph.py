@@ -206,6 +206,7 @@ class telegraph(threading.Thread):
     def __init__(self):
         """Constructor."""
         threading.Thread.__init__(self)
+        self.daemon = True
         self.__queue = Queue.Queue()
         self.__cb = defcallback
         self.__subscriptions = set()

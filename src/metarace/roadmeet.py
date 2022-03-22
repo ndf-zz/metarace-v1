@@ -1086,6 +1086,7 @@ class roadmeet(object):
                 if key in ['0', '1']:
                     # trigger
                     t.refid = u''
+                    t.chan = strops.id2chan(strops.chan2id(key))
                     self._alttimercb(t)
                     return True
                 elif key in ['2', '3', '4', '5', '6', '7', '8', '9']:

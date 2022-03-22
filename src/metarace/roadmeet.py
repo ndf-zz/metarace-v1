@@ -140,34 +140,38 @@ class registerdlg(object):
         if e.refid:
             r = self.rdb.getrefid(e.refid)
             if r is not None:
-                # rider already assined to tag?
+                # transponder aleady assigned to a rider, load them
                 bib = self.rdb.getvalue(r, riderdb.COL_BIB)
                 ser = self.rdb.getvalue(r, riderdb.COL_SERIES)
                 self.rfidval.set_text(e.refid)
                 self.bibent.set_text(bib)
                 self.serent.set_text(ser)
             else:
-                # rider ok to assign or new rider
+                # transponder currently unassigned
                 bib = self.bibent.get_text().decode(u'utf-8', u'replace')
-                ser = self.serent.get_text().decode(u'utf-8', u'replace')
-                self.bibent.activate()  # required?
-                r = self.rdb.getrider(bib, ser)
-                if r is not None:
-                    # check for existing tag allocation
-                    orefid = self.rdb.getvalue(r, riderdb.COL_REFID)
-                    if not orefid:
-                        nrefid = e.refid.lower()
-                        self.rdb.editrider(r, refid=nrefid)
-                        LOG.warning(u'Assigned ID %r to %r:%r', nrefid, bib,
-                                    ser)
-                        self.rfidval.set_text(nrefid)
-                        if self.autoinc.get_active():
-                            glib.idle_add(self.increment_rider)
+                if bib:
+                    ser = self.serent.get_text().decode(u'utf-8', u'replace')
+                    self.bibent.activate()  # required?
+                    r = self.rdb.getrider(bib, ser)
+                    if r is not None:
+                        # check for existing tag allocation
+                        orefid = self.rdb.getvalue(r, riderdb.COL_REFID)
+                        if not orefid:
+                            nrefid = e.refid.lower()
+                            self.rdb.editrider(r, refid=nrefid)
+                            LOG.warning(u'Assigned ID %r to %r:%r', nrefid,
+                                        bib, ser)
+                            self.rfidval.set_text(nrefid)
+                            if self.autoinc.get_active():
+                                glib.idle_add(self.increment_rider)
+                            else:
+                                self.bibent.grab_focus()
                         else:
-                            self.bibent.grab_focus()
-                    else:
-                        LOG.error(u'Rider %r:%r already assigned to %r', bib,
-                                  ser, orefid)
+                            LOG.warning(u'Rider %r:%r already assigned to %r',
+                                        bib, ser, orefid)
+                else:
+                    LOG.warning(u'Rider number entry empty')
+                    self.rfidval.set_text(e.refid.lower())
 
 
 class fakemeet(object):
@@ -913,7 +917,7 @@ class roadmeet(object):
         dlg.destroy()
 
     def menu_timing_start_activate_cb(self, menuitem, data=None):
-        """Manually set race elapsed time via RFU trigger."""
+        """Manually set race elapsed time via trigger."""
         if self.curevent is None:
             LOG.info(u'No event open to set elapsed time on')
         else:

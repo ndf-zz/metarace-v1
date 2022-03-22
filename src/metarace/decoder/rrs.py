@@ -148,7 +148,9 @@ class rrs(decoder):
             self._lastpassing = pid
 
             if not loopid:
-                loopid = u'1'  # add fake loop id for passives
+                loopid = u'C1'  # add faked id for passives
+            else:
+                loopid = strops.id2chan(strops.chan2id(loopid))
             activestore = False
             if adata:
                 activestore = (int(adata) & 0x40) == 0x40

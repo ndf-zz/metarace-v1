@@ -499,18 +499,16 @@ class rru(decoder):
 
             # Check values
             if not loopid:
-                loopid = u'1'  # add fake id for passives
+                loopid = u'C1'  # add faked id for passives
             else:
-                loopid = unicode(int(loopid, 16) + 1)
+                loopid = strops.id2chan(int(loopid, 16) + 1)
             activestore = False
             if adata:
                 aval = int(adata, 16)
                 activestore = (int(adata, 16) & 0x40) == 0x40
-
             if tagid == RRU_MARKER:
                 tagid = u''
 
-            bv = None
             if battery and tagid:
                 try:
                     bv = int(battery, 16) / 10
@@ -520,9 +518,6 @@ class rru(decoder):
                     LOG.debug(u'%s reading battery voltage: %s',
                               e.__class__.__name__, e)
 
-            hitcount = 0
-            twofour = -90
-            lstringth = 0
             if hits and rssi and tagid:
                 try:
                     hitcount = int(hits, 16)

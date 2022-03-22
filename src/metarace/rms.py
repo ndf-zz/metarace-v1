@@ -2276,13 +2276,17 @@ class rms(object):
         self.winopen = False
 
     def starttrig(self, e):
-        """Process a 'start' trigger signal."""
-        LOG.info(u'Trigger: %s', e.rawtime(2))
+        """Process a start trigger signal."""
+        # Note: in rms all triggers other than C1 from alttimer
+        #       are assumed to be for the start
         if self.timerstat == u'armstart':
+            LOG.info(u'Start trigger: %s@%s/%s', e.chan, e.rawtime(), e.source)
             self.set_start(e)
             self.resetcatonlaps()
-            if self.event[u'type'] in [u'criterium', u'circuit']:
+            if self.event[u'type'] in [u'criterium', u'circuit', u'cross']:
                 glib.timeout_add_seconds(5, self.armlap)
+        else:
+            LOG.info(u'Trigger: %s@%s/%s', e.chan, e.rawtime(), e.source)
         return False
 
     def set_lap_finish(self, e):
@@ -2296,13 +2300,27 @@ class rms(object):
                 self.onlap += 1
         else:
             self.onlap += 1
-        ##self.meet.cmd_announce(u'onlap',unicode(self.onlap))
         self.reannounce_times()
 
-    def timertrig(self, e):
+    def alttimertrig(self, e):
         """Record timer message from alttimer."""
-        if self.timerstat == u'armfinish':
-            LOG.info(u'Bunch Trigger: %s', e.rawtime(0))
+        # note: these impulses are sourced from alttimer device and keyboard
+        #       transponder triggers are collected separately in timertrig()
+        LOG.debug(u'Alt timer: %s@%s/%s', e.chan, e.rawtime(), e.source)
+        channo = strops.chan2id(e.chan)
+        if channo == 1:
+            # this is a finish impulse, treat as bunch time
+            if self.timerstat == u'armfinish':
+                if self.altfinish is not None:
+                    dt = e - self.altfinish
+                    LOG.info(u'New bunch time: +%s', dt.rawtime(0))
+                else:
+                    LOG.debug(u'Recording first bunch finish: %s', e.rawtime())
+                    self.altfinish = e
+        else:
+            # send through to catch-all trigger handler
+            self.starttrig(e)
+
 
     def catstarted(self, cat):
         """Return true if category is considered started."""
@@ -2352,17 +2370,17 @@ class rms(object):
                     else:
                         LOG.debug(u'No data for %r cat lap', cat)
 
-    def rfidtrig(self, e):
+    def timertrig(self, e):
         """Process transponder passing event."""
 
-        # check for impulse/trigger
+        # all impulses from transponder timer are considered start triggers
         if e.refid in [u'', u'255']:
             return self.starttrig(e)
 
         # fetch rider data from riderdb using refid lookup
         r = self.meet.rdb.getrefid(e.refid)
         if r is None:
-            LOG.info(u'Unknown rider: %s@%s/%s', e.refid, e.rawtime(2),
+            LOG.info(u'Unknown rider: %s:%s@%s/%s', e.refid, e.chan, e.rawtime(2),
                      e.source)
             return False
 
@@ -2373,15 +2391,18 @@ class rms(object):
             return False
 
         # if there's a source filter set, discard any unknown sources
+        # todo: channel should be the primary source identifier
         if len(self.passingsource) > 0:
             if e.source.lower() not in self.passingsource:
-                LOG.info(u'Invalid passing: %s@%s/%s', bib, e.rawtime(2),
+                LOG.info(u'Invalid passing: %s:%s@%s/%s', bib, e.chan, e.rawtime(2),
                          e.source)
                 return False
 
         # check for a spare bike in riderdb cat, before clubmode additions
         spcat = riderdb.primary_cat(self.meet.rdb.getvalue(r, riderdb.COL_CAT))
-        if self.allowspares and spcat == u'SPARE':
+        if self.allowspares and spcat == u'SPARE' and self.timerstat in [
+                    u'running', u'armfinish'
+            ]:
             LOG.warning(u'Adding spare bike: %r', bib)
             self.addrider(bib)
 
@@ -2393,22 +2414,22 @@ class rms(object):
             ]:
                 self.addrider(bib)
                 lr = self.getrider(bib)
-                LOG.info(u'Added new starter: %s@%s/%s', bib, e.rawtime(2),
+                LOG.info(u'Added new starter: %s:%s@%s/%s', bib, e.chan, e.rawtime(2),
                          e.source)
             else:
-                LOG.info(u'Non-starter: %s@%s/%s', bib, e.rawtime(2), e.source)
+                LOG.info(u'Non-starter: %s:%s@%s/%s', bib, e.chan, e.rawtime(2), e.source)
                 return False
 
         # log passing of rider before further processing
         if not lr[COL_INRACE]:
-            LOG.warning(u'Withdrawn rider: %s@%s/%s', bib, e.rawtime(2),
+            LOG.warning(u'Withdrawn rider: %s:%s@%s/%s', bib, e.chan, e.rawtime(2),
                         e.source)
             # but continue as if still in race
         else:
-            LOG.info('Saw: %s@%s/%s', bib, e.rawtime(2), e.source)
+            LOG.info(u'Saw: %s:%s@%s/%s', bib, e.chan, e.rawtime(2), e.source)
 
         # check run state
-        if self.timerstat in [u'idle', u'armstart']:
+        if self.timerstat in [u'idle', u'armstart', u'finished']:
             return False
 
         # fetch primary category from event
@@ -2427,8 +2448,8 @@ class rms(object):
             st = self.start + catstart + self.minlap
         # ignore all passings from before first allowed time
         if e <= st:
-            LOG.info(u'Ignored early passing: %s@%s/%s < %s', bib,
-                     e.rawtime(2), e.source, st.rawtime(2))
+            LOG.info(u'Ignored early passing: %s:%s@%s/%s < %s', bib,
+                     e.chan, e.rawtime(2), e.source, st.rawtime(2))
             return False
 
         # check this passing against previous passing records
@@ -2442,15 +2463,15 @@ class rms(object):
             lastseen = lr[COL_RFSEEN][ipos - 1]
             nthresh = lastseen + self.minlap
             if e <= nthresh:
-                LOG.info(u'Ignored short lap: %s@%s/%s < %s', bib,
-                         e.rawtime(2), e.source, nthresh.rawtime(2))
+                LOG.info(u'Ignored short lap: %s:%s@%s/%s < %s', bib,
+                         e.chan, e.rawtime(2), e.source, nthresh.rawtime(2))
                 return False
             # check the following passing if it exists
             if len(lr[COL_RFSEEN]) > ipos:
                 npass = lr[COL_RFSEEN][ipos]
                 delta = npass - e
                 if delta <= self.minlap:
-                    LOG.info(u'Spurious passing: %s@%s/%s < %s', bib,
+                    LOG.info(u'Spurious passing: %s:%s@%s/%s < %s', bib, e.chan,
                              e.rawtime(2), e.source, npass.rawtime(2))
                     return False
 
@@ -2488,8 +2509,8 @@ class rms(object):
                         lr[COL_RFTIME] = e
                         self.__dorecalc = True
                     else:
-                        LOG.error(u'Placed rider seen at finish: %s@%s/%s',
-                                  bib, e.rawtime(2), e.source)
+                        LOG.error(u'Placed rider seen at finish: %s:%s@%s/%s',
+                                  bib, e.chan, e.rawtime(2), e.source)
                     if lr[COL_INRACE]:
                         lr[COL_LAPS] += 1
                         if rcat in self.catonlap and lr[
@@ -2502,7 +2523,7 @@ class rms(object):
                                             lr[COL_NAMESTR].decode(u'utf-8'),
                                             lr[COL_CAT].decode(u'utf-8'), e)
             else:
-                LOG.info(u'Duplicate finish rider %s@%s/%s', bib, e.rawtime(2),
+                LOG.info(u'Duplicate finish rider %s:%s@%s/%s', bib, e.chan, e.rawtime(2),
                          e.source)
         # end finishing rider path
 
@@ -2546,8 +2567,8 @@ class rms(object):
                         if e < curlapstart:
                             # passing is for a previous event lap
                             onlap = False
-                            LOG.info(u'Passing on previous lap: %s@%s/%s < %s',
-                                     bib, e.rawtime(2), e.source,
+                            LOG.info(u'Passing on previous lap: %s:%s@%s/%s < %s',
+                                     bib, e.chan, e.rawtime(2), e.source,
                                      curlapstart.rawtime(2))
                         else:
                             if lr[COL_LAPS] == self.curlap:
@@ -3659,7 +3680,7 @@ class rms(object):
             LOG.debug(u'%s setting elapsed time: %s', e.__class__.__name__, e)
             pass
         finally:
-            self.meet.timercb = self.rfidtrig
+            self.meet.timercb = self.timertrig
             dlg.destroy()
 
     def time_context_menu(self, widget, event, data=None):
@@ -3874,6 +3895,7 @@ class rms(object):
         self.calcset = False
         self.start = None
         self.finish = None
+        self.altfinish = None
         self.maxfinish = None
         self.showdowntimes = True
         self.showuciids = False
@@ -4008,5 +4030,5 @@ class rms(object):
                               self.treeview_button_press)
             self.view.connect(u'row-activated', self.treerow_selected)
             b.connect_signals(self)
-            self.meet.timercb = self.rfidtrig
-            self.meet.alttimercb = self.rfidtrig
+            self.meet.timercb = self.timertrig
+            self.meet.alttimercb = self.alttimertrig

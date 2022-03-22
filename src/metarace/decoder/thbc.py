@@ -384,11 +384,16 @@ class thbc(decoder):
                         pvec = data.decode(THBC_ENCODING).split()
                         istr = pvec[3] + u':' + pvec[5]
                         rstr = pvec[1].lstrip(u'0')
+                        cstr = u'C1'
+                        if pvec[0] == u'BOX':
+                            cstr = u'C2'
+                        elif pvec[0] == u'MAN':
+                            cstr = u'C0'
                         if pvec[5] == u'3':  # LOW BATTERY ALERT
                             LOG.warning(u'Low battery on %r', rstr)
                         ret = tod.tod(pvec[2],
                                       index=istr,
-                                      chan=pvec[0],
+                                      chan=cstr,
                                       refid=rstr,
                                       source=self._boxname)
                         # Log a hardware-specific passing

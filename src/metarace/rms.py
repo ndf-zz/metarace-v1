@@ -2927,7 +2927,7 @@ class rms(object):
         if self.__dorecalc:
             self.__dorecalc = False
             self.recalculate()
-            if self.autoexport and self.timerstat in [u'armfinish']:
+            if self.autoexport:
                 glib.idle_add(self.meet.menu_data_results_cb, None)
         et = None
         nt = None
@@ -2944,11 +2944,15 @@ class rms(object):
                 # time limit is applied to total event time/first finisher
                 limit = self.decode_limit(self.timelimit, ft)
                 if limit is not None:
-                    evec.append('Limit: +' + (limit - ft).rawtime(0))
+                    evec.append('Limit:')
+                    evec.append(u'+' + (limit - ft).rawtime(0))
             elif self.lapfin is not None:
-                # lap down time from first passing
-                lt = (self.lapfin - self.start).truncate(0)
-                evec.append(u'+' + (et - lt).rawtime(0))
+                # prev lap time
+                if self.lapstart is not None:
+                   evec.append('Lap:')
+                   evec.append((self.lapfin - self.lapstart).rawtime(0))
+                # lap down time
+                evec.append(u'+' + (nt-self.lapfin).rawtime(0))
             self.elaplbl.set_text(u' '.join(evec))
         else:
             self.elaplbl.set_text(u'')
@@ -3212,10 +3216,16 @@ class rms(object):
             if cb is not None:
                 cr.set_property(u'text', cb.rawtime(0))
             else:
+                # display last lap time
                 seen = model.get_value(iter, COL_RFSEEN)
                 if len(seen) > 0:
                     if self.start:
-                        et = seen[-1] - self.start
+                        if len(seen) > 1:
+                            # show last lap time
+                            et = seen[-1] - seen[-2]
+                        else:
+                            # show elapsed
+                            et = seen[-1] - self.start
                     else:
                         et = seen[-1]
                     cr.set_property(u'text', u'[' + et.rawtime(1) + u']')
@@ -4042,7 +4052,7 @@ class rms(object):
                                 width=50,
                                 editcb=self.editstart_cb)
             uiutil.mkviewcoltod(t,
-                                u'Bunch',
+                                u'Time',
                                 cb=self.showbunch_cb,
                                 editcb=self.editbunch_cb,
                                 width=50)

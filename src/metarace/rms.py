@@ -1129,6 +1129,9 @@ class rms(object):
         subhead = u''
         footer = u''
         distance = self.meet.get_distance()
+        laps = self.totlaps
+        if self.catlaps[cat] is not None:
+            laps = self.catlaps[cat]
         doflap = self.dofastestlap
         if self.start is None:
             doflap = False  # don't do laps unless start is set
@@ -1223,6 +1226,9 @@ class rms(object):
                             et = bt - sof
                         if wt is None:  # first finish time
                             wt = et
+                            if r[COL_LAPS] != laps:
+                                # assume the distance is invalid
+                                distance = None
                         if not first:
                             if self.showdowntimes:
                                 dstr = u'+' + (et - wt).rawtime(0)

@@ -2013,7 +2013,7 @@ class rms(object):
         return ret
 
     def armlap(self, data=None):
-        LOG.info(u'Arming lap')
+        LOG.debug(u'Arm lap')
         if self.curlap is None or self.curlap < 0:
             self.curlap = 0  # manual override lap counts
         self.scratch_map = {}
@@ -2026,7 +2026,7 @@ class rms(object):
             if self.timerstat in [u'idle', u'armstart']:
                 self.reannounce_times()  # otherwise not called
                 self.meet.cmd_announce(u'title', titlestr)  # enforce
-                return True  # no arm till event underway
+                return False  # no arm till event underway
         if self.curlap <= 0 or self.lapfin is not None:
             self.curlap += 1  # increment
 

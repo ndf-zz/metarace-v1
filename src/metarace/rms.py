@@ -2327,7 +2327,6 @@ class rms(object):
             # send through to catch-all trigger handler
             self.starttrig(e)
 
-
     def catstarted(self, cat):
         """Return true if category is considered started."""
         ret = False
@@ -2386,8 +2385,8 @@ class rms(object):
         # fetch rider data from riderdb using refid lookup
         r = self.meet.rdb.getrefid(e.refid)
         if r is None:
-            LOG.info(u'Unknown rider: %s:%s@%s/%s', e.refid, e.chan, e.rawtime(2),
-                     e.source)
+            LOG.info(u'Unknown rider: %s:%s@%s/%s', e.refid, e.chan,
+                     e.rawtime(2), e.source)
             return False
 
         bib = self.meet.rdb.getvalue(r, riderdb.COL_BIB)
@@ -2400,15 +2399,15 @@ class rms(object):
         # todo: channel should be the primary source identifier
         if len(self.passingsource) > 0:
             if e.source.lower() not in self.passingsource:
-                LOG.info(u'Invalid passing: %s:%s@%s/%s', bib, e.chan, e.rawtime(2),
-                         e.source)
+                LOG.info(u'Invalid passing: %s:%s@%s/%s', bib, e.chan,
+                         e.rawtime(2), e.source)
                 return False
 
         # check for a spare bike in riderdb cat, before clubmode additions
         spcat = riderdb.primary_cat(self.meet.rdb.getvalue(r, riderdb.COL_CAT))
         if self.allowspares and spcat == u'SPARE' and self.timerstat in [
-                    u'running', u'armfinish'
-            ]:
+                u'running', u'armfinish'
+        ]:
             LOG.warning(u'Adding spare bike: %r', bib)
             self.addrider(bib)
 
@@ -2420,16 +2419,17 @@ class rms(object):
             ]:
                 self.addrider(bib)
                 lr = self.getrider(bib)
-                LOG.info(u'Added new starter: %s:%s@%s/%s', bib, e.chan, e.rawtime(2),
-                         e.source)
+                LOG.info(u'Added new starter: %s:%s@%s/%s', bib, e.chan,
+                         e.rawtime(2), e.source)
             else:
-                LOG.info(u'Non-starter: %s:%s@%s/%s', bib, e.chan, e.rawtime(2), e.source)
+                LOG.info(u'Non-starter: %s:%s@%s/%s', bib, e.chan,
+                         e.rawtime(2), e.source)
                 return False
 
         # log passing of rider before further processing
         if not lr[COL_INRACE]:
-            LOG.warning(u'Withdrawn rider: %s:%s@%s/%s', bib, e.chan, e.rawtime(2),
-                        e.source)
+            LOG.warning(u'Withdrawn rider: %s:%s@%s/%s', bib, e.chan,
+                        e.rawtime(2), e.source)
             # but continue as if still in race
         else:
             LOG.info(u'Saw: %s:%s@%s/%s', bib, e.chan, e.rawtime(2), e.source)
@@ -2454,8 +2454,8 @@ class rms(object):
             st = self.start + catstart + self.minlap
         # ignore all passings from before first allowed time
         if e <= st:
-            LOG.info(u'Ignored early passing: %s:%s@%s/%s < %s', bib,
-                     e.chan, e.rawtime(2), e.source, st.rawtime(2))
+            LOG.info(u'Ignored early passing: %s:%s@%s/%s < %s', bib, e.chan,
+                     e.rawtime(2), e.source, st.rawtime(2))
             return False
 
         # check this passing against previous passing records
@@ -2469,16 +2469,16 @@ class rms(object):
             lastseen = lr[COL_RFSEEN][ipos - 1]
             nthresh = lastseen + self.minlap
             if e <= nthresh:
-                LOG.info(u'Ignored short lap: %s:%s@%s/%s < %s', bib,
-                         e.chan, e.rawtime(2), e.source, nthresh.rawtime(2))
+                LOG.info(u'Ignored short lap: %s:%s@%s/%s < %s', bib, e.chan,
+                         e.rawtime(2), e.source, nthresh.rawtime(2))
                 return False
             # check the following passing if it exists
             if len(lr[COL_RFSEEN]) > ipos:
                 npass = lr[COL_RFSEEN][ipos]
                 delta = npass - e
                 if delta <= self.minlap:
-                    LOG.info(u'Spurious passing: %s:%s@%s/%s < %s', bib, e.chan,
-                             e.rawtime(2), e.source, npass.rawtime(2))
+                    LOG.info(u'Spurious passing: %s:%s@%s/%s < %s', bib,
+                             e.chan, e.rawtime(2), e.source, npass.rawtime(2))
                     return False
 
         # insert this passing in order
@@ -2486,6 +2486,7 @@ class rms(object):
 
         # check if lap mode is target-based
         lapfinish = False
+        doarm = False
         targetlap = None
         if self.targetlaps:
             # category laps override event laps
@@ -2495,6 +2496,12 @@ class rms(object):
                 targetlap = self.totlaps
             if targetlap and lr[COL_LAPS] >= targetlap - 1:
                 lapfinish = True  # arm just this rider
+                if self.event[u'type'] == u'cross':
+                    doarm = True
+
+        # for cross races when targets apply, armfinish is set automatically
+        if doarm and lapfinish and self.timerstat != u'armfinish':
+            self.armfinish()
 
         # finishing rider path
         if self.timerstat == u'armfinish' or lapfinish:
@@ -2529,15 +2536,15 @@ class rms(object):
                                             lr[COL_NAMESTR].decode(u'utf-8'),
                                             lr[COL_CAT].decode(u'utf-8'), e)
             else:
-                LOG.info(u'Duplicate finish rider %s:%s@%s/%s', bib, e.chan, e.rawtime(2),
-                         e.source)
+                LOG.info(u'Duplicate finish rider %s:%s@%s/%s', bib, e.chan,
+                         e.rawtime(2), e.source)
         # end finishing rider path
 
         # lapping rider path
         elif self.timerstat in [u'running']:  # not finished, not armed
             self.__dorecalc = True
-            if lr[COL_INRACE]:
-                # rider is in the race, increment own lap count
+            if lr[COL_INRACE] and (lr[COL_PLACE] or lr[COL_CBUNCH] is None):
+                # rider in the race, not yet finished: increment own lap count
                 lr[COL_LAPS] += 1
                 onlap = False
 
@@ -2573,9 +2580,10 @@ class rms(object):
                         if e < curlapstart:
                             # passing is for a previous event lap
                             onlap = False
-                            LOG.info(u'Passing on previous lap: %s:%s@%s/%s < %s',
-                                     bib, e.chan, e.rawtime(2), e.source,
-                                     curlapstart.rawtime(2))
+                            LOG.info(
+                                u'Passing on previous lap: %s:%s@%s/%s < %s',
+                                bib, e.chan, e.rawtime(2), e.source,
+                                curlapstart.rawtime(2))
                         else:
                             if lr[COL_LAPS] == self.curlap:
                                 onlap = True

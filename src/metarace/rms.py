@@ -3036,13 +3036,15 @@ class rms(object):
 
     def editcol_cb(self, cell, path, new_text, col):
         """Edit column callback."""
-        new_text = new_text.strip()
+        new_text = new_text.decode(u'utf-8').strip()
         self.riders[path][col] = new_text
 
     def editlap_cb(self, cell, path, new_text, col):
         """Edit the lap field if valid."""
-        new_text = new_text.strip()
-        if new_text.isdigit():
+        new_text = new_text.decode(u'utf-8').strip()
+        if new_text == u'?':
+            self.riders[path][col] = len(self.riders[path][COL_RFSEEN])
+        elif new_text.isdigit():
             self.riders[path][col] = int(new_text)
         else:
             LOG.error(u'Invalid lap count')
@@ -3149,8 +3151,8 @@ class rms(object):
             ret = r[COL_STOFT]
         else:
             # Check primary category for start time
-            cs = r[COL_CAT].decode(u'utf-8').split()[0].upper()
-            rcat = self.ridercat(cs)
+            cs = r[COL_CAT].decode(u'utf-8')
+            rcat = self.ridercat(riderdb.primary_cat(cs))
             if rcat in self.catstarts and self.catstarts[rcat] is not None:
                 ret = self.catstarts[rcat]
         return ret
@@ -3187,6 +3189,7 @@ class rms(object):
             if cb is not None:
                 tv = cb.rawtime(0)
             else:
+                # just show event elapsed in this path
                 seen = self.riders.get_value(iter, COL_RFSEEN)
                 if len(seen) > 0:
                     et = seen[-1]
@@ -3242,12 +3245,11 @@ class rms(object):
 
     def editbunch_cb(self, cell, path, new_text, col=None):
         """Edit bunch time on rider view."""
-        # NOTE: This is the cascading bunch time editor,
         new_text = new_text.strip()
         dorecalc = False
         if not self.showdowntimes:
             self.showdowntimes = True  # assume edit implies required on result
-        if new_text == u'':  # user request to clear RFTIME?
+        if new_text == u'':  # user request to clear also clears RFTIME
             self.riders[path][COL_RFTIME] = None
             self.riders[path][COL_MBUNCH] = None
             self.riders[path][COL_CBUNCH] = None
@@ -3266,25 +3268,19 @@ class rms(object):
                 nmb = tod.mktod(new_text.replace(u'+', u''))
                 if nmb is not None:
                     nmb += oft
+            elif new_text.startswith(u's'):
+                # assume same time as previous rider
+                i = int(path) - 1
+                if i >= 0:
+                    nmb = self.vbunch(self.riders[i][COL_CBUNCH],
+                              self.riders[i][COL_MBUNCH])
+                else:
+                    LOG.info(u'Ignored same time on first rider.')
             else:
                 nmb = tod.mktod(new_text)
             if self.riders[path][COL_MBUNCH] != nmb:
                 self.riders[path][COL_MBUNCH] = nmb
                 dorecalc = True
-            if nmb is not None:
-                i = int(path) + 1
-                tl = len(self.riders)
-                # until next rider has mbunch set OR place clear assign new bt
-                while i < tl:
-                    ivb = self.vbunch(self.riders[i][COL_CBUNCH],
-                                      self.riders[i][COL_MBUNCH])
-                    if (self.riders[i][COL_PLACE]
-                            and (ivb is None or ivb == omb)):
-                        self.riders[i][COL_MBUNCH] = nmb
-                        dorecalc = True
-                    else:
-                        break
-                    i += 1
         if dorecalc:
             self.recalculate()
 
@@ -3615,8 +3611,8 @@ class rms(object):
             if ft is not None and self.timelimit is not None:
                 limit = self.decode_limit(self.timelimit, ft)
                 if limit is not None:
-                    LOG.info(u'Time limit: %r = %s, +%s', self.timelimit,
-                             limit.rawtime(0), (limit - ft).rawtime(0))
+                    LOG.debug(u'Time limit: %r = %s, +%s', self.timelimit,
+                              limit.rawtime(0), (limit - ft).rawtime(0))
                     # and export to announce
                     self.meet.cmd_announce(u'timelimit', limit.rawtime(0))
             tot = 0

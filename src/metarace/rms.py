@@ -1552,7 +1552,7 @@ class rms(object):
                     ])
             if dofastest:
                 if vfastest and vfastest < fastest:
-                    LOG.info(u'Fastest time not yet available.')
+                    LOG.info(u'Fastest time not yet available')
                 else:
                     ftr = self.getrider(fastestbib)
                     fts = u''
@@ -1604,7 +1604,7 @@ class rms(object):
 
     def stat_but_clicked(self, button=None):
         """Deal with a status button click in the main container."""
-        LOG.debug(u'Stat button clicked.')
+        LOG.debug(u'Stat button clicked')
 
     def ctrl_change(self, acode=u'', entry=None):
         """Notify change in action combo."""
@@ -2037,15 +2037,16 @@ class rms(object):
             # sanity check onlap
             # once arm lap is done, curlap and onlap _should_ be same
             if self.onlap != self.curlap:
-                LOG.debug(u'Cur/On lap mismatch %r/%r', self.curlap, self.onlap)
+                LOG.debug(u'Cur/On lap mismatch %r/%r', self.curlap,
+                          self.onlap)
                 if self.curlap == 1:
                     # assume this is an in-race correction
                     self.curlap = self.onlap
-                    LOG.debug(u'Curlap set to %r from onlap.', self.curlap)
+                    LOG.debug(u'Curlap set to %r from onlap', self.curlap)
                 else:
                     # assume the curlap is set to the desired count
                     self.onlap = self.curlap
-                    LOG.debug(u'Onlap set to %r from curlap.', self.curlap)
+                    LOG.debug(u'Onlap set to %r from curlap', self.curlap)
                 self.meet.cmd_announce(u'onlap', unicode(self.onlap))
 
         # update curlap entry whatever happened
@@ -2133,7 +2134,6 @@ class rms(object):
             selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
             selpath = self.riders.get_path(i)
             LOG.info(u'Confirmed next place: %r/%r', selbib, selpath)
-            #LOG.debug(u'Old places: %r', self.places)
             nplaces = []
             # remove selected rider from places
             for placegroup in self.places.split():
@@ -2147,7 +2147,6 @@ class rms(object):
             # append selected rider to places and recalc
             nplaces.append(selbib)
             self.places = u' '.join(nplaces)
-            #LOG.debug(u'New places: %r', self.places)
             self.recalculate()
             # advance selection
             j = self.riders.iter_next(i)
@@ -2168,7 +2167,6 @@ class rms(object):
             selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
             selpath = self.riders.get_path(i)
             LOG.info(u'Confirm places to: %r/%r', selbib, selpath)
-            #LOG.debug(u'Old places: %r', self.places)
             oplaces = self.places.split()
             nplaces = []
             for r in self.riders:
@@ -2181,7 +2179,6 @@ class rms(object):
                     break
             nplaces.extend(oplaces)
             self.places = u' '.join(nplaces)
-            #LOG.debug(u'New places: %r', self.places)
             self.recalculate()
             # advance selection
             j = self.riders.iter_next(i)
@@ -2197,7 +2194,6 @@ class rms(object):
             selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
             selpath = self.riders.get_path(i)
             LOG.info(u'Clear places from: %r/%r', selbib, selpath)
-            #LOG.debug(u'Old places: %r', self.places)
             nplaces = []
             found = False
             for placegroup in self.places.split():
@@ -2212,11 +2208,9 @@ class rms(object):
                 if found:
                     break
             self.places = u' '.join(nplaces)
-            #LOG.debug(u'New places: %r', self.places)
             self.recalculate()
 
     def clear_place(self, bib):
-        #LOG.debug(u'Old places: %r', self.places)
         nplaces = []
         for placegroup in self.places.split():
             gv = placegroup.split(u'-')
@@ -2227,7 +2221,6 @@ class rms(object):
             if gv:
                 nplaces.append(u'-'.join(gv))
         self.places = u' '.join(nplaces)
-        #LOG.debug(u'New places: %r', self.places)
 
     def clear_selected_place(self):
         """Remove the selected rider from places."""
@@ -2925,7 +2918,6 @@ class rms(object):
         if not self.winopen:
             return False
         if self.__dorecalc:
-            self.__dorecalc = False
             self.recalculate()
             if self.autoexport:
                 glib.idle_add(self.meet.menu_data_results_cb, None)
@@ -2949,10 +2941,10 @@ class rms(object):
             elif self.lapfin is not None:
                 # prev lap time
                 if self.lapstart is not None:
-                   evec.append('Lap:')
-                   evec.append((self.lapfin - self.lapstart).rawtime(0))
+                    evec.append('Lap:')
+                    evec.append((self.lapfin - self.lapstart).rawtime(0))
                 # lap down time
-                evec.append(u'+' + (nt-self.lapfin).rawtime(0))
+                evec.append(u'+' + (nt - self.lapfin).rawtime(0))
             self.elaplbl.set_text(u' '.join(evec))
         else:
             self.elaplbl.set_text(u'')
@@ -3273,9 +3265,9 @@ class rms(object):
                 i = int(path) - 1
                 if i >= 0:
                     nmb = self.vbunch(self.riders[i][COL_CBUNCH],
-                              self.riders[i][COL_MBUNCH])
+                                      self.riders[i][COL_MBUNCH])
                 else:
-                    LOG.info(u'Ignored same time on first rider.')
+                    LOG.info(u'Ignored same time on first rider')
             else:
                 nmb = tod.mktod(new_text)
             if self.riders[path][COL_MBUNCH] != nmb:
@@ -3318,7 +3310,10 @@ class rms(object):
             return None  # allow only one entry
         try:
             self.__recalc()
+        except Exception as e:
+            LOG.error(u'%s recalculating result: %s', e.__class__.__name__, e)
         finally:
+            self.__dorecalc = False
             self.recalclock.release()
 
     def rider_in_cat(self, bib, cat):
@@ -3327,7 +3322,7 @@ class rms(object):
         r = self.getrider(bib)
         if cat and r is not None:
             cv = r[COL_CAT].decode('utf-8').upper().split()
-            ret = cat in cv
+            ret = cat.upper() in cv
         return ret
 
     def get_cat_placesr(self, cat):
@@ -3538,31 +3533,39 @@ class rms(object):
         racefinish = None
         ft = None  # the finish or first bunch time
         lt = None  # the rftime of last competitor across line
+        ll = None  # lap count of previous competitor for cross scoring
         bt = None  # the 'current' bunch time
         if self.start is not None:
             for r in self.riders:
                 rcomment = r[COL_COMMENT].decode(u'utf-8')
                 if r[COL_INRACE] or rcomment == u'otl':
+                    rtime = r[COL_RFTIME]
+                    if self.event[u'type'] == u'cross':
+                        if ll is None or ll != r[COL_LAPS]:
+                            # invalidate last passing since on a different lap
+                            lt = None
+                            bt = None
+                            ll = r[COL_LAPS]
                     if r[COL_MBUNCH] is not None:
                         bt = r[COL_MBUNCH]  # override with manual bunch
                         r[COL_CBUNCH] = bt
                         if ft is None:
                             ft = bt
-                        lt = bt  # problematic for gaps, but only on
-                        # manual override anyhow
-                    elif r[COL_RFTIME] is not None:
+                        lt = bt
+                    elif rtime is not None:
                         # establish elapsed, but allow subsequent override
-                        if r[COL_RFTIME] > self.maxfinish:
-                            self.maxfinish = r[COL_RFTIME]
-                        et = r[COL_RFTIME] - self.start
+                        if rtime > self.maxfinish:
+                            self.maxfinish = rtime
+                        et = rtime - self.start
 
                         # establish bunch time
-                        if ft is None:
+                        if ft is None and r[COL_RFTIME] is not None:
                             racefinish = r[COL_RFTIME]  # save race finish
                             ft = et.truncate(0)  # compute first time
                             bt = ft
                         else:
-                            if et < lt or et - lt < self.gapthresh:
+                            if lt is not None and (et < lt or
+                                                   et - lt < self.gapthresh):
                                 # same time
                                 pass
                             else:
@@ -3579,7 +3582,7 @@ class rms(object):
                             r[COL_CBUNCH] = None
 
                         # for riders still lapping, extend maxfinish too
-                        if r[COL_RFSEEN]:
+                        if len(r[COL_RFSEEN]) > 1:
                             lpass = r[COL_RFSEEN][-1]
                             if lpass is not None and lpass > self.maxfinish:
                                 self.maxfinish = lpass
@@ -3598,7 +3601,8 @@ class rms(object):
             rcomment = r[COL_COMMENT].decode(u'utf-8')
             auxtbl.append([
                 idx, rbib, r[COL_INRACE], r[COL_PLACE],
-                self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH]), rcomment
+                self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH]), rcomment,
+                r[COL_LAPS]
             ])
             idx += 1
         if len(auxtbl) > 1:
@@ -3759,7 +3763,7 @@ class rms(object):
 
     def placeswap(self, src, dst):
         """Swap the src and dst riders if they appear in places."""
-        LOG.debug(u'Old places: %r', self.places)
+        LOG.debug(u'Places before swap: %r', self.places)
         newplaces = []
         for placegroup in self.places.split():
             gv = placegroup.split(u'-')
@@ -3779,7 +3783,7 @@ class rms(object):
                 gv[dind] = src
             newplaces.append(u'-'.join(gv))
         self.places = u' '.join(newplaces)
-        LOG.debug(u'New places: %r', self.places)
+        LOG.debug(u'Places after swap: %r', self.places)
 
     def rms_context_swap_activate_cb(self, menuitem, data=None):
         """Swap data to/from another rider."""

@@ -1309,13 +1309,15 @@ class rms(object):
                 pass
         if self.timerstat == u'finished':
             sec.heading = u'Result'
+        elif self.timerstat in [u'idle', u'armstart']:
+            sec.heading = u''
         elif self.timerstat in [u'running', u'armfinish']:
             # set status if number of judged riders greater than jtgt
             jtgt = 10
             javail = totcount - (dnfcount + dnscount + hdcount)
             if javail < 16:
                 jtgt = 1
-            if jcnt >= jtgt:
+            if javail > 0 and jcnt >= jtgt:
                 sec.heading = u'Provisional Result'
             else:
                 sec.heading = u'Event in Progress'
@@ -1366,7 +1368,11 @@ class rms(object):
 
             # finish report title manipulation
             if catname:
-                rsec.heading += u': ' + catname
+                cv = []
+                if rsec.heading:
+                    cv.append(rsec.heading)
+                cv.append(catname)
+                rsec.heading = u': '.join(cv)
                 rsec.subheading = subhead
             ret.append(report.pagebreak())
         return ret

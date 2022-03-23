@@ -812,7 +812,7 @@ class roadmeet(object):
             else:
                 rep.strings[u'diststr'] = self.diststr
             rep.indexlink = u'index'
-            for sec in self.curevent.startlist_report(uciids=False):
+            for sec in self.curevent.startlist_report():
                 rep.add_section(sec)
 
             filename = filebase + u'startlist'

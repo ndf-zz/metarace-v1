@@ -2037,9 +2037,15 @@ class rms(object):
             # sanity check onlap
             # once arm lap is done, curlap and onlap _should_ be same
             if self.onlap != self.curlap:
-                LOG.info(u'Cur/On lap mismatch %r/%r fixed', self.curlap,
-                         self.onlap)
-                self.onlap = self.curlap
+                LOG.debug(u'Cur/On lap mismatch %r/%r', self.curlap, self.onlap)
+                if self.curlap == 1:
+                    # assume this is an in-race correction
+                    self.curlap = self.onlap
+                    LOG.debug(u'Curlap set to %r from onlap.', self.curlap)
+                else:
+                    # assume the curlap is set to the desired count
+                    self.onlap = self.curlap
+                    LOG.debug(u'Onlap set to %r from curlap.', self.curlap)
                 self.meet.cmd_announce(u'onlap', unicode(self.onlap))
 
         # update curlap entry whatever happened
@@ -2296,7 +2302,7 @@ class rms(object):
             self.set_start(e)
             self.resetcatonlaps()
             if self.event[u'type'] in [u'criterium', u'circuit', u'cross']:
-                glib.timeout_add_seconds(5, self.armlap)
+                glib.idle_add(self.armlap)
         else:
             LOG.info(u'Trigger: %s@%s/%s', e.chan, e.rawtime(), e.source)
         return False
@@ -2679,6 +2685,8 @@ class rms(object):
                     r[COL_LAPS] = len(r[COL_RFSEEN])
                     maxlap = max(r[COL_LAPS] + 1, maxlap)
             self.onlap = maxlap
+            if self.event[u'type'] in [u'criterium', u'circuit', u'cross']:
+                self.armlap()
 
     def totlapentry_activate_cb(self, entry, data=None):
         """Transfer total lap entry string into model if possible."""

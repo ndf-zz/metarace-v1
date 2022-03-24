@@ -82,6 +82,8 @@ DNFCODES = [u'otl', u'wd', u'dsq', u'dnf', u'dns']
 GAPTHRESH = tod.tod(u'1.12')
 MINPASSSTR = u'20.0'
 MINPASSTIME = tod.tod(MINPASSSTR)
+MAXELAPSTR = u'12h00:00'
+MAXELAP = tod.tod(MAXELAPSTR)
 
 # timing keys
 key_announce = u'F4'
@@ -408,7 +410,7 @@ class rms(object):
         self.set_start(cr.get(u'rms', u'start'))
         self.set_finish(cr.get(u'rms', u'finish'))
         self.lapstart = tod.mktod(cr.get(u'rms', u'lapstart'))
-        self.lapfin = tod.mktod(cr.get(u'rms', u'lapstart'))
+        self.lapfin = tod.mktod(cr.get(u'rms', u'lapfin'))
         self.minlap = tod.mktod(cr.get(u'rms', u'minlap'))
         if self.minlap is None:
             self.minlap = MINPASSTIME
@@ -2932,10 +2934,11 @@ class rms(object):
             nt = tod.now()
             et = nt - self.start
         if et is not None:
-            evec = [et.rawtime(0)]
+            evec = []
             if self.finish is not None:
                 # event down time is on first finisher
                 ft = (self.finish - self.start).truncate(0)
+                evec.append(ft.rawtime(0))
                 evec.append(u'+' + (et - ft).rawtime(0))
 
                 # time limit is applied to total event time/first finisher
@@ -2943,13 +2946,17 @@ class rms(object):
                 if limit is not None:
                     evec.append('Limit:')
                     evec.append(u'+' + (limit - ft).rawtime(0))
-            elif self.lapfin is not None:
-                # prev lap time
-                if self.lapstart is not None:
-                    evec.append('Lap:')
-                    evec.append((self.lapfin - self.lapstart).rawtime(0))
-                # lap down time
-                evec.append(u'+' + (nt - self.lapfin).rawtime(0))
+            else:
+                evec.append(et.rawtime(0))
+                if self.lapfin is not None:
+                    # prev lap time
+                    if self.lapstart is not None:
+                        evec.append('Lap:')
+                        evec.append((self.lapfin - self.lapstart).rawtime(0))
+                    # lap down time
+                    dt = nt - self.lapfin
+                    if dt < MAXELAP:
+                        evec.append(u'+' + (dt).rawtime(0))
             self.elaplbl.set_text(u' '.join(evec))
         else:
             self.elaplbl.set_text(u'')
@@ -3908,27 +3915,6 @@ class rms(object):
                 LOG.info(u'Adjust rider %r start:%s, finish:%s', bib, nst, nft)
                 self.recalculate()
 
-    def rms_context_clear_activate_cb(self, menuitem, data=None):
-        """Clear finish time for selected rider."""
-        sel = self.view.get_selection().get_selected()
-        if sel is not None:
-            i = sel[1]
-            selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
-            LOG.info(u'Clear raw finish time for: %r', selbib)
-            self.riders.set_value(i, COL_RFTIME, None)
-            self.riders.set_value(i, COL_MBUNCH, None)
-            self.recalculate()
-
-    def rms_context_del_activate_cb(self, menuitem, data=None):
-        """Remove selected rider from event."""
-        sel = self.view.get_selection().get_selected()
-        bib = None
-        if sel is not None:
-            i = sel[1]
-            selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
-            LOG.info(u'Delete rider: %r', selbib)
-            self.delrider(selbib)
-
     def rms_context_chg_activate_cb(self, menuitem, data=None):
         """Update selected rider from event."""
         change = menuitem.get_label().lower()
@@ -3941,6 +3927,20 @@ class rms(object):
             if change == u'delete':
                 LOG.info(u'Delete rider: %r', selbib)
                 self.delrider(selbib)
+            elif change == u'clear':
+                LOG.info(u'Clear rider %r finish time', selbib)
+                self.riders.set_value(i, COL_RFTIME, None)
+                self.riders.set_value(i, COL_MBUNCH, None)
+                self.recalculate()
+            elif change == u'refinish':
+                splits = self.riders.get_value(i, COL_RFSEEN)
+                if splits is not None and len(splits) > 0:
+                    nf = splits[-1]
+                    LOG.info(
+                        u'Set raw finish for rider %r to last passing: %s',
+                        selbib, nf.rawtime(2))
+                    self.riders.set_value(i, COL_RFTIME, nf)
+                    self.recalculate()
             elif change in [u'dns', u'dnf', u'wd', u'otl', u'dsq']:
                 self.dnfriders(selbib, change)
             elif change == u'return':
@@ -3949,20 +3949,6 @@ class rms(object):
                 self.manpassing(selbib)
             else:
                 LOG.info(u'Unknown rider change %r ignored', change)
-
-    def rms_context_refinish_activate_cb(self, menuitem, data=None):
-        """Try to automatically re-finish rider from last passing."""
-        sel = self.view.get_selection().get_selected()
-        if sel is not None:
-            i = sel[1]
-            selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
-            splits = self.riders.get_value(i, COL_RFSEEN)
-            if splits is not None and len(splits) > 0:
-                nf = splits[-1]
-                LOG.info(u'Set raw finish for rider %r to last passing: %s',
-                         selbib, nf.rawtime(2))
-                self.riders.set_value(i, COL_RFTIME, nf)
-                self.recalculate()
 
     def __init__(self, meet, event, ui=True):
         self.meet = meet

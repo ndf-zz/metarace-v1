@@ -58,7 +58,7 @@
       </object>
     </child>
     <child>
-      <object class="GtkMenuItem" id="rms_context_ref">
+      <object class="GtkMenuItem" id="rms_context_ret">
         <property name="label" translatable="yes">Return</property>
         <property name="visible">True</property>
         <property name="tooltip_text" translatable="yes">Return rider to event</property>
@@ -83,7 +83,7 @@
         <property name="label">Clear</property>
         <property name="visible">True</property>
         <property name="tooltip_text" translatable="yes">Clear rider's finish time</property>
-        <signal name="activate" handler="rms_context_clear_activate_cb"/>
+        <signal name="activate" handler="rms_context_chg_activate_cb"/>
       </object>
     </child>
     <child>
@@ -91,7 +91,7 @@
         <property name="label" translatable="yes">Refinish</property>
         <property name="visible">True</property>
         <property name="tooltip_text" translatable="yes">Reset rider's finish from last passing</property>
-        <signal name="activate" handler="rms_context_refinish_activate_cb"/>
+        <signal name="activate" handler="rms_context_chg_activate_cb"/>
       </object>
     </child>
     <child>

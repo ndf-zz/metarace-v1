@@ -2532,7 +2532,7 @@ class rms(object):
                 if lr[COL_COMMENT] != u'wd':
                     if lr[COL_PLACE] == u'':
                         lr[COL_RFTIME] = e
-                        self.__dorecalc = True
+                        self._dorecalc = True
                     else:
                         LOG.error(u'Placed rider seen at finish: %s:%s@%s/%s',
                                   bib, e.chan, e.rawtime(2), e.source)
@@ -2554,7 +2554,7 @@ class rms(object):
 
         # lapping rider path
         elif self.timerstat in [u'running']:  # not finished, not armed
-            self.__dorecalc = True
+            self._dorecalc = True
             if lr[COL_INRACE] and (lr[COL_PLACE] or lr[COL_CBUNCH] is None):
                 # rider in the race, not yet finished: increment own lap count
                 lr[COL_LAPS] += 1
@@ -2924,7 +2924,7 @@ class rms(object):
         """Update elapsed time and recalculate if required."""
         if not self.winopen:
             return False
-        if self.__dorecalc:
+        if self._dorecalc:
             self.recalculate()
             if self.autoexport:
                 glib.idle_add(self.meet.menu_data_results_cb, None)
@@ -3038,7 +3038,7 @@ class rms(object):
             self.set_start(ret[1])
             if wasrunning:
                 # flag a recalculate
-                self.__dorecalc = True
+                self._dorecalc = True
             else:
                 self.resetcatonlaps()
                 if self.event[u'type'] in [u'criterium', u'circuit', u'cross']:
@@ -3070,54 +3070,56 @@ class rms(object):
             self.pointscb[c] = {}
 
     def sortrough(self, x, y):
-        # aux cols: ind, bib, in, place, rftime, laps, lastpass
-        #             0    1   2      3       4     5         6
+        """Pre-sort riders based on class, place, laps then time."""
+        # Note: this considers rftime fractions of a second to pre-order
+        #       unclassified riders on the same lap by rough arrival at finish
         if x[2] != y[2]:  # in the race?
             if x[2]:
                 return -1
             else:
                 return 1
         else:
-            if x[3] != y[3]:  # places not same?
+            if x[3] != y[3]:  # place
                 if y[3] == u'':
                     return -1
                 elif x[3] == u'':
                     return 1
-                if int(x[3]) < int(y[3]):
+                elif int(x[3]) < int(y[3]):
                     return -1
                 else:
                     return 1
             else:
-                if x[4] == y[4]:  # same time?
-                    if x[5] == y[5]:  # same laps?
-                        return cmp(x[6], y[6])  # oldest pass on same lap
+                if x[5] == y[5]:  # lap count
+                    if x[4] == y[4]:  # finish time
+                        return cmp(x[6], y[6])  # last passing
                     else:
-                        if x[5] > y[5]:
+                        if y[4] is None:
+                            return -1
+                        elif x[4] is None:
+                            return 1
+                        elif x[4] < y[4]:
                             return -1
                         else:
                             return 1
                 else:
-                    if y[4] is None:
-                        return -1
-                    elif x[4] is None:
-                        return 1
-                    elif x[4] < y[4]:
+                    if x[5] > y[5]:
                         return -1
                     else:
                         return 1
         return 0
 
-    # do final sort on manual places then manual bunch entries
     def sortvbunch(self, x, y):
-        # aux cols: ind, bib, in, place, vbunch, comment
-        #             0    1   2      3       4        5
-        if x[2] != y[2]:  # IN compares differently,
-            if x[2]:  # return in rider first
+        """Re-sort result after application of bunch times and comments."""
+        # Note: unlike sortrough above, this considers unclassified riders
+        #       with the same laps and time as equal
+        if x[2] != y[2]:
+            if x[2]:
                 return -1
             else:
                 return 1
         else:
-            if x[2]:  # in the race...
+            if x[2]:
+                # both in the event
                 if x[3] != y[3]:  # places not same?
                     if y[3] == u'':
                         return -1
@@ -3128,23 +3130,29 @@ class rms(object):
                     else:
                         return 1
                 else:
-                    if x[4] == y[4]:  # same time?
-                        return 0
-                    else:
-                        if y[4] is None:
-                            return -1
-                        elif x[4] is None:
-                            return 1
-                        elif x[4] < y[4]:
-                            return -1
+                    if x[6] == y[6]:  # same laps?
+                        if x[4] == y[4]:  # same time?
+                            return 0
                         else:
-                            return 1
-            else:  # not in the race
+                            if y[4] is None:
+                                return -1
+                            elif x[4] is None:
+                                return 1
+                            elif x[4] < y[4]:
+                                return -1
+                            else:
+                                return 1
+                    else:
+                        return cmp(y[6], x[6])
+            else:
+                # both not in event
                 if x[5] != y[5]:
-                    return strops.cmp_dnf(x[5], y[5])  # sort by code
+                    # sort by dnf code
+                    return strops.cmp_dnf(x[5], y[5])
                 else:
+                    # fall back to a sort by rider no
                     return cmp(strops.riderno_key(x[1]),
-                               strops.riderno_key(y[1]))  # sort on no
+                               strops.riderno_key(y[1]))
         return 0
 
     def vbunch(self, cbunch=None, mbunch=None):
@@ -3328,11 +3336,11 @@ class rms(object):
             LOG.warning(u'Recalculate already in progress')
             return None  # allow only one entry
         try:
-            self.__recalc()
+            self._recalc()
         except Exception as e:
             LOG.error(u'%s recalculating result: %s', e.__class__.__name__, e)
         finally:
-            self.__dorecalc = False
+            self._dorecalc = False
             self.recalclock.release()
 
     def rider_in_cat(self, bib, cat):
@@ -3511,7 +3519,7 @@ class rms(object):
                 LOG.warning(u'Unable to decode time limit: %r', limitstr)
         return ret
 
-    def __recalc(self):
+    def _recalc(self):
         """Internal 'protected' recalculate function."""
         # if readonly and calc set - skip recalc
         if self.readonly and self.calcset:
@@ -3610,7 +3618,7 @@ class rms(object):
         if racefinish:
             self.set_finish(racefinish)
 
-        # pass five: resort on in,vbunch (todo -> check if place cmp reqd)
+        # pass five: resort on in,vbunch
         #            at this point all riders will have valid bunch time
         auxtbl = []
         idx = 0
@@ -3694,7 +3702,7 @@ class rms(object):
                 self.set_start(st)
                 if wasrunning:
                     # flag a recalculate
-                    self.__dorecalc = True
+                    self._dorecalc = True
                 else:
                     self.resetcatonlaps()
                     if self.event[u'type'] in [
@@ -3963,7 +3971,7 @@ class rms(object):
         LOG.debug(u'Init %r event %r', rstr, self.evno)
 
         self.recalclock = threading.Lock()
-        self.__dorecalc = False
+        self._dorecalc = False
 
         # event run time attributes
         self.calcset = False

@@ -2275,6 +2275,7 @@ class rms(object):
             if r is not None:
                 r[COL_INRACE] = True
                 r[COL_COMMENT] = u''
+                r[COL_LAPS] = len(r[COL_RFSEEN])
                 recalc = True
                 LOG.info(u'Rider %r returned to event', bib)
             else:
@@ -3927,6 +3928,27 @@ class rms(object):
             selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
             LOG.info(u'Delete rider: %r', selbib)
             self.delrider(selbib)
+
+    def rms_context_chg_activate_cb(self, menuitem, data=None):
+        """Update selected rider from event."""
+        change = menuitem.get_label().lower()
+        LOG.debug(u'menuitem: %r: %r', menuitem, change)
+        sel = self.view.get_selection().get_selected()
+        bib = None
+        if sel is not None:
+            i = sel[1]
+            selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
+            if change == u'delete':
+                LOG.info(u'Delete rider: %r', selbib)
+                self.delrider(selbib)
+            elif change in [u'dns', u'dnf', u'wd', u'otl', u'dsq']:
+                self.dnfriders(selbib, change)
+            elif change == u'return':
+                self.retriders(selbib)
+            elif change == u'passing':
+                self.manpassing(selbib)
+            else:
+                LOG.info(u'Unknown rider change %r ignored', change)
 
     def rms_context_refinish_activate_cb(self, menuitem, data=None):
         """Try to automatically re-finish rider from last passing."""

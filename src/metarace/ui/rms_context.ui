@@ -5,42 +5,100 @@
   <object class="GtkMenu" id="rms_context">
     <property name="visible">True</property>
     <child>
-      <object class="GtkImageMenuItem" id="rms_context_edit">
-        <property name="label">gtk-edit</property>
+      <object class="GtkMenuItem" id="rms_context_pass">
+        <property name="label" translatable="yes">Passing</property>
+        <property name="visible">True</property>
+        <property name="tooltip_text" translatable="yes">Add a manual passing for this rider</property>
+        <signal name="activate" handler="rms_context_chg_activate_cb"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkSeparatorMenuItem" id="rms_context_sep1">
+        <property name="visible">True</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="rms_context_dns">
+        <property name="label" translatable="yes">DNS</property>
+        <property name="visible">True</property>
+        <property name="tooltip_text" translatable="yes">Rider did not start event</property>
+        <signal name="activate" handler="rms_context_chg_activate_cb"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="rms_context_wd">
+        <property name="label" translatable="yes">WD</property>
+        <property name="visible">True</property>
+        <property name="tooltip_text" translatable="yes">Withdraw rider</property>
+        <signal name="activate" handler="rms_context_chg_activate_cb"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="rms_context_otl">
+        <property name="label" translatable="yes">OTL</property>
+        <property name="visible">True</property>
+        <property name="tooltip_text" translatable="yes">Rider finished outside time limit</property>
+        <signal name="activate" handler="rms_context_chg_activate_cb"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="rms_context_dnf">
+        <property name="label" translatable="yes">DNF</property>
+        <property name="visible">True</property>
+        <property name="tooltip_text" translatable="yes">Rider did not finish event</property>
+        <signal name="activate" handler="rms_context_chg_activate_cb"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="rms_context_dsq">
+        <property name="label" translatable="yes">DSQ</property>
+        <property name="visible">True</property>
+        <property name="tooltip_text" translatable="yes">Disqualify rider</property>
+        <signal name="activate" handler="rms_context_chg_activate_cb"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="rms_context_ref">
+        <property name="label" translatable="yes">Return</property>
+        <property name="visible">True</property>
+        <property name="tooltip_text" translatable="yes">Return rider to event</property>
+        <signal name="activate" handler="rms_context_chg_activate_cb"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkSeparatorMenuItem" id="rms_context_sep0">
+        <property name="visible">True</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="rms_context_edit">
+        <property name="label">Edit</property>
         <property name="visible">True</property>
         <property name="tooltip_text" translatable="yes">Manually adjust rider's start and finish times</property>
-        <property name="use_underline">True</property>
-        <property name="use_stock">True</property>
         <signal name="activate" handler="rms_context_edit_activate_cb"/>
       </object>
     </child>
     <child>
-      <object class="GtkImageMenuItem" id="rms_context_clear">
-        <property name="label">gtk-clear</property>
+      <object class="GtkMenuItem" id="rms_context_clear">
+        <property name="label">Clear</property>
         <property name="visible">True</property>
         <property name="tooltip_text" translatable="yes">Clear rider's finish time</property>
-        <property name="use_underline">True</property>
-        <property name="use_stock">True</property>
         <signal name="activate" handler="rms_context_clear_activate_cb"/>
       </object>
     </child>
     <child>
-      <object class="GtkImageMenuItem" id="rms_context_refinish">
+      <object class="GtkMenuItem" id="rms_context_refinish">
         <property name="label" translatable="yes">Refinish</property>
         <property name="visible">True</property>
         <property name="tooltip_text" translatable="yes">Reset rider's finish from last passing</property>
-        <property name="image">image1</property>
-        <property name="use_stock">False</property>
         <signal name="activate" handler="rms_context_refinish_activate_cb"/>
       </object>
     </child>
     <child>
-      <object class="GtkImageMenuItem" id="rms_context_swap">
+      <object class="GtkMenuItem" id="rms_context_swap">
         <property name="label" translatable="yes">Swap</property>
         <property name="visible">True</property>
         <property name="tooltip_text" translatable="yes">Swap selected rider finish passing times</property>
-        <property name="image">image2</property>
-        <property name="use_stock">False</property>
         <signal name="activate" handler="rms_context_swap_activate_cb"/>
       </object>
     </child>
@@ -51,21 +109,11 @@
     </child>
     <child>
       <object class="GtkImageMenuItem" id="rms_context_del">
-        <property name="label">gtk-delete</property>
+        <property name="label">Delete</property>
         <property name="visible">True</property>
         <property name="tooltip_text" translatable="yes">Delete rider from event model</property>
-        <property name="use_underline">True</property>
-        <property name="use_stock">True</property>
-        <signal name="activate" handler="rms_context_del_activate_cb"/>
+        <signal name="activate" handler="rms_context_chg_activate_cb"/>
       </object>
     </child>
-  </object>
-  <object class="GtkImage" id="image1">
-    <property name="visible">True</property>
-    <property name="stock">gtk-redo</property>
-  </object>
-  <object class="GtkImage" id="image2">
-    <property name="visible">True</property>
-    <property name="stock">gtk-refresh</property>
   </object>
 </interface>

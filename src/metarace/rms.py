@@ -2100,7 +2100,11 @@ class rms(object):
             key = gtk.gdk.keyval_name(event.keyval) or u'None'
             if event.state & gtk.gdk.CONTROL_MASK:
                 if key == key_abort:  # override ctrl+f5
-                    self.resettimer()
+                    if uiutil.questiondlg(
+                            self.meet.window, u'Reset event to idle?',
+                            u'Note: All result and timing data will be cleared.'
+                    ):
+                        self.resettimer()
                     return True
                 elif key == key_announce:  # re-send current announce vars
                     self.reannounce_times()
@@ -2952,21 +2956,20 @@ class rms(object):
 
     def set_start(self, start=u''):
         """Set the start time."""
-        self.lapstart = None
-        self.lapfin = None
-        self.onestart = False
-        if type(start) is tod.tod:
-            self.start = start
-        else:
-            self.start = tod.mktod(start)
+        wasidle = self.start is None
+        self.start = tod.mktod(start)
         if self.start is not None:
-            self.onestart = True
-            self.meet.cmd_announce(u'start', self.start.rawtime())
-            self.curlap = -1  # reset lap count at start
-            self.onlap = 1  # leaders are 'onlap'
-            self.meet.cmd_announce(u'onlap', unicode(self.onlap))
+            if wasidle:
+                self.lapstart = None
+                self.lapfin = None
+                self.curlap = -1  # reset lap count at start
+                self.onlap = 1  # leaders are 'onlap'
+                self.meet.cmd_announce(u'onlap', unicode(self.onlap))
             if self.finish is None:
                 self.set_running()
+            self.meet.cmd_announce(u'start', self.start.rawtime())
+        else:
+            self.meet.cmd_announce(u'start', None)
 
     def set_finish(self, finish=u''):
         """Set the finish time."""
@@ -3022,8 +3025,16 @@ class rms(object):
             ft = self.finish.rawtime(2)
         ret = uiutil.edit_times_dlg(self.meet.window, stxt=st, ftxt=ft)
         if ret[0] == 1:
-            self.set_start(ret[1])
+            wasrunning = self.timerstat in [u'running', u'armfinish']
             self.set_finish(ret[2])
+            self.set_start(ret[1])
+            if wasrunning:
+                # flag a recalculate
+                self.__dorecalc = True
+            else:
+                self.resetcatonlaps()
+                if self.event[u'type'] in [u'criterium', u'circuit', u'cross']:
+                    glib.idle_add(self.armlap)
             LOG.info(u'Adjusted event times')
 
     def editcol_cb(self, cell, path, new_text, col):
@@ -3664,14 +3675,25 @@ class rms(object):
         return False  # allow idle add
 
     def new_start_trigger(self, rfid):
-        """Collect a RFID trigger signal and apply it to the model."""
+        """Collect a timer trigger signal and apply it to the model."""
         if self.newstartdlg is not None and self.newstartent is not None:
             et = tod.mktod(self.newstartent.get_text().decode(u'utf-8'))
             if et is not None:
+                dlg = self.newstartdlg
+                self.newstartdlg = None
+                wasrunning = self.timerstat in [u'running', u'armfinish']
                 st = rfid - et
                 self.set_start(st)
-                self.newstartdlg.response(1)
-                self.newstartdlg = None  # try to ignore the 'up' impulse
+                if wasrunning:
+                    # flag a recalculate
+                    self.__dorecalc = True
+                else:
+                    self.resetcatonlaps()
+                    if self.event[u'type'] in [
+                            u'criterium', u'circuit', u'cross'
+                    ]:
+                        glib.idle_add(self.armlap)
+                dlg.response(1)
             else:
                 LOG.warning(u'Invalid elapsed time: Start not updated')
         return False
@@ -3941,7 +3963,6 @@ class rms(object):
         self.winopen = True
         self.timerstat = u'idle'
         self.racestat = u'prerace'
-        self.onestart = False
         self.places = u''
         self.laptimes = []
         self.comment = []

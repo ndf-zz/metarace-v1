@@ -3738,7 +3738,6 @@ class rms(object):
                 LOG.info(u'Set elapsed time cancelled')
         except Exception as e:
             LOG.debug(u'%s setting elapsed time: %s', e.__class__.__name__, e)
-            pass
         finally:
             self.meet.timercb = self.timertrig
             dlg.destroy()
@@ -3773,13 +3772,14 @@ class rms(object):
 
     def chg_dst_ent(self, entry, data):
         bib = entry.get_text().decode(u'utf-8')
+        sbib = data[2]
         nv = u'[Invalid Rider]'
         rv = u''
-        i = self.getiter(bib)
-
-        if i is not None:
-            nv = self.riders.get_value(i, COL_NAMESTR).decode(u'utf-8')
-            rv = self.getbunch_iter(i)
+        if sbib != bib:
+            i = self.getiter(bib)
+            if i is not None:
+                nv = self.riders.get_value(i, COL_NAMESTR).decode(u'utf-8')
+                rv = self.getbunch_iter(i)
         data[0].set_text(nv)
         data[1].set_text(rv)
 
@@ -3832,32 +3832,38 @@ class rms(object):
         dst_ent = b.get_object(u'dest_entry')
         dst_lbl = b.get_object(u'dest_label')
         dst_result = b.get_object(u'dest_result')
-        dst_ent.connect(u'changed', self.chg_dst_ent, (dst_lbl, dst_result))
+        dst_ent.connect(u'changed', self.chg_dst_ent,
+                        (dst_lbl, dst_result, srcbib))
         ret = dlg.run()
         if ret == 1:
             dstbib = dst_ent.get_text().decode(u'utf-8')
-            dr = self.getrider(dstbib)
-            if dr is not None:
-                self.placeswap(dstbib, srcbib)
-                sr = self.getrider(srcbib)
-                for col in [
-                        COL_COMMENT, COL_INRACE, COL_PLACE, COL_LAPS,
-                        COL_RFTIME, COL_CBUNCH, COL_MBUNCH, COL_RFSEEN
-                ]:
-                    tv = dr[col]
-                    dr[col] = sr[col]
-                    sr[col] = tv
-                LOG.info(u'Swap rider result %r <=> %r', srcbib, dstbib)
-                # If srcrider was a spare bike, remove the spare and patch
-                if spare:
-                    ac = [t for t in sr[COL_RFSEEN]]
-                    ac.extend(dr[COL_RFSEEN])
-                    dr[COL_RFSEEN] = [t for t in sorted(ac)]
-                    dr[COL_LAPS] = len(dr[COL_RFSEEN])
-                    self.delrider(srcbib)
-                self.recalculate()
+            if dstbib != srcbib:
+                dr = self.getrider(dstbib)
+                if dr is not None:
+                    self.placeswap(dstbib, srcbib)
+                    sr = self.getrider(srcbib)
+                    for col in [
+                            COL_COMMENT, COL_INRACE, COL_PLACE, COL_LAPS,
+                            COL_RFTIME, COL_CBUNCH, COL_MBUNCH, COL_RFSEEN
+                    ]:
+                        tv = dr[col]
+                        dr[col] = sr[col]
+                        sr[col] = tv
+                    LOG.info(u'Swap riders %r <=> %r', srcbib, dstbib)
+                    # If srcrider was a spare bike, remove the spare and patch
+                    if spare:
+                        ac = [t for t in sr[COL_RFSEEN]]
+                        ac.extend(dr[COL_RFSEEN])
+                        dr[COL_RFSEEN] = [t for t in sorted(ac)]
+                        dr[COL_LAPS] = len(dr[COL_RFSEEN])
+                        self.delrider(srcbib)
+                        LOG.debug(u'Spare bike %r removed', srcbib)
+                    # If dstrider is a spare bike, leave it in place
+                    self.recalculate()
+                else:
+                    LOG.error(u'Invalid rider swap %r <=> %r', srcbib, dstbib)
             else:
-                LOG.error(u'Invalid rider swap %r <=> %r', srcbib, dstbib)
+                LOG.info(u'Swap to same rider ignored')
         else:
             LOG.info(u'Swap rider cancelled')
         dlg.destroy()

@@ -1126,7 +1126,7 @@ class rms(object):
     def single_catresult(self, cat):
         ret = []
         catname = cat  # fallback emergency
-        if cat == u'':  # will need to check count later
+        if cat == u'' and len(self.cats) > 1:
             catname = u'Uncategorised Riders'
         subhead = u''
         footer = u''
@@ -1154,6 +1154,10 @@ class rms(object):
         sec = report.section(u'result-' + cat)
 
         wt = None
+        bwt = None
+        leadpass = None
+        leadlap = None
+        leadsplits = None
         lt = None
         first = True
         lcomment = u''
@@ -1162,6 +1166,7 @@ class rms(object):
         rcnt = 0
         plcnt = 1
         jcnt = 0
+        vcnt = 0
         totcount = 0
         dnscount = 0
         dnfcount = 0
@@ -1190,16 +1195,19 @@ class rms(object):
                     sof = self.catstarts[rcat]
                 bstr = r[COL_BIB].decode(u'utf-8')
                 nstr = r[COL_NAMESTR].decode(u'utf-8')
+                rlap = r[COL_LAPS]
                 pstr = u''
-                tstr = u''  # tstr not used in catresult
+                tstr = u''  # cross laps down
                 dstr = u''  # time/gap
                 cstr = u''
+                rpass = None
                 if self.showuciids:
                     dbr = self.meet.rdb.getrider(bstr, self.series)
                     if dbr is not None:
                         cstr = self.meet.rdb.getvalue(dbr, riderdb.COL_UCICODE)
                 placed = False  # placed at finish
                 timed = False  # timed at finish
+                virtual = False  # oncourse
                 comment = None
                 if r[COL_INRACE]:
                     psrc = r[COL_PLACE].decode(u'utf-8')
@@ -1218,6 +1226,65 @@ class rms(object):
                         pstr = lp + u'.'
                         jcnt += 1
                     bt = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
+                    if self.event[u'type'] == u'cross':
+                        ronlap = True
+                        risleader = False
+                        dtlap = rlap
+                        if leadpass is None and rlap > 0:
+                            risleader = True
+                            leadpass = r[COL_RFSEEN][-1]
+                            leadlap = rlap
+                            leadsplits = [tv for tv in r[COL_RFSEEN]]
+                        if rlap > 0 and leadpass is not None:
+                            rpass = r[COL_RFSEEN][-1]
+                            if bt is None:
+                                if rpass < leadpass:
+                                    # rider is still finishing a lap
+                                    rlap += 1
+                                    ronlap = False
+                                virtual = True
+                                vcnt += 1
+                                dstr = u''
+                        if leadlap is not None:
+                            if leadlap != rlap and rlap > 0:
+                                # show laps down in time column
+                                virtual = True
+                                tstr = u'-{0:d} lap{1}'.format(
+                                    leadlap - rlap,
+                                    strops.plural(leadlap - rlap))
+                                # invalidate bunch times for this rider
+                                bwt = None
+                                bt = None
+                        if risleader and self.start is not None:
+                            et = leadpass - self.start
+                            if sof is not None:
+                                et = et - sof
+                            dstr = et.rawtime(0)
+                        elif bt is None and self.showdowntimes:
+                            # synthesise down time if possible
+                            if dtlap > 0:
+                                rlpass = None
+                                if len(r[COL_RFSEEN]) >= dtlap:
+                                    rlpass = r[COL_RFSEEN][dtlap - 1]
+                                llpass = None
+                                if len(leadsplits) >= dtlap:
+                                    llpass = leadsplits[dtlap - 1]
+                                else:
+                                    LOG.debug(u'Lap down time not available')
+                                if llpass is not None and rlpass is not None:
+                                    rdown = rlpass - llpass
+                                    if rdown < MAXELAP:
+                                        dstr = u'+' + rdown.rawtime(0)
+                                        if not ronlap:
+                                            dstr = u'[' + dstr + u']'
+                                    else:
+                                        # probably a change of leader
+                                        if rpass is not None:
+                                            et = rpass - self.start
+                                            if sof is not None:
+                                                et = et - sof
+                                            dstr = u'[' + et.rawtime(0) + u']'
+
                     if bt is not None:
                         fincount += 1  # for accounting, use bunch time
                         timed = True
@@ -1228,15 +1295,17 @@ class rms(object):
                             et = bt - sof
                         if wt is None:  # first finish time
                             wt = et
-                            if r[COL_LAPS] != laps:
+                            if rlap != laps:
                                 # assume the distance is invalid
                                 distance = None
-                        if not first:
+                        if bwt is not None:
                             if self.showdowntimes:
-                                dstr = u'+' + (et - wt).rawtime(0)
+                                dstr = u'+' + (et - bwt).rawtime(0)
                         else:
-                            dstr = wt.rawtime(0)
+                            dstr = et.rawtime(0)
                         first = False
+                        if bwt is None:
+                            bwt = et
                     lt = bt
                 else:
                     # Non-finishers dns, dnf, otl, dsq
@@ -1253,7 +1322,7 @@ class rms(object):
                     elif comment == u'otl':
                         # otl special case: also show down time if possible
                         bt = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
-                        if bt is not None:
+                        if bt is not None and self.showdowntimes:
                             if not first and wt is not None:
                                 et = bt
                                 if sof is not None:
@@ -1264,7 +1333,7 @@ class rms(object):
                     else:
                         dnfcount += 1
                     pstr = comment
-                if placed or timed:
+                if placed or timed or virtual:
                     sec.lines.append([pstr, bstr, nstr, cstr, tstr, dstr])
                     ## and look up pilots?
                     if cat in [u'MB', u'WB']:
@@ -1327,6 +1396,8 @@ class rms(object):
                 jtgt = 1
             if javail > 0 and jcnt >= jtgt:
                 sec.heading = u'Provisional Result'
+            elif vcnt > 0:
+                sec.heading = u'Virtual Standing'
             else:
                 sec.heading = u'Event in Progress'
         else:
@@ -1389,7 +1460,8 @@ class rms(object):
         """Return a result report."""
 
         # check if a categorised report is required
-        if self.event[u'type'] != u'handicap' and len(self.cats) > 1:
+        if (self.event[u'type'] == u'cross' or
+            (self.event[u'type'] != u'handicap' and len(self.cats) > 1)):
             return self.catresult_report()
 
         LOG.debug(u'Result report in uncat/handicap path')
@@ -3541,13 +3613,16 @@ class rms(object):
         for r in self.riders:
             rbib = r[COL_BIB].decode(u'utf-8')
             rplace = r[COL_PLACE].decode(u'utf-8')
+            rftime = r[COL_RFTIME]
             lastpass = tod.ZERO  # earliest?
             if len(r[COL_RFSEEN]) > 0:
                 lastpass = r[COL_RFSEEN][-1]
+                # in cross scoring, rftime is same as last passing
+                if self.event[u'type'] == u'cross':
+                    rftime = lastpass
             # aux cols: ind, bib, in, place, rftime, laps, last passing
             auxtbl.append([
-                idx, rbib, r[COL_INRACE], rplace, r[COL_RFTIME], r[COL_LAPS],
-                lastpass
+                idx, rbib, r[COL_INRACE], rplace, rftime, r[COL_LAPS], lastpass
             ])
             idx += 1
         if len(auxtbl) > 1:
@@ -3618,23 +3693,24 @@ class rms(object):
         if racefinish:
             self.set_finish(racefinish)
 
-        # pass five: resort on in,vbunch
+        # pass five: resort on in,vbunch (not valid for cross scoring)
         #            at this point all riders will have valid bunch time
-        auxtbl = []
-        idx = 0
-        for r in self.riders:
-            # aux cols: ind, bib, in, place, vbunch
-            rbib = r[COL_BIB].decode(u'utf-8')
-            rcomment = r[COL_COMMENT].decode(u'utf-8')
-            auxtbl.append([
-                idx, rbib, r[COL_INRACE], r[COL_PLACE],
-                self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH]), rcomment,
-                r[COL_LAPS]
-            ])
-            idx += 1
-        if len(auxtbl) > 1:
-            auxtbl.sort(self.sortvbunch)
-            self.riders.reorder([a[0] for a in auxtbl])
+        if self.event[u'type'] != u'cross':
+            auxtbl = []
+            idx = 0
+            for r in self.riders:
+                # aux cols: ind, bib, in, place, vbunch
+                rbib = r[COL_BIB].decode(u'utf-8')
+                rcomment = r[COL_COMMENT].decode(u'utf-8')
+                auxtbl.append([
+                    idx, rbib, r[COL_INRACE], r[COL_PLACE],
+                    self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH]), rcomment,
+                    r[COL_LAPS]
+                ])
+                idx += 1
+            if len(auxtbl) > 1:
+                auxtbl.sort(self.sortvbunch)
+                self.riders.reorder([a[0] for a in auxtbl])
 
         # Pass six - Scan model to determine racestat and time limits
         if self.timerstat != u'idle':

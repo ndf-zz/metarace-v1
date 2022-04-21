@@ -433,10 +433,10 @@ class roadmeet(object):
                     LOG.debug(u'Result cats changed %r -> %r', ocats, ncats)
                     self.curevent.loadcats(ncats)
                     reload = True
+            nt = tmodel.get_value(tcombo.get_active_iter(),
+                                  0).decode(u'utf-8')
             if dotype:
                 # check for type change
-                nt = tmodel.get_value(tcombo.get_active_iter(),
-                                      0).decode(u'utf-8')
                 if nt != self.etype:
                     LOG.info(u'Event type changed from %r to %r', self.etype,
                              nt)

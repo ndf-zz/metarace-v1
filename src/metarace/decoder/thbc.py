@@ -11,7 +11,7 @@ import time
 from . import (decoder, DECODER_LOG_LEVEL)
 from metarace import sysconf
 from metarace import tod
-from metarace import crc_algorithms
+from libscrc import mcrf4xx
 
 LOG = logging.getLogger(u'metarace.decoder.thbc')
 LOG.setLevel(logging.DEBUG)
@@ -99,26 +99,12 @@ DEFAULT_IPCFG = {
 }
 DEFPORT = u'/dev/ttyS0'
 
-# Initialise crc algorithm for CRC-16/MCRF4XX
-crc_alg = crc_algorithms.Crc(width=16,
-                             poly=0x1021,
-                             reflect_in=True,
-                             xor_in=0xffff,
-                             reflect_out=True,
-                             xor_out=0x0000)
-
-
 def thbc_sum(msgstr=b''):
     """Return sum of character values as decimal string."""
     ret = 0
     for ch in msgstr:
         ret = ret + ord(ch)
     return '{0:04d}'.format(ret)
-
-
-def thbc_crc(msgstr='123456789'):
-    """Return CRC-16/MCRF4XX on input string."""
-    return crc_alg.table_driven(msgstr)
 
 
 def val2hexval(val):
@@ -251,7 +237,7 @@ class thbc(decoder):
 
     def _v3_cmd(self, cmdstr=b''):
         """Pack and send a v3 command directly to port."""
-        crc = thbc_crc(cmdstr)
+        crc = mcrf4xx(cmdstr)
         crcstr = chr(crc >> 8) + chr(crc & 0xff)  # Py2
         self._write(ESCAPE + cmdstr + crcstr + b'>')
 

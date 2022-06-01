@@ -1,2 +1,3 @@
 include utils/*
 include src/metarace/data/*
+include src/metarace/ui/*

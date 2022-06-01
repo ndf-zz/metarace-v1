@@ -156,7 +156,7 @@ class unt4(object):
                 head = unichr(self.prefix) + head
             if self.xx is not None and self.yy is not None:
                 text += unichr(DLE) + u'{0:02d}{1:02d}'.format(
-                    self.xx, self.yy)
+                    self.xx % 100, self.yy % 100)
             if self.text:
                 text += self.text
             if self.erl:

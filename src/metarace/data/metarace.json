@@ -42,7 +42,6 @@
     "linelen": 32,
     "pagelen": 8,
     "portspec": "/dev/ttyUSB0",
-    "protocol": "dhi",
     "serialbaud": 115200
   },
   "telegraph": {

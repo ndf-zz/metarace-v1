@@ -1,8 +1,8 @@
 """DHI scoreboard sender class.
 
 This module provides a thread object which collects
-and dispatches messages intended for a Galactica or
-Caprica DHI scoreboard.
+and dispatches DHI messages intended for a Galactica or
+Caprica scoreboard.
 
 """
 
@@ -21,9 +21,6 @@ ENCODING = 'utf-8'
 LINELEN = 24
 PAGELEN = 7
 SERIALBAUD = 115200
-
-# protocol to object mappings
-PROTOCOLS = {}
 
 # dispatch thread queue commands
 TCMDS = (u'EXIT', u'PORT', u'MSG')
@@ -113,7 +110,7 @@ class scbport(object):
 
 
 def mkport(port=None):
-    """Create a new scbport socket object.
+    """Create a new scbport object.
 
     port is a string specifying the address as follows:
 
@@ -122,7 +119,7 @@ def mkport(port=None):
     Where:
 
         PROTOCOL :: TCP or UDP	(optional)
-        ADDRESS :: hostname or IP address
+        ADDRESS :: hostname or IP address or device file
         PORT :: port name or number (optional)
 
     """
@@ -176,8 +173,9 @@ def mkport(port=None):
         else:
             nport = socket.getservbyname(vels[2])
 
-    ## split port string into [PROTOCOL:]ADDR[:PORT]
+    # split port string into [PROTOCOL:]ADDR[:PORT]
     if u'/dev/' in naddr:
+        # assume device file for a serial port
         baud = SERIALBAUD
         if metarace.sysconf.has_option(u'sender', u'serialbaud'):
             baud = strops.confopt_posint(
@@ -187,17 +185,7 @@ def mkport(port=None):
         return scbport((naddr, nport), nprot)
 
 
-def mksender(port=None, protocol=None):
-    nprot = u'dhi'
-    if metarace.sysconf.has_option(u'sender', u'protocol'):
-        look = metarace.sysconf.get(u'sender', u'protocol').lower()
-        if look in PROTOCOLS:
-            nprot = look
-        else:
-            # DHI is the only supported protocol
-            pass
-    if protocol is not None and protocol in PROTOCOLS:
-        nprot = protocol
+def mksender(port=None):
     cols = LINELEN
     rows = PAGELEN
     encoding = ENCODING
@@ -207,7 +195,7 @@ def mksender(port=None, protocol=None):
         rows = metarace.sysconf.get(u'sender', u'pagelen')
     if metarace.sysconf.has_option(u'sender', u'encoding'):
         encoding = metarace.sysconf.get(u'sender', u'encoding')
-    ret = PROTOCOLS[nprot](port)
+    ret = sender(port)
     ret.linelen = cols
     ret.pagelen = rows
     ret.encoding = encoding
@@ -344,6 +332,3 @@ class sender(threading.Thread):
         if self.port is not None:
             self.port.close()
         LOG.info(u'Exiting')
-
-
-PROTOCOLS[u'dhi'] = sender

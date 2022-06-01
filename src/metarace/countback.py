@@ -53,7 +53,10 @@ class countback(object):
             return 0
 
     def __setitem__(self, key, value):
-        self.__store[key] = value
+        if isinstance(key, int):
+            self.__store[key] = value
+        else:
+            raise AttributeError(u'Countback keys must be integer')
 
     def __delitem__(self, key):
         del (self.__store[key])

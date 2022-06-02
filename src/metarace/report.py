@@ -4354,37 +4354,37 @@ class report(object):
     def output_html(self, file=None, linkbase=u'', linktypes=[]):
         """Output a html version of the report."""
         cw = file
-        navbar = u''
+        navbar = []
         for link in self.customlinks:  # to build custom toolbars
-            navbar += htlib.a(htlib.escapetext(link[0]), {
+            navbar.append(htlib.a(htlib.escapetext(link[0]), {
                 u'href': link[1] + u'.html',
                 u'class': u'nav-link'
-            })
+            }))
         if self.prevlink:
-            navbar += htlib.a(htlib.escapetext(u'\u2190 Previous'), {
+            navbar.append(htlib.a(htlib.escapetext(u'\u2190 Previous'), {
                 u'href': self.prevlink + u'.html',
                 u'class': u'nav-link'
-            })
+            }))
         if self.indexlink:
             hrf = self.indexlink + u'.html'
             if hrf == u'index.html':
                 hrf = u'./'
-            navbar += htlib.a(htlib.escapetext(u'\u2191 Index'), {
+            navbar.append(htlib.a(htlib.escapetext(u'\u2191 Index'), {
                 u'href': hrf,
                 u'class': u'nav-link'
-            })
+            }))
         if self.provisional:  # add refresh button
-            navbar += htlib.a(htlib.escapetext(u'Reload \u21bb'), {
+            navbar.append(htlib.a(htlib.escapetext(u'Reload \u21bb'), {
                 u'href': u'#',
                 u'class': u'nav-link',
                 u'onclick': u'return rl();'
-            })
+            }))
         if self.nextlink:
-            navbar += htlib.a(htlib.escapetext(u'Next \u2192'), {
+            navbar.append(htlib.a(htlib.escapetext(u'Next \u2192'), {
                 u'href': self.nextlink + u'.html',
                 u'class': u'nav-link'
-            })
-        if navbar:  # write out bar if non-empty
+            }))
+        if len(navbar) > 0:  # write out bar if non-empty
             self.navbar = htlib.nav(
                 htlib.div(navbar, {u'class': u'container-fluid navbar-nav'}), {
                     u'class':

@@ -4,9 +4,7 @@ from __future__ import division
 
 import threading
 import Queue
-import decimal
 import logging
-import time
 
 from metarace import tod
 

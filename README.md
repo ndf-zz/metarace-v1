@@ -57,5 +57,4 @@ please refer to [v1-changes.md](v1-changes.md).
 
 	$ cd src
 	$ export PYTHONPATH=.
-	$ export PYTHONDONTWRITEBYTECODE=yes
 	$ python2 -m metarace.roadmeet

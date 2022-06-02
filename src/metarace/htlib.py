@@ -6,7 +6,7 @@ the document produced. All elements take a named parameter 'attrs'
 which is a dict of key/value attributes. Non-empty elements take a
 parameter 'clist' which is a list of other constructed elements.
 
-Note: "input" is not provided due to conflict with python2 name.
+Note: <input> is provided by forminput()
 
 Example for an empty element:
 
@@ -20,9 +20,9 @@ Example for an element with content:
 
 Example paragraph:
 
-    p(['Check the',
-       a(['website'], attrs={'href':'#website'}),
-       'for more.']) => 
+    p(('Check the',
+       a(('website'), attrs={'href':'#website'}),
+       'for more.')) => 
 
 	<p>Check the\n<a href="#website">website</a>\nfor more.</p>
 
@@ -32,13 +32,10 @@ from xml.sax.saxutils import escape, quoteattr
 import sys
 
 
-def html(headlist=[], bodylist=[]):
+def html(headlist=(), bodylist=()):
     """Emit HTML document."""
-    return u'\n'.join([
-        preamble(), u'<html lang="en">',
-        head(headlist),
-        body(bodylist), u'</html>'
-    ])
+    return u'\n'.join((preamble(), u'<html lang="en">', head(headlist),
+                       body(bodylist, {'onload': 'ud();'}), u'</html>'))
 
 
 def preamble():
@@ -47,7 +44,7 @@ def preamble():
 
 
 def attrlist(attrs):
-    """Convert attr dict into properly escaped attrlist."""
+    """Convert attr dict into escaped attrlist."""
     alist = []
     for a in attrs:
         alist.append(a.lower() + u'=' + quoteattr(attrs[a]))
@@ -68,18 +65,60 @@ def comment(commentstr=u''):
     return u'<!-- ' + commentstr.replace(u'--', u'') + u' -->'
 
 
-# Declare all the empty types
-for empty in [
-        u'meta', u'link', u'base', u'param', u'hr', u'br', u'img', u'col'
-]:
+# output a valid but empty html templatye
+def emptypage():
+    return html((
+        meta(attrs={u'charset': u'utf-8'}),
+        meta(
+            attrs={
+                u'name': u'viewport',
+                u'content': u'width=device-width, initial-scale=1'
+            }),
+        title(u'__REPORT_TITLE__'),
+        link(
+            attrs={
+                u'href':
+                u'https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css',
+                u'integrity':
+                u'sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC',
+                u'crossorigin': u'anonymous',
+                u'rel': u'stylesheet'
+            }),
+        link(
+            attrs={
+                u'href':
+                u'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css',
+                u'rel': u'stylesheet'
+            }),
+        script((
+            'function ud(){null!==document.querySelector("#pgre")&&setTimeout("history.go(0);",55329)}function rl(){return setTimeout("history.go(0);",10),!1}',
+        )),
+    ), (u'__REPORT_NAV__',
+        div((
+            h1(u'__REPORT_TITLE__'),
+            u'__REPORT_CONTENT__',
+        ),
+            attrs={u'class': u'container'})))
 
-    def emptyfunc(attrs={}, elem=empty):
-        return u'<' + elem + attrlist(attrs) + u'>'
+
+# Declare all the empty types
+for empty in (u'meta', u'link', u'base', u'param', u'hr', u'br', u'img',
+              u'col'):
+
+    def emptyfunc(attrs={}, tag=empty):
+        return u'<' + tag + attrlist(attrs) + u'>'
 
     setattr(sys.modules[__name__], empty, emptyfunc)
 
+
+def emptyfunc(attrs={}):
+    return u'<input' + attrlist(attrs) + u'>'
+
+
+setattr(sys.modules[__name__], 'forminput', emptyfunc)
+
 # Declare all the non-empties
-for nonempty in [
+for nonempty in (
         u'head',
         u'body',
         u'title',
@@ -140,54 +179,12 @@ for nonempty in [
         u'tr',
         u'th',
         u'td',
-]:
+):
 
-    def nonemptyfunc(clist=[], attrs={}, elem=nonempty):
-        if isinstance(clist, (
-                str,
-                unicode,
-        )):
-            clist = [clist]
+    def nonemptyfunc(clist=(), attrs={}, elem=nonempty):
+        if isinstance(clist, basestring):
+            clist = (clist, )
         return (u'<' + elem + attrlist(attrs) + u'>' + u'\n'.join(clist) +
                 u'</' + elem + u'>')
 
     setattr(sys.modules[__name__], nonempty, nonemptyfunc)
-
-
-# output a valid but empty html templatye
-def emptypage():
-    return html([
-        meta(attrs={u'charset': u'utf-8'}),
-        meta(
-            attrs={
-                u'name': u'viewport',
-                u'content': u'width=device-width, initial-scale=1'
-            }),
-        title(u'__REPORT_TITLE__'),
-        link(
-            attrs={
-                u'href':
-                u'https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css',
-                u'integrity':
-                u'sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6',
-                u'crossorigin': u'anonymous',
-                u'rel': u'stylesheet'
-            }),
-        link(
-            attrs={
-                u'href':
-                u'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.0/font/bootstrap-icons.css',
-                u'rel': u'stylesheet'
-            }),
-    ], [
-        u'__REPORT_NAV__',
-        div([
-            h1(u'__REPORT_TITLE__'),
-            u'\n',
-            comment(u'Begin report content'),
-            u'__REPORT_CONTENT__',
-            comment(u'End report content'),
-            u'\n',
-        ],
-            attrs={u'class': u'container'})
-    ])

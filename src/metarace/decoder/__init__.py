@@ -7,6 +7,7 @@ import Queue
 import logging
 
 from metarace import tod
+from metarace import sysconf
 
 LOG = logging.getLogger(u'metarace.decoder')
 LOG.setLevel(logging.DEBUG)
@@ -21,6 +22,9 @@ def mkdevice(portstr=u'', curdev=None):
     # Note: If possible, returns the current device
     ret = curdev
     devtype = DEFAULT_HANDLER
+    if sysconf.has_option(u'decoder',u'default'):
+        devtype = sysconf.get(u'decoder',u'default')
+        LOG.debug(u'Default type set to %r from sysconf', devtype)
     (a, b, c) = portstr.partition(u':')
     if b:
         a = a.lower()

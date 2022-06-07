@@ -74,7 +74,7 @@ CHAN_7 = 7
 CHAN_8 = 8
 CHAN_INT = 9
 
-CR = unichr(0x0d)
+CR = b'\x0d'
 LOG = logging.getLogger(u'metarace.timy')
 LOG.setLevel(logging.DEBUG)
 TIMER_LOG_LEVEL = 25
@@ -143,7 +143,7 @@ class timy(threading.Thread):
         self.daemon = True
         self.__port = None
         self.__cqueue = Queue.Queue()  # command queue
-        self.__rdbuf = u''
+        self.__rdbuf = b''
         self.__arms = [
             False, False, False, False, False, False, False, False, False,
             False
@@ -382,23 +382,22 @@ class timy(threading.Thread):
 
     def __read(self):
         """Read messages from timy until a timeout condition."""
-        ch = self.__port.read(1).decode(ENCODING, u'replace')
-        # decode ok here - timy uses single-byte encoding
+        ch = self.__port.read(1)
         mcnt = 0
-        while ch != u'':
+        while ch != b'':
             if ch == CR:
                 # Return ends the current 'message'
                 self.__rdbuf += ch  # include trailing <cr>
-                t = self.__parse_message(self.__rdbuf)
+                t = self.__parse_message(self.__rdbuf.decode(ENCODING, 'replace'))
                 if t is not None:
                     self.__proc_impulse(t)
-                self.__rdbuf = u''
+                self.__rdbuf = b''
                 mcnt += 1
                 if mcnt > 4:  # break to allow write back
                     return
             else:
                 self.__rdbuf += ch
-            ch = self.__port.read(1).decode(ENCODING, u'replace')
+            ch = self.__port.read(1)
 
     def run(self):
         running = True

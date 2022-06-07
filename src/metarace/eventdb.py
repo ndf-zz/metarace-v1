@@ -4,7 +4,6 @@ import gtk
 import gobject
 import glib
 import logging
-import threading
 import os
 
 import metarace
@@ -653,7 +652,6 @@ class eventdb(object):
         self.__popup_program_data = None
         self.__evno_change_cb = None
 
-        self.__lock = threading.Lock()
         self.view = None
         self.include_cols = DEFAULT_COLUMN_ORDER
         if racetypes is not None:

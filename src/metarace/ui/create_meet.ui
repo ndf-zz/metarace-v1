@@ -41,20 +41,12 @@
         <col id="0" translatable="yes">road:cross</col>
         <col id="1" translatable="yes">Cyclocross</col>
       </row>
-      <row>
-        <col id="0" translatable="yes">road:24hr</col>
-        <col id="1" translatable="yes">24 Hour Road Race</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">road:sportif</col>
-        <col id="1" translatable="yes">Sportif</col>
-      </row>
     </data>
   </object>
   <object class="GtkDialog" id="create">
     <property name="can_focus">False</property>
     <property name="border_width">5</property>
-    <property name="title" translatable="yes">Create New Metarace Event</property>
+    <property name="title" translatable="yes">Create New Metarace Meet</property>
     <property name="modal">True</property>
     <property name="window_position">center-on-parent</property>
     <property name="type_hint">dialog</property>
@@ -75,7 +67,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="tooltip_text" translatable="yes">Cancel creation of new event.</property>
+                <property name="tooltip_text" translatable="yes">Cancel creation of new meet.</property>
                 <property name="use_action_appearance">False</property>
                 <property name="use_stock">True</property>
               </object>
@@ -94,7 +86,7 @@
                 <property name="can_default">True</property>
                 <property name="has_default">True</property>
                 <property name="receives_default">True</property>
-                <property name="tooltip_text" translatable="yes">Create new event as specified.</property>
+                <property name="tooltip_text" translatable="yes">Create new meet as specified.</property>
                 <property name="use_action_appearance">False</property>
                 <property name="use_stock">True</property>
               </object>
@@ -121,38 +113,11 @@
             <property name="column_spacing">2</property>
             <property name="row_spacing">2</property>
             <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
-              <placeholder/>
-            </child>
-            <child>
               <object class="GtkLabel" id="create_label">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">Event Type:</property>
+                <property name="label" translatable="yes">Meet Type:</property>
                 <property name="single_line_mode">True</property>
               </object>
               <packing>
@@ -166,7 +131,7 @@
               <object class="GtkComboBox" id="create_type">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="tooltip_text" translatable="yes">Choose a type of event to create.</property>
+                <property name="tooltip_text" translatable="yes">Choose a type of meet to create.</property>
                 <property name="model">type_model</property>
                 <property name="active">0</property>
                 <child>
@@ -189,7 +154,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">Event Path:</property>
+                <property name="label" translatable="yes">Meet Path:</property>
                 <property name="single_line_mode">True</property>
               </object>
               <packing>
@@ -205,7 +170,7 @@
               <object class="GtkEntry" id="path_entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="tooltip_text" translatable="yes">Choose a path (or folder) name for the new event.</property>
+                <property name="tooltip_text" translatable="yes">Choose a path (or folder) name for the new meet.</property>
                 <property name="invisible_char">●</property>
                 <property name="activates_default">True</property>
               </object>

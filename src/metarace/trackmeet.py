@@ -1750,8 +1750,15 @@ class trackmeet(object):
 
 
 def main():
-    """Run the trackmeet application."""
-    # expand config on cmd line to realpath _before_ doing chdir
+    """Run the track meet application as a console script."""
+    # attach a console log handler to the root logger then run the ui
+    ch = logging.StreamHandler()
+    ch.setLevel(metarace.LOGLEVEL)
+    fh = logging.Formatter(metarace.LOGFORMAT)
+    ch.setFormatter(fh)
+    logging.getLogger().addHandler(ch)
+
+    metarace.init(withgtk=True)
     configpath = metarace.DATA_PATH
     if len(sys.argv) > 2:
         LOG.error(u'Usage: trackmeet [configdir]')
@@ -1762,30 +1769,29 @@ def main():
     if configpath is None:
         LOG.error(u'Unable to open meet config %r', sys.argv[1])
         sys.exit(1)
+    app = runapp(configpath)
+    try:
+        metarace.mainloop()
+    except:
+        app.shutdown(u'Exception from main loop')
+        raise
+    return 0
+
+
+def runapp(configpath):
+    """Create the trackmeet object, start in configpath and return a handle."""
     lf = metarace.lockpath(configpath)
     if lf is None:
         LOG.error(u'Unable to lock meet config, already in use')
         sys.exit(1)
     LOG.debug(u'Entering meet folder %r', configpath)
     os.chdir(configpath)
-    metarace.init(withgtk=True)
     app = trackmeet()
     app.loadconfig()
     app.window.show()
     app.start()
-    try:
-        metarace.mainloop()
-        lf = metarace.unlockpath(configpath, lf)
-    except:
-        app.shutdown(u'Exception from main loop')
-        raise
+    return app
 
 
 if __name__ == u'__main__':
-    # attach a console log handler to the root logger
-    ch = logging.StreamHandler()
-    ch.setLevel(metarace.LOGLEVEL)
-    fh = logging.Formatter(metarace.LOGFORMAT)
-    ch.setFormatter(fh)
-    logging.getLogger().addHandler(ch)
     main()

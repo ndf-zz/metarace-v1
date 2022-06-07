@@ -18,7 +18,7 @@
             <property name="yalign">1</property>
             <property name="xpad">4</property>
             <property name="ypad">4</property>
-            <property name="label" translatable="yes">Metarace Events</property>
+            <property name="label" translatable="yes">Metarace Meets</property>
             <attributes>
               <attribute name="weight" value="semibold"/>
               <attribute name="scale" value="1.2"/>

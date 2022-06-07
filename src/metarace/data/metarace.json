@@ -1,10 +1,16 @@
 {
+  "decoder": {
+    "default", "thbc"
+  },
   "export": {
     "arguments": [
       "{srcdir}",
       "{dstdir}"
     ],
     "command": "echo"
+  },
+  "roadmeet": {
+    "timertopic": "timer"
   },
   "rms": {
     "allowspares": false,
@@ -47,7 +53,7 @@
   "telegraph": {
     "debug": false,
     "deftopic": null,
-    "host": null,
+    "host": "localhost",
     "password": null,
     "qos": 0,
     "username": null,

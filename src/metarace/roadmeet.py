@@ -433,8 +433,7 @@ class roadmeet(object):
                     LOG.debug(u'Result cats changed %r -> %r', ocats, ncats)
                     self.curevent.loadcats(ncats)
                     reload = True
-            nt = tmodel.get_value(tcombo.get_active_iter(),
-                                  0).decode(u'utf-8')
+            nt = tmodel.get_value(tcombo.get_active_iter(), 0).decode(u'utf-8')
             if dotype:
                 # check for type change
                 if nt != self.etype:
@@ -1540,10 +1539,17 @@ class roadmeet(object):
         glib.timeout_add_seconds(1, self.timeout)
 
 
-def main(etype=None):
-    """Run the road meet application."""
+def main():
+    """Run the road meet application as a console script."""
+    # attach a console log handler to the root logger then run the ui
+    ch = logging.StreamHandler()
+    ch.setLevel(metarace.LOGLEVEL)
+    fh = logging.Formatter(metarace.LOGFORMAT)
+    ch.setFormatter(fh)
+    logging.getLogger().addHandler(ch)
+
+    metarace.init(withgtk=True)
     configpath = metarace.DATA_PATH
-    # expand configpath on cmd line to realpath _before_ doing chdir
     if len(sys.argv) > 2:
         LOG.error(u'Usage: roadmeet [configdir]')
         sys.exit(1)
@@ -1553,30 +1559,29 @@ def main(etype=None):
     if configpath is None:
         LOG.error(u'Unable to open meet config %r', sys.argv[1])
         sys.exit(1)
+    app = runapp(configpath)
+    try:
+        metarace.mainloop()
+    except:
+        app.shutdown(u'Exception from main loop')
+        raise
+    return 0
+
+
+def runapp(configpath, etype=None):
+    """Create the roadmeet object, start in configpath and return a handle."""
     lf = metarace.lockpath(configpath)
     if lf is None:
         LOG.error(u'Unable to lock meet config, already in use')
         sys.exit(1)
     LOG.debug(u'Entering meet folder %r', configpath)
     os.chdir(configpath)
-    metarace.init(withgtk=True)
     app = roadmeet(etype)
     app.loadconfig()
     app.window.show()
     app.start()
-    try:
-        metarace.mainloop()
-        lf = metarace.unlockpath(configpath, lf)
-    except:
-        app.shutdown(u'Exception from main loop')
-        raise
+    return app
 
 
 if __name__ == u'__main__':
-    # attach a console log handler to the root logger then call main
-    ch = logging.StreamHandler()
-    ch.setLevel(metarace.LOGLEVEL)
-    fh = logging.Formatter(metarace.LOGFORMAT)
-    ch.setFormatter(fh)
-    logging.getLogger().addHandler(ch)
     main()

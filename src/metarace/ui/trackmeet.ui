@@ -555,17 +555,6 @@
                       <object class="GtkMenu" id="menu3">
                         <property name="visible">True</property>
                         <child>
-                          <object class="GtkImageMenuItem" id="menu_help_docs">
-                            <property name="label">_Contents</property>
-                            <property name="visible">True</property>
-                            <property name="tooltip_text" translatable="yes">Trackmeet Documentation and info</property>
-                            <property name="use_underline">True</property>
-                            <property name="image">image9</property>
-                            <property name="use_stock">False</property>
-                            <signal name="activate" handler="menu_help_docs_cb"/>
-                          </object>
-                        </child>
-                        <child>
                           <object class="GtkImageMenuItem" id="menu_help_about">
                             <property name="label">gtk-about</property>
                             <property name="visible">True</property>

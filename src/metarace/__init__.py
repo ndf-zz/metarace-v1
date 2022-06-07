@@ -13,13 +13,14 @@ from tempfile import NamedTemporaryFile
 from shutil import copyfile
 from metarace import jsonconfig
 
-VERSION = u'1.12.2'
+VERSION = u'1.12.3'
 LIB_PATH = os.path.realpath(os.path.dirname(__file__))
 UI_PATH = os.path.join(LIB_PATH, u'ui')
 DB_PATH = os.path.join(LIB_PATH, u'data')
 DATA_PATH = os.path.realpath(
     os.path.expanduser(os.path.join(u'~', u'Documents', u'metarace')))
-DEFAULTS_PATH = os.path.join(DATA_PATH, u'.default')
+DEFAULTS_NAME = u'default'
+DEFAULTS_PATH = os.path.join(DATA_PATH, DEFAULTS_NAME)
 LOGO_FILE = u'metarace_icon.svg'
 SYSCONF_FILE = u'metarace.json'
 PDF_TEMPLATE_FILE = u'pdf_template.json'

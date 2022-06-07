@@ -256,7 +256,7 @@ class apploader(object):
         for root, dirs, files in os.walk(self.path):
             if root == self.path:
                 for d in dirs:
-                    if d != u'.default':  # ignore config dir
+                    if d != metarace.DEFAULTS_NAME: # ignore sysdefaults
                         meet = meet_identify(os.path.join(root, d))
                         if meet is not None:
                             tinfo = self.infostring(meet[0], meet[3])

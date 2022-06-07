@@ -1,6 +1,6 @@
 {
   "decoder": {
-    "default", "thbc"
+    "default": "thbc"
   },
   "export": {
     "arguments": [

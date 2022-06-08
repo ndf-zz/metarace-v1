@@ -3,14 +3,12 @@
 import gtk
 import glib
 import gobject
-import pango
 import os
 import logging
+import threading
 
 import metarace
 from metarace import tod
-from metarace import unt4
-from metarace import timy
 from metarace import eventdb
 from metarace import riderdb
 from metarace import strops
@@ -19,30 +17,33 @@ from metarace import timerpane
 from metarace import report
 from metarace import jsonconfig
 
+LOG = logging.getLogger(u'metarace.irtt')
+LOG.setLevel(logging.DEBUG)
+
 # rider commands
 RIDER_COMMANDS_ORD = [
-    'add', 'del', 'que', 'onc', 'dns', 'hd', 'dnf', 'dsq', 'com', ''
+    u'add', u'del', u'que', u'onc', u'dns', u'otl', u'dnf', u'dsq', u'com', ''
 ]
 RIDER_COMMANDS = {
-    'dns': 'Did not start',
-    'dnf': 'Did not finish',
-    'add': 'Add starters',
-    'del': 'Remove starters',
-    'que': 'Query riders',
-    'com': 'Add comment',
-    'hd': 'Outside time limit',
-    'dsq': 'Disqualify',
-    'onc': 'Riders on course',
-    '': '',
+    u'dns': u'Did not start',
+    u'dnf': u'Did not finish',
+    u'add': u'Add starters',
+    u'del': u'Remove starters',
+    u'que': u'Query riders',
+    u'com': u'Add comment',
+    u'otl': u'Outside time limit',
+    u'dsq': u'Disqualify',
+    u'onc': u'Riders on course',
+    u'': u'',
 }
 
 RESERVED_SOURCES = [
-    'fin',  # finished stage
-    'reg',  # registered to stage
-    'start'
+    u'fin',  # finished stage
+    u'reg',  # registered to stage
+    u'start'
 ]  # started stage
 
-DNFCODES = ['hd', 'otl', 'dsq', 'dnf', 'dns']
+DNFCODES = [u'otl', u'dsq', u'dnf', u'dns']
 STARTFUDGE = tod.tod(u'1:00')  # min elapsed	- lower for 2km inter
 
 # startlist model columns
@@ -67,25 +68,24 @@ COL_ETA = 17
 COL_PASS = 18
 
 # scb function key mappings
-key_startlist = 'F6'  # clear scratchpad (FIX)
-key_results = 'F4'  # recalc/show results in scratchpad
-key_starters = 'F3'  # show next few starters in scratchpad
+key_startlist = u'F6'  # clear scratchpad (FIX)
+key_results = u'F4'  # recalc/show results in scratchpad
+key_starters = u'F3'  # show next few starters in scratchpad
 
 # timing function key mappings
-key_armsync = 'F1'  # arm for clock sync start
-key_armstart = 'F5'  # arm for start impulse
-key_armfinish = 'F9'  # arm for finish impulse
-key_raceover = 'F10'  # flag race completion/not provisional
+key_armsync = u'F1'  # arm for clock sync start
+key_armstart = u'F5'  # arm for start impulse
+key_armfinish = u'F9'  # arm for finish impulse
+key_raceover = u'F10'  # flag race completion/not provisional
 
 # extended function key mappings
-key_reset = 'F5'  # + ctrl for clear/abort
-key_falsestart = 'F6'  # + ctrl for false start
-key_abort_start = 'F7'  # + ctrl abort A
-key_abort_finish = 'F8'  # + ctrl abort B
-key_undo = 'Z'
+key_reset = u'F5'  # + ctrl for clear/abort
+key_falsestart = u'F6'  # + ctrl for false start
+key_abort_start = u'F7'  # + ctrl abort A
+key_abort_finish = u'F8'  # + ctrl abort B
 
 # config version string
-EVENT_ID = u'roadtt-2.0'
+EVENT_ID = u'roadtt-3.0'
 
 
 def jsob(inmap):
@@ -115,12 +115,13 @@ def unjsob(inmap):
 
 
 def sort_tally(x, y):
-    """Points tally rough sort for stage tally."""
+    """Points tally sort using countback struct."""
     if x[0] == y[0]:
-        return cmp(100 * y[3] + 10 * y[4] + y[5],
-                   100 * x[3] + 10 * x[4] + x[5])
+        return cmp(y[3], x[3])
+    elif y[0] < x[0]:
+        return -1
     else:
-        return cmp(y[0], x[0])
+        return 1
 
 
 def sort_dnfs(x, y):
@@ -140,19 +141,15 @@ class irtt(object):
     def key_event(self, widget, event):
         """Race window key press handler."""
         if event.type == gtk.gdk.KEY_PRESS:
-            key = gtk.gdk.keyval_name(event.keyval) or 'None'
+            key = gtk.gdk.keyval_name(event.keyval) or u'None'
             if event.state & gtk.gdk.CONTROL_MASK:
                 if key == key_reset:  # override ctrl+f5
-                    #self.resetall()	-> too dangerous!!
                     return True
                 elif key == key_falsestart:  # false start both lanes
-                    #self.falsestart()
                     return True
                 elif key == key_abort_start:  # abort start line
-                    #self.abortstarter()
                     return True
                 elif key == key_abort_finish:  # abort finish line
-                    #self.abortfinisher()
                     return True
             if key[0] == 'F':
                 if key == key_armstart:
@@ -162,139 +159,121 @@ class irtt(object):
                     self.armfinish()
                     return True
                 elif key == key_startlist:
-                    self.meet.announce_clear()
+                    self.meet.cmd_announce(u'clear', u'all')
                     self.doannounce = True
                     return True
                 elif key == key_raceover:
                     self.set_finished()
                     return True
                 elif key == key_results:
-                    #self.showresults()
                     return True
         return False
 
     def resetall(self):
-        #self.start = None
-        #self.lstart = None
-        #self.sl.toidle()
-        #self.sl.disable()
+        """Reset timers."""
         self.fl.toidle()
         self.fl.disable()
-        #self.timerstat = 'idle'
-        #self.meet.alttimer.dearm(0)	# 'unarm'
-        #self.meet.alttimer.dearm(1)	# 'unarm'
-        #uiutil.buttonchg(self.meet.stat_but, uiutil.bg_none, 'Idle')
-        #self.log.info('Reset to IDLE')
 
     def set_finished(self):
         """Update event status to finished."""
-        if self.timerstat == 'finished':
-            self.timerstat = 'running'
-            uiutil.buttonchg(self.meet.stat_but, uiutil.bg_none, 'Running')
+        if self.timerstat == u'finished':
+            self.timerstat = u'running'
+            self.meet.stat_but.buttonchg(uiutil.bg_armstart, u'Running')
+            self.meet.stat_but.set_sensitive(True)
         else:
-            self.timerstat = 'finished'
-            uiutil.buttonchg(self.meet.stat_but, uiutil.bg_none, 'Finished')
+            self.timerstat = u'finished'
+            self.meet.stat_but.buttonchg(uiutil.bg_none, u'Finished')
             self.meet.stat_but.set_sensitive(False)
 
     def armfinish(self):
-        if self.timerstat == 'running':
-            if self.fl.getstatus() != 'finish' and self.fl.getstatus(
-            ) != 'armfin':
+        if self.timerstat == u'running':
+            if self.fl.getstatus() != u'finish' and self.fl.getstatus(
+            ) != u'armfin':
                 self.fl.toarmfin()
-                #bib = self.fl.bibent.get_text()
-                #series = self.fl.serent.get_text()
-                #i = self.getiter(bib, series)
-                #if i is not None:
-                #self.announce_rider('', bib,
-                #self.riders.get_value(i,COL_NAMESTR),
-                #self.riders.get_value(i,COL_SHORTNAME),
-                #self.riders.get_value(i,COL_CAT))
             else:
                 self.fl.toidle()
                 self.announce_rider()
 
     def armstart(self):
-        if self.timerstat == 'idle':
-            self.log.info('Armed for timing sync.')
-            self.timerstat = 'armstart'
-        elif self.timerstat == 'armstart':
+        if self.timerstat == u'idle':
+            LOG.info(u'Armed for timing sync')
+            self.timerstat = u'armstart'
+        elif self.timerstat == u'armstart':
             self.resetall()
-        elif self.timerstat == 'running':
-            if self.sl.getstatus() in ['armstart', 'running']:
+        elif self.timerstat == u'running':
+            if self.sl.getstatus() in [u'armstart', u'running']:
                 self.sl.toidle()
-            elif self.sl.getstatus() != 'running':
+            elif self.sl.getstatus() != u'running':
                 self.sl.toarmstart()
 
     def delayed_announce(self):
         """Re-announce all riders from the nominated category."""
-        self.meet.announce_clear()
+        self.meet.cmd_announce(u'clear', u'all')
         heading = u''
-        if self.timerstat == 'finished':  # THIS OVERRIDES RESIDUAL
+        if self.timerstat == u'finished':
             heading = u': Result'
         else:
             if self.racestat == u'prerace':
                 heading = u''  # anything better?
             else:
                 heading = u': Standings'
-        #self.meet.scb.clrall()
-### standings?
-        self.meet.announce_title(self.title_namestr.get_text() + heading)
-        #self.meet.scb.set_title(self.title_namestr.get_text())
+        self.meet.cmd_announce(u'title', self.title_namestr.get_text() + heading)
         self.meet.cmd_announce(u'finstr', self.meet.get_short_name())
         cat = self.ridercat(self.curcat)
         for t in self.results[cat]:
-            r = self.getiter(t.refid, t.index)
+            r = self.getiter(t[0].refid, t[0].index)
             if r is not None:
                 et = self.getelapsed(r)
-                bib = t.refid
+                bib = t[0].refid
                 rank = self.riders.get_value(r, COL_PLACE)
                 cat = self.riders.get_value(r, COL_CAT)
                 namestr = self.riders.get_value(r, COL_NAMESTR)
-                self.meet.announce_rider(
+                self.meet.rider_announce(
                     [rank, bib, namestr, cat,
                      et.rawtime(2)])
         arrivalsec = self.arrival_report(0)  # fetch all arrivals
         if len(arrivalsec) > 0:
             arrivals = arrivalsec[0].lines
             for a in arrivals:
-                self.meet.scb.add_rider(a, 'arrivalrow')
+                # announce arrival
+                pass
         return False
 
     def edit_event_properties(self, window, data=None):
-        """Edit race specifics."""
-        self.log.info(u'going on prop ' + repr(window))
-        pass
+        """Edit event specifics."""
+        LOG.warning(u'Edit event properties not implemented')
 
     def wallstartstr(self, col, cr, model, iter, data=None):
         """Format start time into text for listview."""
         st = model.get_value(iter, COL_TODSTART)
         if st is not None:
-            cr.set_property('text', st.timestr(2))  # time from tapeswitch
-            cr.set_property('style', pango.STYLE_NORMAL)
+            cr.set_property(u'text', st.timestr(2))  # time from tapeswitch
+            cr.set_property(u'style', uiutil.STYLE_NORMAL)
         else:
-            cr.set_property('style', pango.STYLE_OBLIQUE)
+            cr.set_property(u'style', uiutil.STYLE_OBLIQUE)
             wt = model.get_value(iter, COL_WALLSTART)
             if wt is not None:
-                cr.set_property('text', wt.timestr(0))  # adv start
+                cr.set_property(u'text', wt.timestr(0))  # adv start
             else:
-                cr.set_property('text', '')  # no info on start time
+                cr.set_property(u'text', u'')  # no info on start time
 
     def announce_rider(self,
-                       place='',
-                       bib='',
-                       namestr='',
-                       shortname='',
-                       cat='',
+                       place=u'',
+                       bib=u'',
+                       namestr=u'',
+                       shortname=u'',
+                       cat=u'',
                        rt=None,
                        et=None):
         """Emit a finishing rider to announce."""
-        rts = ''
+        rts = u''
         if et is not None:
             rts = et.rawtime(2)
         elif rt is not None:
             rts = rt.rawtime(0)
-        self.meet.scb.add_rider([place, bib, shortname, cat, rts], 'finpanel')
-        self.meet.scb.add_rider([place, bib, namestr, cat, rts], 'finish')
+        # Announce rider
+        ##self.meet.scb.add_rider([place, bib, shortname, cat, rts], 'finpanel')
+        ##self.meet.scb.add_rider([place, bib, namestr, cat, rts], 'finish')
 
     def geteta(self, iter):
         """Return a best guess rider's ET."""
@@ -342,81 +321,72 @@ class irtt(object):
 
     def stat_but_clicked(self, button=None):
         """Deal with a status button click in the main container."""
-        self.log.info('Stat button clicked.')
+        LOG.debug(u'Stat button clicked')
 
-    def ctrl_change(self, acode='', entry=None):
+    def ctrl_change(self, acode=u'', entry=None):
         """Notify change in action combo."""
         pass
         # TODO?
-        if acode == 'fin':
+        if acode == u'fin':
             pass
-            #if entry is not None:
-            #entry.set_text(self.places)
-        #elif acode in self.intermeds:
-        #if entry is not None:
-        #entry.set_text(self.intermap[acode]['places'])
         else:
             if entry is not None:
-                entry.set_text('')
+                entry.set_text(u'')
 
-    def race_ctrl(self, acode='', rlist=''):
+    def race_ctrl(self, acode=u'', rlist=u''):
         """Apply the selected action to the provided bib list."""
         if acode in self.intermeds:
             rlist = strops.reformat_bibserplacelist(rlist)
             if self.checkplaces(rlist, dnf=False):
-                self.intermap[acode]['places'] = rlist
+                self.intermap[acode][u'places'] = rlist
                 self.placexfer()
-                #self.intsprint(acode, rlist)
-                self.log.info('Intermediate ' + repr(acode) + ' == ' +
-                              repr(rlist))
+                LOG.info(u'Intermediate %r == %r', acode, rlist)
             else:
-                self.log.error('Intermediate ' + repr(acode) + ' not updated.')
+                LOG.error('Intermediate %r not updated', acode)
                 return False
-        elif acode == 'que':
-            self.log.warn('Query rider not implemented - reannounce.')
+        elif acode == u'que':
+            LOG.debug(u'Query rider not implemented - reannounce ridercat')
             self.curcat = self.ridercat(rlist.strip())
             self.doannounce = True
-        elif acode == 'del':
+        elif acode == u'del':
             rlist = strops.reformat_bibserlist(rlist)
             for bibstr in rlist.split():
                 bib, ser = strops.bibstr2bibser(bibstr)
                 self.delrider(bib, ser)
             return True
-        elif acode == 'add':
-            self.log.info('Add starter deprecated: Use startlist import.')
+        elif acode == u'add':
+            LOG.info(u'Add starter deprecated: Use startlist import')
             rlist = strops.reformat_bibserlist(rlist)
             for bibstr in rlist.split():
                 bib, ser = strops.bibstr2bibser(bibstr)
                 self.addrider(bib, ser)
             return True
-        elif acode == 'onc':
-            #rlist = strops.reformat_bibserlist(rlist)
-            #for bibstr in rlist.split():
-            #self.add_starter(bibstr)
+        elif acode == u'onc':
+            LOG.info(u'on-course ignored')
             return True
-        elif acode == 'dnf':
+        elif acode == u'dnf':
             self.dnfriders(strops.reformat_bibserlist(rlist))
             return True
-        elif acode == 'dsq':
-            self.dnfriders(strops.reformat_bibserlist(rlist), 'dsq')
+        elif acode == u'dsq':
+            self.dnfriders(strops.reformat_bibserlist(rlist), u'dsq')
             return True
-        elif acode == 'hd':
-            self.dnfriders(strops.reformat_bibserlist(rlist), 'otl')
+        elif acode == u'otl':
+            self.dnfriders(strops.reformat_bibserlist(rlist), u'otl')
             return True
-        elif acode == 'dns':
-            self.dnfriders(strops.reformat_bibserlist(rlist), 'dns')
+        elif acode == u'dns':
+            self.dnfriders(strops.reformat_bibserlist(rlist), u'dns')
             return True
-        elif acode == 'com':
+        elif acode == u'com':
             self.add_comment(rlist)
             return True
         else:
-            self.log.error('Ignoring invalid action.')
+            LOG.error(u'Ignoring invalid action %r', acode)
         return False
 
-    def add_comment(self, comment=''):
-        """Append a race comment."""
+    def add_comment(self, comment=u''):
+        """Append a commissaires comment."""
         self.comment.append(comment.strip())
-        self.log.info('Added race comment: ' + repr(comment))
+        LOG.info(u'Added comment: %r', comment)
 
     def elapstr(self, col, cr, model, iter, data=None):
         """Format elapsed time into text for listview."""
@@ -425,42 +395,48 @@ class irtt(object):
             st = model.get_value(iter, COL_TODSTART)
             if st is None:  # defer to wall start time
                 st = model.get_value(iter, COL_WALLSTART)
-                cr.set_property('style', pango.STYLE_OBLIQUE)
+                cr.set_property(u'style', uiutil.STYLE_OBLIQUE)
             else:
-                cr.set_property('style', pango.STYLE_NORMAL)
+                cr.set_property(u'style', uiutil.STYLE_NORMAL)
             et = self.getelapsed(iter)
             if et is not None:
-                cr.set_property('text', et.timestr(2))
+                cr.set_property(u'text', et.timestr(2))
             else:
-                cr.set_property('text', '[ERR]')
+                cr.set_property(u'text', u'[ERR]')
         else:
-            cr.set_property('text', '')
+            cr.set_property(u'text', u'')
 
-    def loadcats(self, cats=u''):
-        if cats:
-            self.cats = []  # clear old cat list
-            catlist = cats.split()
-            if u'AUTO' in catlist:  # ignore any others and re-load from rdb
-                self.cats = self.meet.rdb.listcats()
-                self.autocats = True
-            else:
-                self.autocats = False
-                for cat in catlist:
-                    if cat != u'':
-                        cat = cat.upper()
+    def loadcats(self, cats=[]):
+        self.cats = []  # clear old cat list
+        if u'AUTO' in cats:  # ignore any others and re-load from rdb
+            self.cats = self.meet.rdb.listcats()
+            self.autocats = True
+        else:
+            self.autocats = False
+            for cat in cats:
+                if cat != u'':
+                    cat = cat.upper()
+                    if cat not in [u'CAT', u'SPARE', u'TEAM']:
                         self.cats.append(cat)
-            self.cats.append(u'')  # always include one empty cat
-            self.log.debug(u'Result category list updated: ' + repr(self.cats))
+                    else:
+                        LOG.warning(u'Invalid result category: %r', cat)
+        self.cats.append(u'')  # always include one empty cat
         self.catlaps = {}
-        for c in self.cats:
+        for cat in self.cats:
+            self.results[cat] = tod.todlist(cat)
+            self.inters[COL_INTERA][cat] = tod.todlist(cat)
+            self.inters[COL_INTERB][cat] = tod.todlist(cat)
+            self.inters[COL_INTERC][cat] = tod.todlist(cat)
+            self.inters[COL_INTERD][cat] = tod.todlist(cat)
+            self.inters[COL_INTERE][cat] = tod.todlist(cat)
             lt = self.finishpass
-            dbr = self.meet.rdb.getrider(c, u'cat')
+            dbr = self.meet.rdb.getrider(cat, u'cat')
             if dbr is not None:
                 lt = strops.confopt_posint(
                     self.meet.rdb.getvalue(dbr, riderdb.COL_CAT))
-            self.catlaps[c] = lt
-            self.log.debug(u'Set category ' + repr(c) + ' pass count to: ' +
-                           repr(lt))
+            self.catlaps[cat] = lt
+            LOG.debug(u'Set category %r pass count to: %r', cat, lt)
+        LOG.debug(u'Result category list updated: %r', self.cats)
 
     def loadconfig(self):
         """Load race config from disk."""
@@ -469,7 +445,7 @@ class irtt(object):
         self.cats = []
 
         cr = jsonconfig.config({
-            u'event': {
+            u'irtt': {
                 u'startlist': u'',
                 u'id': EVENT_ID,
                 u'start': u'0',
@@ -502,92 +478,68 @@ class irtt(object):
                 u'intere': None,
             }
         })
-        cr.add_section(u'event')
+        cr.add_section(u'irtt')
         cr.add_section(u'riders')
+        cr.add_section(u'stagebonus')
+        cr.add_section(u'stagepenalty')
+        cr.merge(metarace.sysconf, u'irtt')
 
-        # check for config file
-        try:
-            with open(self.configpath, 'rb') as f:
-                cr.read(f)
-        except Exception as e:
-            self.log.error(u'Reading event config: ' + unicode(e))
+        if os.path.exists(self.configfile):
+            try:
+                with open(self.configfile, 'rb') as f:
+                    cr.read(f)
+            except Exception as e:
+                LOG.error(u'Unable to read config: %s', e)
+        else:
+            LOG.info(u'%r not found, loading defaults', self.configfile)
 
         # load default gap
-        self.startgap = tod.mktod(cr.get(u'event', u'startgap'))
+        self.startgap = tod.mktod(cr.get(u'irtt', u'startgap'))
         if self.startgap is None:
-            self.startgap = tod.tod('1:00')
+            self.startgap = tod.tod(u'1:00')
 
         # load result precision
-        self.precision = strops.confopt_posint(cr.get(u'event', u'precision'))
+        self.precision = strops.confopt_posint(cr.get(u'irtt', u'precision'))
         if self.precision > 2:  # posint forbids negatives
             self.precision = 2
 
         # load start delay for wireless impulse
-        self.startdelay = tod.mktod(cr.get(u'event', u'startdelay'))
+        self.startdelay = tod.mktod(cr.get(u'irtt', u'startdelay'))
         if self.startdelay is None:
             self.startdelay = tod.ZERO
 
         # load minimum elapsed time
-        self.minelap = tod.mktod(cr.get(u'event', u'minelap'))
+        self.minelap = tod.mktod(cr.get(u'irtt', u'minelap'))
         if self.minelap is None:
             self.minelap = STARTFUDGE
-        self.timelimit = cr.get(u'event', u'timelimit')  # save as str
+        self.timelimit = cr.get(u'irtt', u'timelimit')  # save as str
 
         # allow auto export
-        self.autoexport = strops.confopt_bool(cr.get(u'event', u'autoexport'))
+        self.autoexport = strops.confopt_bool(cr.get(u'irtt', u'autoexport'))
         # sloppy start times
-        self.sloppystart = strops.confopt_bool(cr.get(u'event',
-                                                      u'sloppystart'))
-        self.startloop = cr.get(u'event', u'startloop')
-        self.starttrig = cr.get(u'event', u'starttrig')
-        self.finishloop = cr.get(u'event', u'finishloop')
-        self.finishpass = cr.get(u'event', u'finishpass')
+        self.sloppystart = strops.confopt_bool(cr.get(u'irtt', u'sloppystart'))
+        self.startloop = cr.get(u'irtt', u'startloop')
+        self.starttrig = cr.get(u'irtt', u'starttrig')
+        self.finishloop = cr.get(u'irtt', u'finishloop')
+        self.finishpass = cr.get(u'irtt', u'finishpass')
 
         # load intermediate split schema
-        self.showinter = strops.confopt_posint(cr.get(u'event', u'showinter'),
+        self.showinter = strops.confopt_posint(cr.get(u'irtt', u'showinter'),
                                                None)
-        self.ischem[COL_INTERA] = unjsob(cr.get(u'event', u'intera'))
-        self.ischem[COL_INTERB] = unjsob(cr.get(u'event', u'interb'))
-        self.ischem[COL_INTERC] = unjsob(cr.get(u'event', u'interc'))
-        self.ischem[COL_INTERD] = unjsob(cr.get(u'event', u'interd'))
-        self.ischem[COL_INTERE] = unjsob(cr.get(u'event', u'intere'))
-        self.interloops = cr.get(u'event', u'interloops')
+        self.ischem[COL_INTERA] = unjsob(cr.get(u'irtt', u'intera'))
+        self.ischem[COL_INTERB] = unjsob(cr.get(u'irtt', u'interb'))
+        self.ischem[COL_INTERC] = unjsob(cr.get(u'irtt', u'interc'))
+        self.ischem[COL_INTERD] = unjsob(cr.get(u'irtt', u'interd'))
+        self.ischem[COL_INTERE] = unjsob(cr.get(u'irtt', u'intere'))
+        self.interloops = cr.get(u'irtt', u'interloops')
 
         # load _result_ categories
-        catlist = cr.get(u'event', u'categories')
-        if u'AUTO' in catlist:  # ignore any others and re-load from rdb
-            self.cats = self.meet.rdb.listcats()
-            self.autocats = True
-            for cat in self.cats:
-                self.results[cat] = tod.todlist(cat)
-                self.inters[COL_INTERA][cat] = tod.todlist(cat)
-                self.inters[COL_INTERB][cat] = tod.todlist(cat)
-                self.inters[COL_INTERC][cat] = tod.todlist(cat)
-                self.inters[COL_INTERD][cat] = tod.todlist(cat)
-                self.inters[COL_INTERE][cat] = tod.todlist(cat)
-        else:
-            self.autocats = False
-            for cat in catlist:
-                if cat != u'':
-                    cat = cat.upper()
-                    if cat not in self.cats:
-                        self.cats.append(cat)
-                        self.results[cat] = tod.todlist(cat)
-                        self.inters[COL_INTERA][cat] = tod.todlist(cat)
-                        self.inters[COL_INTERB][cat] = tod.todlist(cat)
-                        self.inters[COL_INTERC][cat] = tod.todlist(cat)
-                        self.inters[COL_INTERD][cat] = tod.todlist(cat)
-                        self.inters[COL_INTERE][cat] = tod.todlist(cat)
-                    else:
-                        self.log.info(u'Duplicate Category Ignored: ' +
-                                      repr(cat))
-        self.cats.append(u'')  # always include one empty cat
-        self.loadcats()
+        self.loadcats(cr.get(u'irtt', u'categories'))
 
         # restore intermediates
-        for i in cr.get(u'event', u'intermeds'):
+        for i in cr.get(u'irtt', u'intermeds'):
             if i in RESERVED_SOURCES:
-                self.log.info(u'Ignoring reserved intermediate: ' + repr(i))
+                LOG.info(u'Ignoring reserved intermediate: %r', i)
             else:
                 crkey = u'intermed_' + i
                 descr = u''
@@ -598,17 +550,15 @@ class irtt(object):
                     places = strops.reformat_placelist(cr.get(
                         crkey, u'places'))
                 if i not in self.intermeds:
-                    self.log.debug(u'Adding intermediate: ' + repr(i) + u':' +
-                                   descr + u':' + places)
+                    LOG.debug(u'Adding inter %r: %r %r', i, descr, places)
                     self.intermeds.append(i)
                     self.intermap[i] = {u'descr': descr, u'places': places}
                 else:
-                    self.log.info(u'Ignoring duplicate intermediate: ' +
-                                  repr(i))
+                    LOG.info(u'Ignoring duplicate inter: %r', i)
 
         # load contest meta data
         tallyset = set()
-        for i in cr.get(u'event', u'contests'):
+        for i in cr.get(u'irtt', u'contests'):
             if i not in self.contests:
                 self.contests.append(i)
                 self.contestmap[i] = {}
@@ -640,8 +590,8 @@ class irtt(object):
                     for bstr in cr.get(crkey, u'bonuses').split():
                         bt = tod.mktod(bstr)
                         if bt is None:
-                            self.log.info(u'Invalid bonus ' + repr(bstr) +
-                                          u' in contest ' + repr(i))
+                            LOG.info(u'Invalid bonus %r in contest %r', bstr,
+                                     i)
                             bt = tod.ZERO
                         bonuses.append(bt)
                 self.contestmap[i][u'bonuses'] = bonuses
@@ -649,16 +599,15 @@ class irtt(object):
                 if cr.has_option(crkey, u'points'):
                     pliststr = cr.get(crkey, u'points').strip()
                     if pliststr and tally == u'':  # no tally for these points!
-                        self.log.error(u'No tally for points in contest: ' +
-                                       repr(i))
+                        LOG.error(u'No tally for points in contest %r', i)
                         tallyset.add(u'')  # add empty placeholder
                     for pstr in pliststr.split():
                         pt = 0
                         try:
                             pt = int(pstr)
-                        except:
-                            self.log.info(u'Invalid points ' + repr(pstr) +
-                                          u' in contest ' + repr(i))
+                        except Exception:
+                            LOG.info(u'Invalid points %r in contest %r', pstr,
+                                     i)
                         points.append(pt)
                 self.contestmap[i][u'points'] = points
                 allsrc = False  # all riders in source get same pts
@@ -666,21 +615,20 @@ class irtt(object):
                     allsrc = strops.confopt_bool(cr.get(crkey, u'all_source'))
                 self.contestmap[i][u'all_source'] = allsrc
             else:
-                self.log.info(u'Ignoring duplicate contest: ' + repr(i))
+                LOG.info(u'Ignoring duplicate contest %r', i)
 
             # check for invalid allsrc
             if self.contestmap[i][u'all_source']:
                 if (len(self.contestmap[i][u'points']) > 1
                         or len(self.contestmap[i][u'bonuses']) > 1):
-                    self.log.info(u'Ignoring extra points/bonus for ' +
-                                  u'all source contest ' + repr(i))
+                    LOG.info(u'Ignoring extra points/bonus for allsrc %r', i)
 
         # load points tally meta data
-        tallylist = cr.get('event', 'tallys')
+        tallylist = cr.get(u'irtt', 'tallys')
         # append any 'missing' tallys from points data errors
         for i in tallyset:
             if i not in tallylist:
-                self.log.debug(u'Adding missing tally to config: ' + repr(i))
+                LOG.debug(u'Adding missing tally to config %r', i)
                 tallylist.append(i)
         # then scan for meta data
         for i in tallylist:
@@ -699,15 +647,15 @@ class irtt(object):
                     keepdnf = strops.confopt_bool(cr.get(crkey, u'keepdnf'))
                 self.tallymap[i][u'keepdnf'] = keepdnf
             else:
-                self.log.info(u'Ignoring duplicate points tally: ' + repr(i))
+                LOG.info(u'Ignoring duplicate points tally %r', i)
 
         # re-join any existing timer state -> no, just do a start
-        self.set_syncstart(tod.mktod(cr.get(u'event', u'start')),
-                           tod.mktod(cr.get(u'event', u'lstart')))
+        self.set_syncstart(tod.mktod(cr.get(u'irtt', u'start')),
+                           tod.mktod(cr.get(u'irtt', u'lstart')))
 
         # re-load starters/results
         self.onestart = False
-        for rs in cr.get(u'event', u'startlist').split():
+        for rs in cr.get(u'irtt', u'startlist').split():
             (r, s) = strops.bibstr2bibser(rs)
             self.addrider(r, s)
             wst = None
@@ -762,71 +710,69 @@ class irtt(object):
 
         self.placexfer()
 
-        self.comment = cr.get(u'event', u'comment')
+        self.comment = cr.get(u'irtt', u'comment')
         self.arrivalcount = strops.confopt_posint(
-            cr.get(u'event', u'arrivalcount'), 4)
+            cr.get(u'irtt', u'arrivalcount'), 4)
 
-        if strops.confopt_bool(cr.get(u'event', u'finished')):
+        if strops.confopt_bool(cr.get(u'irtt', u'finished')):
             self.set_finished()
         self.onestartlist = strops.confopt_bool(
-            cr.get(u'event', u'onestartlist'))
+            cr.get(u'irtt', u'onestartlist'))
 
         # After load complete - check config and report. This ensures
         # an error message is left on top of status stack. This is not
         # always a hard fail and the user should be left to determine
         # an appropriate outcome.
-        eid = cr.get(u'event', u'id')
-        if eid != EVENT_ID:
-            self.log.error(u'Event configuration mismatch: ' + repr(eid) +
-                           u' != ' + repr(EVENT_ID))
+        eid = cr.get(u'irtt', u'id')
+        if eid and eid != EVENT_ID:
+            LOG.info(u'Event config mismatch: %r != %r', eid, EVENT_ID)
+            self.readonly = True
 
     def saveconfig(self):
         """Save race to disk."""
         if self.readonly:
-            self.log.error(u'Attempt to save readonly ob.')
+            LOG.error(u'Attempt to save readonly event')
             return
         cw = jsonconfig.config()
-
-        # save basic race properties
-        cw.add_section(u'event')
+        cw.add_section(u'irtt')
         if self.start is not None:
-            cw.set(u'event', u'start', self.start.rawtime())
+            cw.set(u'irtt', u'start', self.start.rawtime())
         if self.lstart is not None:
-            cw.set(u'event', u'lstart', self.lstart.rawtime())
-        cw.set(u'event', u'comment', self.comment)
+            cw.set(u'irtt', u'lstart', self.lstart.rawtime())
+        cw.set(u'irtt', u'comment', self.comment)
         if self.startgap is not None:
-            cw.set(u'event', u'startgap', self.startgap.rawtime(0))
+            cw.set(u'irtt', u'startgap', self.startgap.rawtime(0))
         else:
-            cw.set(u'event', u'startgap', None)
+            cw.set(u'irtt', u'startgap', None)
         if self.startdelay is not None:
-            cw.set(u'event', u'startdelay', self.startdelay.rawtime())
+            cw.set(u'irtt', u'startdelay', self.startdelay.rawtime())
         else:
-            cw.set(u'event', u'startdelay', None)
+            cw.set(u'irtt', u'startdelay', None)
         if self.minelap is not None:
-            cw.set(u'event', u'minelap', self.minelap.rawtime())
+            cw.set(u'irtt', u'minelap', self.minelap.rawtime())
         else:
-            cw.set(u'event', u'minelap', None)
+            cw.set(u'irtt', u'minelap', None)
 
-        cw.set(u'event', u'arrivalcount', self.arrivalcount)
-        cw.set(u'event', u'sloppystart', self.sloppystart)
-        cw.set(u'event', u'autoexport', self.autoexport)
-        cw.set(u'event', u'startloop', self.startloop)
-        cw.set(u'event', u'starttrig', self.starttrig)
-        cw.set(u'event', u'finishloop', self.finishloop)
-        cw.set(u'event', u'finishpass', self.finishpass)
-        cw.set(u'event', u'onestartlist', self.onestartlist)
-        cw.set(u'event', u'precision', self.precision)
-        cw.set(u'event', u'timelimit', self.timelimit)
+        cw.set(u'irtt', u'arrivalcount', self.arrivalcount)
+        cw.set(u'irtt', u'sloppystart', self.sloppystart)
+        cw.set(u'irtt', u'autoexport', self.autoexport)
+        cw.set(u'irtt', u'startloop', self.startloop)
+        cw.set(u'irtt', u'starttrig', self.starttrig)
+        cw.set(u'irtt', u'finishloop', self.finishloop)
+        cw.set(u'irtt', u'finishpass', self.finishpass)
+        cw.set(u'irtt', u'onestartlist', self.onestartlist)
+        cw.set(u'irtt', u'precision', self.precision)
+        cw.set(u'irtt', u'timelimit', self.timelimit)
 
         # save intermediate data
-        cw.set(u'event', u'intermeds', self.intermeds)
+        cw.set(u'irtt', u'intermeds', self.intermeds)
         for i in self.intermeds:
             crkey = u'intermed_' + i
             cw.add_section(crkey)
             cw.set(crkey, u'descr', self.intermap[i][u'descr'])
             cw.set(crkey, u'places', self.intermap[i][u'places'])
         # save contest meta data
-        cw.set(u'event', u'contests', self.contests)
+        cw.set(u'irtt', u'contests', self.contests)
         for i in self.contests:
             crkey = u'contest_' + i
             cw.add_section(crkey)
@@ -842,7 +788,7 @@ class irtt(object):
                 plist.append(str(p))
             cw.set(crkey, u'points', u' '.join(plist))
         # save tally meta data
-        cw.set(u'event', u'tallys', self.tallys)
+        cw.set(u'irtt', u'tallys', self.tallys)
         for i in self.tallys:
             crkey = u'tally_' + i
             cw.add_section(crkey)
@@ -850,20 +796,20 @@ class irtt(object):
             cw.set(crkey, u'keepdnf', self.tallymap[i][u'keepdnf'])
 
         # save intermediate split schema
-        cw.set(u'event', u'intera', jsob(self.ischem[COL_INTERA]))
-        cw.set(u'event', u'interb', jsob(self.ischem[COL_INTERB]))
-        cw.set(u'event', u'interc', jsob(self.ischem[COL_INTERC]))
-        cw.set(u'event', u'interd', jsob(self.ischem[COL_INTERD]))
-        cw.set(u'event', u'intere', jsob(self.ischem[COL_INTERE]))
-        cw.set(u'event', u'interloops', self.interloops)
-        cw.set(u'event', u'showinter', self.showinter)
+        cw.set(u'irtt', u'intera', jsob(self.ischem[COL_INTERA]))
+        cw.set(u'irtt', u'interb', jsob(self.ischem[COL_INTERB]))
+        cw.set(u'irtt', u'interc', jsob(self.ischem[COL_INTERC]))
+        cw.set(u'irtt', u'interd', jsob(self.ischem[COL_INTERD]))
+        cw.set(u'irtt', u'intere', jsob(self.ischem[COL_INTERE]))
+        cw.set(u'irtt', u'interloops', self.interloops)
+        cw.set(u'irtt', u'showinter', self.showinter)
 
         # save riders
-        cw.set(u'event', u'startlist', self.get_startlist())
+        cw.set(u'irtt', u'startlist', self.get_startlist())
         if self.autocats:
-            cw.set(u'event', u'categories', [u'AUTO'])
+            cw.set(u'irtt', u'categories', [u'AUTO'])
         else:
-            cw.set(u'event', u'categories', self.get_catlist())
+            cw.set(u'irtt', u'categories', self.get_catlist())
         cw.add_section(u'riders')
         for r in self.riders:
             if r[COL_BIB] != '':
@@ -908,10 +854,10 @@ class irtt(object):
                     r[COL_PLACE], tima, timb, timc, timd, tine, pcnt, lpass
                 ]
                 cw.set(u'riders', strops.bibser2bibstr(bib, ser), slice)
-        cw.set(u'event', u'finished', self.timerstat == 'finished')
-        cw.set(u'event', u'id', EVENT_ID)
-        self.log.debug(u'Saving race config to: ' + repr(self.configpath))
-        with open(self.configpath, 'wb') as f:
+        cw.set(u'irtt', u'finished', self.timerstat == 'finished')
+        cw.set(u'irtt', u'id', EVENT_ID)
+        LOG.debug(u'Saving event config %r', self.configfile)
+        with metarace.savefile(self.configfile) as f:
             cw.write(f)
 
     def get_ridercmdorder(self):
@@ -934,24 +880,17 @@ class irtt(object):
 
     def get_startlist(self):
         """Return a list of bibs in the rider model as b.s."""
-        ret = ''
+        ret = []
         for r in self.riders:
-            ret += ' ' + strops.bibser2bibstr(r[COL_BIB], r[COL_SERIES])
-        return ret.strip()
+            ret.append(strops.bibser2bibstr(r[COL_BIB], r[COL_SERIES]))
+        return u' '.join(ret)
 
     def shutdown(self, win=None, msg='Exiting'):
-        """Terminate race object."""
-        self.log.debug('Race Shutdown: ' + msg)
-        #self.meet.timer.dearm()
-        #self.meet.menu_race_properties.set_sensitive(False)
+        """Close event."""
+        LOG.debug(u'Event shutdown: %r', msg)
         if not self.readonly:
             self.saveconfig()
         self.winopen = False
-
-    def do_properties(self):
-        """Properties placeholder."""
-        self.log.info('Properties callback.')
-        pass
 
     def key_riderno(self, r):
         if r[1] is not None:
@@ -992,7 +931,7 @@ class irtt(object):
     def signon_report(self):
         """Return a signon report."""
         ret = []
-        sec = report.signon_list('signon')
+        sec = report.signon_list(u'signon')
         self.reorder_signon()
         for r in self.riders:
             cmt = r[COL_COMMENT].decode('utf-8')
@@ -1001,9 +940,6 @@ class irtt(object):
             ])
         ret.append(sec)
         return ret
-
-
-#hh:mm:ss ______ -no rider------ cat
 
     def startlist_report(self):
         """Return a startlist report."""
@@ -1041,7 +977,7 @@ class irtt(object):
         """Return a startlist report (rough style)."""
         ret = []
         sec = report.rttstartlist(u'startlist')
-        sec.heading = 'Startlist'
+        sec.heading = u'Startlist'
         if catname:
             sec.heading += u': ' + catname
             sec.subheading = subhead
@@ -1063,24 +999,20 @@ class irtt(object):
                         ucicode = nat
                 ## to here
                 bstr = r[COL_BIB].decode('utf-8').upper()
-                stxt = ''
+                stxt = u''
                 if r[COL_WALLSTART] is not None:
                     stxt = r[COL_WALLSTART].meridiem()
-                    stxt = stxt.replace(u'am', u'\u2009am')
-                    stxt = stxt.replace(u'pm', u'\u2009pm')
                     if lt is not None:
                         if r[COL_WALLSTART] - lt > self.startgap:
                             sec.lines.append([None, None, None])  # GAP!!
                     lt = r[COL_WALLSTART]
                 nstr = r[COL_NAMESTR]
-                #if r[COL_CAT] == 'U23':
-                #ucicode += ' *'
                 cstr = None
                 if self.onestartlist and r[COL_CAT] != cat:  # show if not
                     cstr = r[COL_CAT].decode('utf-8')
                     if cstr in catnamecache and len(catnamecache[cstr]) < 8:
                         cstr = catnamecache[cstr]
-                sec.lines.append([stxt, bstr, nstr, ucicode, '____', cstr])
+                sec.lines.append([stxt, bstr, nstr, ucicode, u'____', cstr])
                 if cstr in [u'MB', u'WB']:
                     # lookup pilot - series lookup
                     dbr = self.meet.rdb.getrider(r[COL_BIB], u'pilot')
@@ -1095,7 +1027,7 @@ class irtt(object):
         ret.append(sec)
         if rcnt > 1:
             sec = report.bullet_text(u'ridercnt')
-            sec.lines.append([u'', 'Total riders: ' + unicode(rcnt)])
+            sec.lines.append([u'', u'Total riders: ' + unicode(rcnt)])
             ret.append(sec)
         return ret
 
@@ -1187,8 +1119,8 @@ class irtt(object):
                 # append km mark if available
                 if r[COL_PASS] > 0:
                     nstr += (u' @ km' + unicode(r[COL_PASS]))
-                    self.log.debug(u'Check namestr: ' + repr(r[COL_PASS]) +
-                                   u' / ' + nstr)
+                    LOG.debug(u'Check namestr: ' + repr(r[COL_PASS]) + u' / ' +
+                              nstr)
                 # projected finish time
                 ets = u'*' + r[COL_ETA].rawtime(self.precision)
 
@@ -1211,9 +1143,9 @@ class irtt(object):
                             speedstr = tet.speedstr(1000.0 * dist)
                 else:
                     pass
-                    #self.log.debug(u'Invalid intermediate split: ' + bstr)
+                    #LOG.debug(u'Invalid intermediate split: ' + bstr)
 
-            #self.log.debug(repr([rankstr, bstr, nstr, turnstr, ets, speedstr]))
+            #LOG.debug(repr([rankstr, bstr, nstr, turnstr, ets, speedstr]))
             if not noshow:
                 if ets or speedstr:  # only add riders with an estimate
                     sec.lines.append(
@@ -1234,8 +1166,8 @@ class irtt(object):
         lcount = 0
         count = 1
         sec = report.section()
-        sec.heading = 'Judges Report'
-        sec.colheader = ['Hit', None, None, 'Start', 'Fin', 'Net']
+        sec.heading = u'Judges Report'
+        sec.colheader = [u'Hit', None, None, u'Start', u'Fin', u'Net']
 
         for r in cmod:
             bstr = r[COL_BIB].decode('utf-8')
@@ -1246,25 +1178,25 @@ class irtt(object):
                 rk = int(plstr)
                 if rk < 6:  # annotate top 5 places
                     rkstr = u'(' + plstr + u'.)'
-            sts = '-'
+            sts = u'-'
             if r[COL_TODSTART] is not None:
                 sts = r[COL_TODSTART].rawtime(2)
             elif r[COL_WALLSTART] is not None:
-                sts = r[COL_WALLSTART].rawtime(0) + '   '
-            fts = '-'
+                sts = r[COL_WALLSTART].rawtime(0) + u'   '
+            fts = u'-'
             if r[COL_TODFINISH] is not None:
                 fts = r[COL_TODFINISH].rawtime(2)
             i = self.getiter(r[COL_BIB], r[COL_SERIES])
             et = self.getelapsed(i)
-            ets = '-'
-            hits = ''
+            ets = u'-'
+            hits = u''
             if et is not None:
                 ets = et.rawtime(self.precision)
                 hits = unicode(count)
                 if rkstr:
                     hits += u' ' + rkstr
                 count += 1
-            elif r[COL_COMMENT] != '':
+            elif r[COL_COMMENT] != u'':
                 hits = r[COL_COMMENT].decode('utf-8')
             sec.lines.append([hits, bstr, nstr, sts, fts, ets, rkstr])
             lcount += 1
@@ -1281,8 +1213,8 @@ class irtt(object):
         cnt = 0
         for tally in self.tallys:
             sec = report.section()
-            sec.heading = self.tallymap[tally]['descr']
-            sec.units = 'pt'
+            sec.heading = self.tallymap[tally][u'descr']
+            sec.units = u'pt'
             tallytot = 0
             aux = []
             for bib in self.points[tally]:
@@ -1303,13 +1235,13 @@ class irtt(object):
             for r in aux:
                 sec.lines.append(r[2])
             sec.lines.append([None, None, None])
-            sec.lines.append([None, None, 'Total Points: ' + str(tallytot)])
+            sec.lines.append([None, None, u'Total Points: ' + str(tallytot)])
             ret.append(sec)
 
         if len(self.bonuses) > 0:
             sec = report.section()
-            sec.heading = 'Stage Bonuses'
-            sec.units = 'sec'
+            sec.heading = u'Stage Bonuses'
+            sec.units = u'sec'
             aux = []
             for bib in self.bonuses:
                 r = self.getrider(bib)
@@ -1336,7 +1268,7 @@ class irtt(object):
             ret.extend(self.single_catresult(cat))
         return ret
 
-    def single_catresult(self, cat=''):
+    def single_catresult(self, cat=u''):
         ret = []
         catname = cat  # fallback emergency, cat is never '' here
         subhead = u''
@@ -1350,8 +1282,7 @@ class irtt(object):
             try:
                 distance = float(dist)
             except:
-                self.log.warn(u'Invalid distance: ' + repr(dist) +
-                              u' for cat ' + repr(cat))
+                LOG.warning(u'Invalid distance %r for cat %r', dist, cat)
         sec = report.section(cat + u'result')
         rsec = sec
         ret.append(sec)
@@ -1387,8 +1318,8 @@ class irtt(object):
                 if ct is None:
                     ct = ft
                 pstr = None
-                if r[COL_PLACE] != '' and r[COL_PLACE].isdigit():
-                    pstr = (r[COL_PLACE] + '.')
+                if r[COL_PLACE] != u'' and r[COL_PLACE].isdigit():
+                    pstr = r[COL_PLACE] + u'.'
                     fincount += 1  # only count placed finishers
                     placed = True
                 else:
@@ -1396,7 +1327,7 @@ class irtt(object):
                     # 'special' dnfs
                     if pstr == u'dns':
                         dnscount += 1
-                    elif pstr in [u'hd', u'otl']:
+                    elif pstr == u'otl':
                         hdcount += 1
                     else:
                         if pstr:  # commented dnf
@@ -1413,7 +1344,7 @@ class irtt(object):
                     tstr = ft.rawtime(self.precision)
                 dstr = None
                 if ct is not None and ft is not None and ct != ft:
-                    dstr = dstr = ('+' + (ft - ct).rawtime(1))
+                    dstr = u'+' + (ft - ct).rawtime(1)
                 if placed:
                     sec.lines.append([pstr, bstr, nstr, cstr, tstr, dstr])
                     if cat in [u'WB', u'MB']:  #also look up pilots
@@ -1431,7 +1362,7 @@ class irtt(object):
 
         residual = totcount - (fincount + dnfcount + dnscount + hdcount)
 
-        if self.timerstat == 'finished':  # THIS OVERRIDES RESIDUAL
+        if self.timerstat == u'finished':  # THIS OVERRIDES RESIDUAL
             sec.heading = u'Result'
         else:
             if self.racestat == u'prerace':
@@ -1476,34 +1407,35 @@ class irtt(object):
         # dump results
         self.placexfer()  # ensure all cat places are filled
         # also re-announces!
-        if self.timerstat == 'running':
+        if self.timerstat == u'running':
             # until final, show last few
             ret.extend(self.arrival_report(self.arrivalcount))
         if len(self.cats) > 1:
             ret.extend(self.catresult_report())
         else:
             ret.extend(self.single_catresult())
-        # dump comms info
+
+        # Decisions of commissaires panel
         if len(self.comment) > 0:
-            s = report.bullet_text('comms')
-            s.heading = u'Decisions of the commissaires panel'
-            for comment in self.comment:
-                s.lines.append([None, comment])
-            ret.append(s)
+            sec = report.bullet_text(u'comms')
+            sec.heading = u'Decisions of the Commissaires Panel'
+            for cl in self.comment:
+                sec.lines.append([None, cl.strip()])
+            ret.append(sec)
         return ret
 
-    def startlist_gen(self, cat=''):
+    def startlist_gen(self, cat=u''):
         """Generator function to export a startlist."""
         mcat = self.ridercat(cat)
         self.reorder_startlist()
         for r in self.riders:
-            if mcat == '' or mcat == self.ridercat(r[COL_CAT]):
-                start = ''
+            if mcat == u'' or mcat == self.ridercat(r[COL_CAT]):
+                start = u''
                 if r[COL_WALLSTART] is not None:
                     start = r[COL_WALLSTART].rawtime(0)
                 bib = r[COL_BIB]
                 series = r[COL_SERIES]
-                name = ''
+                name = u''
                 ## replace with rmap lookup
                 dbr = self.meet.rdb.getrider(bib, series)
                 if dbr is not None:
@@ -1520,7 +1452,7 @@ class irtt(object):
     def get_elapsed(self):
         return None
 
-    def result_gen(self, cat=''):
+    def result_gen(self, cat=u''):
         """Generator function to export a final result."""
         self.placexfer()
         mcat = self.ridercat(cat)
@@ -1528,12 +1460,12 @@ class irtt(object):
         lrank = None
         lpl = None
         for r in self.riders:
-            if mcat == '' or mcat == self.ridercat(r[COL_CAT]):
+            if mcat == u'' or mcat == self.ridercat(r[COL_CAT]):
                 i = self.getiter(r[COL_BIB], r[COL_SERIES])
                 ft = self.getelapsed(i)
                 if ft is not None:
                     ft = ft.truncate(2)  # RETAIN Hundredths
-                bib = r[COL_BIB]
+                bib = r[COL_BIB].decode(u'utf-8')
                 crank = None
                 rank = None
                 if r[COL_PLACE].isdigit():
@@ -1546,7 +1478,7 @@ class irtt(object):
                     lpl = crank
                     lrank = rank
                 else:
-                    crank = r[COL_COMMENT]
+                    crank = r[COL_COMMENT].decode(u'utf-8')
                 extra = None
                 if r[COL_WALLSTART] is not None:
                     extra = r[COL_WALLSTART]
@@ -1558,7 +1490,7 @@ class irtt(object):
 
     def main_loop(self, cb):
         """Run callback once in main loop idle handler."""
-        cb('')
+        cb(u'')
         return False
 
     def set_syncstart(self, start=None, lstart=None):
@@ -1567,9 +1499,10 @@ class irtt(object):
                 lstart = start
             self.start = start
             self.lstart = lstart
-            self.timerstat = 'running'
-            uiutil.buttonchg(self.meet.stat_but, uiutil.bg_none, 'Running')
-            self.log.info('Timer sync @ ' + start.rawtime(2))
+            self.timerstat = u'running'
+            self.meet.stat_but.buttonchg(uiutil.bg_armstart, u'Running')
+            self.meet.stat_but.set_sensitive(True)
+            LOG.info(u'Timer sync @ %s', start.rawtime(2))
             self.sl.toidle()
             self.fl.toidle()
 
@@ -1610,51 +1543,44 @@ class irtt(object):
                     rt = self.inters[split][rcat][rank]
                     if rt is not None:
                         rts = rt.rawtime(2)
-                    #self.meet.scb.add_rider([place,bib,namestr,label,rts],
-                    #'ttsplit')
-                    self.log.info(u'Intermediate ' + label + u': ' + place +
-                                  u' ' + bibstr + u'@' + e.rawtime(2))
+                    ##self.meet.scb.add_rider([place,bib,namestr,label,rts],
+                    ##'ttsplit')
+                    LOG.info(u'Intermediate %s: %s %s@%s/%s', label, place,
+                             bibstr, e.rawtime(2), e.source)
                     lr[COL_ETA] = self.geteta(nri)
                 else:
-                    self.log.info(u'No match found for intermediate: ' +
-                                  bibstr + u'@' + e.source + u'/' +
-                                  e.rawtime(2))
+                    LOG.info(u'No match found for intermediate: %s@%s/%s',
+                             bibstr, e.rawtime(2), e.source)
             else:
-                self.log.info(u'Intermediate ignoring finished rider: ' +
-                              bibstr + u'@' + e.source + u'/' + e.rawtime(2))
+                LOG.info(u'Intermediate ignoring finished rider: %s@%s/%s',
+                         bibstr, e.rawtime(2), e.source)
         else:
-            self.log.info(u'Intermediate ignoring rider not on course: ' +
-                          bibstr + u'@' + e.source + u'/' + e.rawtime(2))
-        return False
-
-    def rfidstat(self, e):
-        """Handle RFID status message."""
-        self.log.info(u'Decoder ' + e.source + u': ' + e.refid)
+            LOG.info(u'Intermediate ignoring rider not on course: %s@%s/%s',
+                     bibstr, e.rawtime(2), e.source)
         return False
 
     def start_by_rfid(self, lr, e):
         # step 1: if sloppystart is false, check for armed start channel
         if not self.sloppystart:
             if lr[COL_TODSTART] is not None:
-                self.log.info(u'Started rider seen on start loop: ' +
-                              lr[COL_BIB] + u'@' + e.rawtime(2))
+                LOG.info(u'Started rider seen on start loop: ' + lr[COL_BIB] +
+                         u'@' + e.rawtime(2))
                 return False
             # compare wall and actual starts
             if lr[COL_WALLSTART] is not None:
                 wv = lr[COL_WALLSTART].timeval
                 ev = e.timeval
                 if abs(wv - ev) > 5:  # differ by more than 5 secs
-                    self.log.info(u'Using advertised start time ' +
-                                  lr[COL_WALLSTART].rawtime(0) + u' for: ' +
-                                  lr[COL_BIB] + u'@' + e.rawtime(2))
+                    LOG.info(u'Using advertised start time ' +
+                             lr[COL_WALLSTART].rawtime(0) + u' for: ' +
+                             lr[COL_BIB] + u'@' + e.rawtime(2))
                     return False
 
         if lr[COL_TODFINISH] is not None:
-            self.log.info(u'Finished rider seen on start loop: ' +
-                          lr[COL_BIB] + u'@' + e.rawtime(2))
+            LOG.info(u'Finished rider seen on start loop: ' + lr[COL_BIB] +
+                     u'@' + e.rawtime(2))
         else:
-            self.log.info(u'Set start time: ' + lr[COL_BIB] + u'@' +
-                          e.rawtime(2))
+            LOG.info(u'Set start time: ' + lr[COL_BIB] + u'@' + e.rawtime(2))
             i = self.getiter(lr[COL_BIB], lr[COL_SERIES])
             # self.riders.set_value(i, COL_TODSTART, e)
             # set_value corrupts the result list - perhaps
@@ -1665,48 +1591,48 @@ class irtt(object):
 
     def setrftime(self, bib, rank, rftime, bonus=None):
         """Override rider result from CSV Data."""
-        self.log.info(u'Set finish time from CSV: ' + bib + u'@' +
-                      rftime.rawtime(2))
+        LOG.info(u'Set finish time from CSV: ' + bib + u'@' +
+                 rftime.rawtime(2))
         i = self.getiter(bib, u'')
         self.settimes(i, tft=rftime)
 
     def setriderval(self, bib, rank, bunch, bonus=None):
         """Hook for CSV import - assume bunch holds elapsed only."""
-        self.log.debug(u'Set rider val by elapsed time: ' + bib + u'/' +
-                       bunch.rawtime(2))
+        LOG.debug(u'Set rider val by elapsed time: ' + bib + u'/' +
+                  bunch.rawtime(2))
         i = self.getiter(bib, u'')
         self.settimes(i, tst=tod.ZERO, tft=bunch)
 
     def finish_by_rfid(self, lr, e):
         if lr[COL_TODFINISH] is not None:
-            self.log.info(u'Finished rider seen on finish loop: ' +
-                          lr[COL_BIB] + u'@' + e.rawtime(2))
+            LOG.info(u'Finished rider seen on finish loop: ' + lr[COL_BIB] +
+                     u'@' + e.rawtime(2))
         else:
             if lr[COL_WALLSTART] is None and lr[COL_TODSTART] is None:
-                self.log.error(u'No start time for rider at finish: ' +
-                               lr[COL_BIB] + u'@' + e.rawtime(2))
+                LOG.error(u'No start time for rider at finish: ' +
+                          lr[COL_BIB] + u'@' + e.rawtime(2))
             else:
                 cat = self.ridercat(lr[COL_CAT])
                 finishpass = self.finishpass  # load default
                 if cat in self.catlaps:
                     finishpass = self.catlaps[cat]
-                    self.log.debug(u'Loaded pass count ' + repr(finishpass) +
-                                   u' for cat: ' + repr(cat))
+                    LOG.debug(u'Loaded pass count ' + repr(finishpass) +
+                              u' for cat: ' + repr(cat))
                 if finishpass is None:
                     st = lr[COL_WALLSTART]
                     if lr[COL_TODSTART] is not None:
                         st = lr[COL_TODSTART]  # use tod if avail
                     if e > st + self.minelap:
-                        self.log.info(u'Set finish time: ' + lr[COL_BIB] +
-                                      u'@' + e.rawtime(2))
+                        LOG.info(u'Set finish time: ' + lr[COL_BIB] + u'@' +
+                                 e.rawtime(2))
                         i = self.getiter(lr[COL_BIB], lr[COL_SERIES])
                         self.settimes(i,
                                       tst=self.riders.get_value(
                                           i, COL_TODSTART),
                                       tft=e)
                     else:
-                        self.log.info(u'Ignored early finish: ' + lr[COL_BIB] +
-                                      u'@' + e.rawtime(2))
+                        LOG.info(u'Ignored early finish: ' + lr[COL_BIB] +
+                                 u'@' + e.rawtime(2))
                 else:
                     lt = lr[COL_WALLSTART]
                     if lr[COL_TODSTART] is not None:
@@ -1717,36 +1643,35 @@ class irtt(object):
                         lr[COL_PASS] += 1
                         nc = lr[COL_PASS]
                         if nc >= finishpass:
-                            self.log.info(u'Set finish lap time: ' +
-                                          lr[COL_BIB] + u'@' + e.rawtime(2))
+                            LOG.info(u'Set finish lap time: ' + lr[COL_BIB] +
+                                     u'@' + e.rawtime(2))
                             i = self.getiter(lr[COL_BIB], lr[COL_SERIES])
                             self.settimes(i,
                                           tst=self.riders.get_value(
                                               i, COL_TODSTART),
                                           tft=e)
                         else:
-                            self.log.info('Lap ' + str(nc) + ' passing: ' +
-                                          lr[COL_BIB] + u'@' + e.rawtime(2))
+                            LOG.info('Lap ' + str(nc) + ' passing: ' +
+                                     lr[COL_BIB] + u'@' + e.rawtime(2))
                     else:
-                        self.log.info(u'Ignored short lap: ' + lr[COL_BIB] +
-                                      u'@' + e.rawtime(2))
+                        LOG.info(u'Ignored short lap: ' + lr[COL_BIB] + u'@' +
+                                 e.rawtime(2))
         # save the last seen for lap counting and wateva
         lr[COL_LASTSEEN] = e
         return False
 
-    def rfidtrig(self, e):
+    def timertrig(self, e):
         """Register RFID crossing."""
-        self.meet.announce_timer(e, self.meet.timer)
         if e.refid in ['', '255']:  # Assume finish/cell trigger from decoder
             if self.starttrig is not None and e.source == self.starttrig:
                 # remote start trigger from decoder box
-                self.log.debug(u'Start trigger from decoder ' + repr(e.source))
-                self.log.info(u'Start Trig: ' + e.rawtime())
+                LOG.debug(u'Start trigger from decoder ' + repr(e.source))
+                LOG.info(u'Start Trig: ' + e.rawtime())
                 self.start_trig(e)
                 return False
             # otherwise flow through
-            self.log.debug(u'Finish trigger from decoder.')
-            self.log.info(u'Trigger: ' + e.rawtime())
+            LOG.debug(u'Finish trigger from decoder.')
+            LOG.info(u'Trigger: ' + e.rawtime())
             return self.fin_trig(e)
         elif e.chan == u'STS':  # status message
             return self.rfidstat(e)
@@ -1777,8 +1702,8 @@ class irtt(object):
                     return self.rfidinttrig(lr, e)
 
                 if lr[COL_TODFINISH] is not None:
-                    self.log.info(u'Finished rider: ' + lr[COL_BIB] + u'@' +
-                                  e.rawtime(2))
+                    LOG.info(u'Finished rider: ' + lr[COL_BIB] + u'@' +
+                             e.rawtime(2))
                     return False
 
                 if self.fl.getstatus() not in ['armfin']:
@@ -1788,30 +1713,29 @@ class irtt(object):
                     if st is not None and e > st and e - st > self.minelap:
                         self.fl.setrider(lr[COL_BIB], lr[COL_SERIES])
                         self.armfinish()
-                        self.log.info(u'Finish armed for: ' + bibstr + u'@' +
-                                      e.rawtime(3))
+                        LOG.info(u'Finish armed for: ' + bibstr + u'@' +
+                                 e.rawtime(3))
                     else:
-                        self.log.info(u'Ignoring rider not on course: ' +
-                                      bibstr + u'@' + e.rawtime(3))
+                        LOG.info(u'Ignoring rider not on course: ' + bibstr +
+                                 u'@' + e.rawtime(3))
                 else:
-                    self.log.info(u'Finish channel blocked for: ' + bib +
-                                  u'.' + series + u'@' + e.rawtime(3))
+                    LOG.info(u'Finish channel blocked for: ' + bib + u'.' +
+                             series + u'@' + e.rawtime(3))
             else:
-                self.log.info(u'Rider not in race: ' + bib + u'.' + series +
-                              u'@' + e.rawtime(3))
+                LOG.info(u'Rider not in race: ' + bib + u'.' + series + u'@' +
+                         e.rawtime(3))
         else:
-            self.log.info(u'Unkown tag: ' + e.refid + u'@' + e.rawtime(1))
+            LOG.info(u'Unkown tag: ' + e.refid + u'@' + e.rawtime(1))
         return False
 
     def int_trig(self, t):
         """Register intermediate trigger."""
-        # Just log
-        self.log.info('Intermediate cell: ' + t.rawtime(2))
+        LOG.info('Intermediate cell: %s', t.rawtime(2))
 
     def fin_trig(self, t):
         """Register finish trigger."""
-        if self.timerstat == 'running':
-            if self.fl.getstatus() == 'armfin':
+        if self.timerstat == u'running':
+            if self.fl.getstatus() == u'armfin':
                 bib = self.fl.bibent.get_text()
                 series = self.fl.serent.get_text()
                 i = self.getiter(bib, series)
@@ -1836,24 +1760,21 @@ class irtt(object):
                         # send a flush hint to minimise display lag
                         self.meet.cmd_announce(u'redraw', u'timer')
                     else:
-                        self.fl.set_time('[err]')
+                        self.fl.set_time(u'[err]')
 
                 else:
-                    self.log.error('Missing rider at finish')
+                    LOG.error(u'Missing rider at finish')
                     self.sl.toidle()
             else:
-                # log impuse to scratchpad
                 pass
-                #self.meet.scratch_log('Finish : '
-                #+ t.index.ljust(6) + t.timestr(4))
-        elif self.timerstat == 'armstart':
+        elif self.timerstat == u'armstart':
             self.set_syncstart(t)
 
     def start_trig(self, t):
         """Register start trigger."""
-        if self.timerstat == 'running':
+        if self.timerstat == u'running':
             # check lane to apply pulse.
-            if self.sl.getstatus() == 'armstart':
+            if self.sl.getstatus() == u'armstart':
                 i = self.getiter(self.sl.bibent.get_text(),
                                  self.sl.serent.get_text())
                 if i is not None:
@@ -1861,23 +1782,22 @@ class irtt(object):
                     self.settimes(i, tst=nst, doplaces=False)
                     self.sl.torunning()
                 else:
-                    self.log.error('Missing rider at start')
+                    LOG.error(u'Missing rider at start')
                     self.sl.toidle()
             else:
-                # log impuse to scratchpad
                 pass
-                #self.meet.scratch_log('Start :  '
-                #+ t.index.ljust(6) + t.timestr(4))
-        elif self.timerstat == 'armstart':
+        elif self.timerstat == u'armstart':
             self.set_syncstart(t, tod.now())
 
-    def timertrig(self, e):
-        """Handle timer callback."""
-        self.meet.announce_timer(e, self.meet.alttimer)
-        chan = timy.chan2id(e.chan)
-        if chan == timy.CHAN_START:
+    def alttimertrig(self, e):
+        """Handle chronometer callbacks."""
+        # note: these impulses are sourced from alttimer device and keyboard
+        #       transponder triggers are collected separately in timertrig()
+        LOG.debug(u'Alt timer: %s@%s/%s', e.chan, e.rawtime(), e.source)
+        channo = strops.chan2id(e.chan)
+        if channo == 0:
             self.start_trig(e)
-        elif chan == timy.CHAN_FINISH:
+        elif channo == 1:
             self.fin_trig(e)
         return False
 
@@ -1886,30 +1806,30 @@ class irtt(object):
         for r in self.riders:
             ws = r[COL_WALLSTART]
             if ws is not None:
-                if curoft + tod.tod('30') == ws:
+                if curoft + tod.tod(u'30') == ws:
                     bib = r[COL_BIB].decode('utf-8')
                     ser = r[COL_SERIES].decode('utf-8')
-                    self.log.info('pre-load starter: ' + repr(bib))
+                    LOG.info(u'pre-load starter: ' + repr(bib))
                     self.sl.setrider(bib, ser)
                     self.meet.cmd_announce(u'startline', bib)
                     break
-                if curoft + tod.tod('5') == ws:
+                if curoft + tod.tod(u'5') == ws:
                     bib = r[COL_BIB].decode('utf-8')
                     ser = r[COL_SERIES].decode('utf-8')
-                    self.log.info('Load starter: ' + repr(bib))
+                    LOG.info(u'Load starter: ' + repr(bib))
                     self.sl.setrider(bib, ser)
                     self.sl.toarmstart()
-                    self.start_unload = ws + tod.tod('5')
+                    self.start_unload = ws + tod.tod(u'5')
                     break
 
     def timeout(self):
         """Update slow changing aspects of race."""
         if not self.winopen:
             return False
-        if self.timerstat == 'running':
+        if self.timerstat == u'running':
             nowoft = (tod.now() - self.lstart).truncate(0)
-            if self.sl.getstatus() in ['idle', 'load']:
-                if nowoft.timeval % 5 == tod.tod('0'):  # every five
+            if self.sl.getstatus() in [u'idle', u'load']:
+                if nowoft.timeval % 5 == 0:  # every five
                     self.on_start(nowoft)
             else:
                 if nowoft == self.start_unload:
@@ -1919,14 +1839,14 @@ class irtt(object):
             self.sl.set_time(nowoft.timestr(0))
 
             # if finish lane loaded, set the elapsed time
-            if self.fl.getstatus() in ['load', 'running', 'armfin']:
+            if self.fl.getstatus() in [u'load', u'running', u'armfin']:
                 bib = self.fl.bibent.get_text()
                 series = self.fl.serent.get_text()
                 i = self.getiter(bib, series)
                 if i is not None:
                     et = self.getelapsed(i, runtime=True)
                     self.fl.set_time(et.timestr(0))
-                    self.announce_rider('',
+                    self.announce_rider(u'',
                                         bib,
                                         self.riders.get_value(i, COL_NAMESTR),
                                         self.riders.get_value(
@@ -1982,10 +1902,10 @@ class irtt(object):
 
     def addrider(self, bib='', series=''):
         """Add specified rider to race model."""
-        if bib == '' or self.getrider(bib, series) is None:
+        if bib == u'' or self.getrider(bib, series) is None:
             ## could be a rmap lookup here
             nr = [
-                bib, series, '', '', '', None, None, None, tod.ZERO, '', '',
+                bib, series, u'', u'', u'', None, None, None, tod.ZERO, u'', u'',
                 None, None, None, None, None, None, None, 0
             ]
             dbr = self.meet.rdb.getrider(bib, series)
@@ -2021,9 +1941,7 @@ class irtt(object):
         elif col == COL_PASS:
             if new_text.isdigit():
                 self.riders[path][COL_PASS] = int(new_text)
-                self.log.debug(u'Adjusted pass count: ' +
-                               repr(self.riders[path][COL_BIB]) + u' : ' +
-                               repr(self.riders[path][COL_PASS]))
+                LOG.debug(u'Adjusted pass count: %r:%r', self.riders[path][COL_BIB], self.riders[path][COL_PASS])
         else:
             self.riders[path][col] = new_text.strip()
 
@@ -2042,7 +1960,7 @@ class irtt(object):
                     try:
                         frac = 0.01 * float(limitstr.replace(u'%', u''))
                         limit = tod.tod(int(frac * float(elap.as_seconds())))
-                    except:
+                    except Exception:
                         pass
             else:  # assume tod without sanity check
                 limit = tod.mktod(limitstr)
@@ -2060,8 +1978,7 @@ class irtt(object):
                 else:
                     ret = limit
             if ret is None:
-                self.log.warn(u'Unable to decode time limit: ' +
-                              repr(limitstr))
+                LOG.warning(u'Unable to decode time limit: %r', limitstr)
         return ret
 
     def placexfer(self):
@@ -2074,30 +1991,29 @@ class irtt(object):
         for cat in self.cats:
             ft = None
             if len(self.results[cat]) > 0:
-                ft = self.results[cat][0]
+                ft = self.results[cat][0][0]
             limit = None
             if ft is not None and self.timelimit is not None:
                 limit = self.decode_limit(self.timelimit, ft)
                 if limit is not None:
-                    self.log.info(u'Time limit: ' + self.timelimit + u' = ' +
-                                  limit.rawtime(0) + u', +' +
-                                  (limit - ft).rawtime(0))
+                    LOG.info(u'Time limit: ' + self.timelimit + u' = ' +
+                             limit.rawtime(0) + u', +' +
+                             (limit - ft).rawtime(0))
             lt = None
             place = 1
             pcount = 0
             for t in self.results[cat]:
-                np = t.refid
+                np = strops.bibser2bibstr(t[0].refid, t[0].index)
                 if np in placelist:
-                    self.log.error(u'Result for rider already in placelist: ' +
-                                   repr(np))
+                    LOG.error(u'Result for rider %r already in placelist', np)
                     # this is a bad fail - indicates duplicate category entry
-                placelist.append(t.refid)
-                i = self.getiter(t.refid, t.index)
+                placelist.append(np)
+                i = self.getiter(t[0].refid, t[0].index)
                 if i is not None:
                     if lt is not None:
-                        if lt != t:
+                        if lt != t[0]:
                             place = pcount + 1
-                    if limit is not None and t > limit:
+                    if limit is not None and t[0] > limit:
                         self.riders.set_value(i, COL_PLACE, u'otl')
                         self.riders.set_value(i, COL_COMMENT, u'otl')
                     else:
@@ -2106,10 +2022,9 @@ class irtt(object):
                     self.riders.swap(j, i)
                     count += 1
                     pcount += 1
-                    lt = t
+                    lt = t[0]
                 else:
-                    self.log.error('Extra result for rider' +
-                                   strops.bibser2bibstr(t.refid, t.index))
+                    LOG.error('Extra result for rider %r', np)
 
         # check counts for racestat
         self.racestat = u'prerace'
@@ -2121,15 +2036,15 @@ class irtt(object):
             else:
                 i = self.getiter(r[COL_BIB], r[COL_SERIES])
                 r[COL_ETA] = self.geteta(i)
-                #self.log.debug(u'Set ETA: ' + repr(r[COL_ETA]))
+                #LOG.debug(u'Set ETA: ' + repr(r[COL_ETA]))
                 # if start set:
                 # transfer out finish time to ETA
                 # or use inters to establish ETA
             if r[COL_PLACE]:
                 placed += 1
-        self.log.debug(u'placed = ' + unicode(placed) + ', total = ' +
-                       unicode(fullcnt))
-        self.log.debug(u'place list = ' + repr(placelist))
+        LOG.debug(u'placed = ' + unicode(placed) + ', total = ' +
+                  unicode(fullcnt))
+        LOG.debug(u'place list = ' + repr(placelist))
         if placed > 0:
             if placed < fullcnt:
                 self.racestat = u'virtual'
@@ -2139,7 +2054,7 @@ class irtt(object):
                     self.racestat = u'final'
                 else:
                     self.racestat = u'provisional'
-        self.log.debug(u'Racestat set to: ' + repr(self.racestat))
+        LOG.debug(u'Racestat set to: ' + repr(self.racestat))
 
         # pass two: compute any intermediates
         self.bonuses = {}  # bonuses are global to stage
@@ -2179,8 +2094,8 @@ class irtt(object):
         # fetch context meta infos
         src = self.contestmap[contest]['source']
         if src not in RESERVED_SOURCES and src not in self.intermeds:
-            self.log.info('Invalid intermediate source: ' + repr(src) +
-                          ' in contest: ' + repr(contest))
+            LOG.info('Invalid intermediate source: ' + repr(src) +
+                     ' in contest: ' + repr(contest))
             return
         tally = self.contestmap[contest]['tally']
         bonuses = self.contestmap[contest]['bonuses']
@@ -2196,7 +2111,7 @@ class irtt(object):
         placestr = ''
         if src == 'fin':
             placestr = self.get_placelist()
-            self.log.info('Using placestr = ' + repr(placestr))
+            LOG.info('Using placestr = ' + repr(placestr))
         elif src == 'reg':
             placestr = self.get_startlist()
         elif src == 'start':
@@ -2212,7 +2127,7 @@ class irtt(object):
                     placeset.add(bib)
                     r = self.getrider(bib)
                     if r is None:
-                        self.log.error('Invalid rider in place string.')
+                        LOG.error('Invalid rider in place string.')
                         break
                         #self.addrider(bib)
                         #r = self.getrider(bib)
@@ -2245,8 +2160,8 @@ class irtt(object):
                             if curplace <= 3:  # countback on 1-3
                                 self.pointscb[tally][bib][curplace - 1] += 1
                 else:
-                    self.log.warn('Duplicate no. = ' + str(bib) + ' in ' +
-                                  repr(contest) + ' places.')
+                    LOG.warning('Duplicate no. = ' + str(bib) + ' in ' +
+                                repr(contest) + ' places.')
 
     def getiter(self, bib, series=''):
         """Return temporary iterator to model row."""
@@ -2283,8 +2198,8 @@ class irtt(object):
                 self.settimes(nri, doplaces=False)
                 recalc = True
             else:
-                self.log.warn('Unregistered Rider ' + str(bibstr) +
-                              ' unchanged.')
+                LOG.warning('Unregistered Rider ' + str(bibstr) +
+                            ' unchanged.')
         if recalc:
             self.placexfer()
         return False
@@ -2310,14 +2225,14 @@ class irtt(object):
         # determine start time
         if imed is not None:
             if tst is not None:  # got a start trigger
-                res.insert(imed - tst, bib, series)
+                res.insert(imed - tst, None, bib, series)
                 ret = res.rank(bib, series)
             elif wst is not None:  # start on wall time
-                res.insert(imed - wst, bib, series)
+                res.insert(imed - wst, None, bib, series)
                 ret = res.rank(bib, series)
             else:
-                self.log.error('No start time for intermediate ' +
-                               strops.bibser2bibstr(bib, series))
+                LOG.error('No start time for intermediate ' +
+                          strops.bibser2bibstr(bib, series))
         return ret
 
     def setpasses(self, iter, passes=None):
@@ -2335,7 +2250,7 @@ class irtt(object):
         bib = self.riders.get_value(iter, COL_BIB)
         series = self.riders.get_value(iter, COL_SERIES)
         cat = self.ridercat(self.riders.get_value(iter, COL_CAT))
-        #self.log.debug('Check: ' + repr(bib) + ', ' + repr(series)
+        #LOG.debug('Check: ' + repr(bib) + ', ' + repr(series)
         #+ ', ' + repr(cat))
 
         # clear result for this bib
@@ -2362,13 +2277,13 @@ class irtt(object):
             self.onestart = True
             if tst is not None:  # got a start trigger
                 self.results[cat].insert(
-                    (tft - tst).truncate(self.precision) + pt, bib, series)
+                    (tft - tst).truncate(self.precision) + pt, None, bib, series)
             elif wst is not None:  # start on wall time
                 self.results[cat].insert(
-                    (tft - wst).truncate(self.precision) + pt, bib, series)
+                    (tft - wst).truncate(self.precision) + pt, None, bib, series)
             else:
-                self.log.error('No start time for rider ' +
-                               strops.bibser2bibstr(bib, series))
+                LOG.error('No start time for rider ' +
+                          strops.bibser2bibstr(bib, series))
         elif tst is not None:
             #self.oncourse(bib, series)	# started but not finished
             pass
@@ -2398,14 +2313,14 @@ class irtt(object):
                 entry.set_text('')
                 tp.grab_focus()
         else:
-            self.log.error('Invalid finish time.')
+            LOG.error('Invalid finish time.')
 
     def lanelookup(self, bib=None, series=''):
         """Prepare name string for timer lane."""
         rtxt = None
         r = self.getrider(bib, series)
         if r is None:
-            self.log.info('Non starter specified: ' + repr(bib))
+            LOG.info('Non starter specified: ' + repr(bib))
         else:
             rtxt = strops.truncpad(r[COL_NAMESTR], 35)
         return rtxt
@@ -2427,6 +2342,49 @@ class irtt(object):
                                         event.time)
                 return True
         return False
+
+    def tod_context_print_activate_cb(self, menuitem, data=None):
+        """Print times for selected rider."""
+        LOG.info(u'Print times not implemented.')
+        pass
+
+    def tod_context_dns_activate_cb(self, menuitem, data=None):
+        """Register rider as non-starter."""
+        sel = self.view.get_selection().get_selected()
+        if sel is not None:
+            i = sel[1]  # grab off row iter
+            bib = self.riders.get_value(i, COL_BIB)
+            series = self.riders.get_value(i, COL_SERIES)
+            self.dnfriders(strops.bibser2bibstr(bib, series), u'dns')
+
+    def tod_context_dnf_activate_cb(self, menuitem, data=None):
+        """Register rider as non-finisher."""
+        sel = self.view.get_selection().get_selected()
+        if sel is not None:
+            i = sel[1]  # grab off row iter
+            bib = self.riders.get_value(i, COL_BIB)
+            series = self.riders.get_value(i, COL_SERIES)
+            self.dnfriders(strops.bibser2bibstr(bib, series), u'dnf')
+
+    def tod_context_dsq_activate_cb(self, menuitem, data=None):
+        """Disqualify rider."""
+        sel = self.view.get_selection().get_selected()
+        if sel is not None:
+            i = sel[1]  # grab off row iter
+            bib = self.riders.get_value(i, COL_BIB)
+            series = self.riders.get_value(i, COL_SERIES)
+            self.dnfriders(strops.bibser2bibstr(bib, series), u'dsq')
+
+    def tod_context_rel_activate_cb(self, menuitem, data=None):
+        """Relegate rider."""
+        LOG.info(u'Relegate not implemented for time trial.')
+        pass
+
+    def tod_context_ntr_activate_cb(self, menuitem, data=None):
+        """Register no time recorded for rider and place last."""
+        ## TODO
+        LOG.info(u'NTR not implemented for time trial.')
+        pass
 
     def tod_context_clear_activate_cb(self, menuitem, data=None):
         """Clear times for selected rider."""
@@ -2481,10 +2439,10 @@ class irtt(object):
                 bib = self.riders.get_value(i, COL_BIB)
                 series = self.riders.get_value(i, COL_SERIES)
                 self.settimes(i, tst=stod, tft=ftod, pt=ptod)  # update model
-                self.log.info('Race times manually adjusted for rider ' +
-                              strops.bibser2bibstr(bib, series))
+                LOG.info('Race times manually adjusted for rider ' +
+                         strops.bibser2bibstr(bib, series))
             else:
-                self.log.info('Edit race times cancelled.')
+                LOG.info('Edit race times cancelled.')
 
     def tod_context_del_activate_cb(self, menuitem, data=None):
         """Delete selected row from race model."""
@@ -2497,8 +2455,7 @@ class irtt(object):
 
     def log_clear(self, bib, series):
         """Print clear time log."""
-        self.log.info('Time cleared for rider ' +
-                      strops.bibser2bibstr(bib, series))
+        LOG.info('Time cleared for rider ' + strops.bibser2bibstr(bib, series))
 
     def title_close_clicked_cb(self, button, entry=None):
         """Close and save the race."""
@@ -2530,7 +2487,7 @@ class irtt(object):
         checka = cat.upper()
         if checka in self.results:
             ret = checka
-        #self.log.debug('ridercat read ' + repr(cat) + '/' + repr(checka)
+        #LOG.debug('ridercat read ' + repr(cat) + '/' + repr(checka)
         #+ '  Returned: ' + repr(ret))
         return ret
 
@@ -2547,11 +2504,16 @@ class irtt(object):
         self.meet = meet
         self.event = event
         self.evno = event[u'evid']
-        self.configpath = meet.event_configfile(self.evno)
+        # series is specified per-rider
+        self.configfile = meet.event_configfile(self.evno)
+        self.readonly = not ui
+        rstr = u''
+        if self.readonly:
+            rstr = u'readonly '
+        LOG.debug(u'Init %r event %r', rstr, self.evno)
 
-        self.log = logging.getLogger('irtt')
-        self.log.setLevel(logging.DEBUG)
-        self.log.debug(u'opening irtt event: ' + unicode(self.evno))
+        self.recalclock = threading.Lock()
+        self._dorecalc = False
 
         # properties
         self.sloppystart = False
@@ -2564,9 +2526,8 @@ class irtt(object):
 
         # race run time attributes
         self.onestart = False
-        self.readonly = not ui
         self.winopen = True
-        self.timerstat = 'idle'
+        self.timerstat = u'idle'
         self.racestat = u'prerace'
         self.start = None
         self.lstart = None
@@ -2624,27 +2585,29 @@ class irtt(object):
             gobject.TYPE_PYOBJECT,  # 17 eta
             gobject.TYPE_INT)  # 18 pass count
 
+        uifile = os.path.join(metarace.UI_PATH, u'irtt.ui')
+        LOG.debug(u'Building event interface from %r', uifile)
         b = gtk.Builder()
-        b.add_from_file(os.path.join(metarace.UI_PATH, u'irtt.ui'))
+        b.add_from_file(uifile)
 
-        self.frame = b.get_object('race_vbox')
-        self.frame.connect('destroy', self.shutdown)
+        self.frame = b.get_object(u'race_vbox')
+        self.frame.connect(u'destroy', self.shutdown)
 
         # meta info pane
-        self.title_namestr = b.get_object('title_namestr')
+        self.title_namestr = b.get_object(u'title_namestr')
         self.set_titlestr()
 
         # Timer Panes
-        mf = b.get_object('race_timer_pane')
-        self.sl = timerpane.timerpane('Start Line', doser=False)
+        mf = b.get_object(u'race_timer_pane')
+        self.sl = timerpane.timerpane(u'Start Line', doser=True)
         self.sl.disable()
-        self.sl.bibent.connect('activate', self.bibent_cb, self.sl)
-        self.sl.serent.connect('activate', self.bibent_cb, self.sl)
-        self.fl = timerpane.mantimerpane('Finish Line', doser=False)
+        self.sl.bibent.connect(u'activate', self.bibent_cb, self.sl)
+        self.sl.serent.connect(u'activate', self.bibent_cb, self.sl)
+        self.fl = timerpane.timerpane(u'Finish Line', doser=True)
         self.fl.disable()
-        self.fl.bibent.connect('activate', self.bibent_cb, self.fl)
-        self.fl.serent.connect('activate', self.bibent_cb, self.fl)
-        self.fl.tment.connect('activate', self.tment_cb, self.fl)
+        self.fl.bibent.connect(u'activate', self.bibent_cb, self.fl)
+        self.fl.serent.connect(u'activate', self.bibent_cb, self.fl)
+        self.fl.tment.connect(u'activate', self.tment_cb, self.fl)
         mf.pack_start(self.sl.frame)
         mf.pack_start(self.fl.frame)
         mf.set_focus_chain([self.sl.frame, self.fl.frame, self.sl.frame])
@@ -2654,33 +2617,37 @@ class irtt(object):
         self.view = t
         t.set_reorderable(True)
         t.set_rules_hint(True)
-        t.connect('button_press_event', self.treeview_button_press)
-
-        # TODO: show team name & club but pop up for rider list
-        uiutil.mkviewcolbibser(t)
-        uiutil.mkviewcoltxt(t, 'Rider', COL_NAMESTR, expand=True)
-        uiutil.mkviewcoltxt(t, 'Cat', COL_CAT, self.editcol_cb)
-        uiutil.mkviewcoltxt(t, 'Passes', COL_PASS, self.editcol_cb)
-        # -> Add in start time field with edit!
-        uiutil.mkviewcoltod(t, 'Start', cb=self.wallstartstr)
-        uiutil.mkviewcoltod(t, 'Time', cb=self.elapstr)
-        uiutil.mkviewcoltxt(t, 'Rank', COL_PLACE, halign=0.5, calign=0.5)
-        t.show()
-        b.get_object('race_result_win').add(t)
         self.context_menu = None
 
         # show window
         if ui:
+            t.connect(u'button_press_event', self.treeview_button_press)
+            # TODO: show team name & club but pop up for rider list
+            uiutil.mkviewcolbibser(t)
+            uiutil.mkviewcoltxt(t, u'Rider', COL_NAMESTR, expand=True)
+            uiutil.mkviewcoltxt(t, u'Cat', COL_CAT, self.editcol_cb)
+            uiutil.mkviewcoltxt(t, u'Passes', COL_PASS, self.editcol_cb)
+            # -> Add in start time field with edit!
+            uiutil.mkviewcoltod(t, u'Start', cb=self.wallstartstr)
+            uiutil.mkviewcoltod(t, u'Time', cb=self.elapstr)
+            uiutil.mkviewcoltxt(t, u'Rank', COL_PLACE, halign=0.5, calign=0.5)
+            t.show()
+            b.get_object(u'race_result_win').add(t)
             b.connect_signals(self)
+
             b = gtk.Builder()
             b.add_from_file(os.path.join(metarace.UI_PATH, u'tod_context.ui'))
-            self.context_menu = b.get_object('tod_context')
+            self.context_menu = b.get_object(u'tod_context')
             b.connect_signals(self)
+
+            # reconfigure the chronometer
             self.meet.alttimer.armlock()  # lock the arm to capture all hits
             self.meet.alttimer.arm(0)  # start line
             self.meet.alttimer.arm(1)  # finish line (primary)
-            self.meet.alttimer.arm(2)  # use for backup trigger
-            self.meet.alttimer.arm(3)  # use for backup trigger
-            self.meet.alttimer.delaytime('0.01')
-            self.meet.timer.setcb(self.rfidtrig)
-            self.meet.alttimer.setcb(self.timertrig)
+            self.meet.alttimer.arm(2)  # use for backup trigger a
+            self.meet.alttimer.arm(3)  # use for backup trigger b
+            self.meet.alttimer.delaytime(u'0.01')
+
+            # connect timer callback functions
+            self.meet.timercb = self.timertrig  # transponders
+            self.meet.alttimercb = self.alttimertrig  # chronometer

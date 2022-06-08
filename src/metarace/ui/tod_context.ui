@@ -29,7 +29,6 @@
         <property name="label" translatable="yes">ntr</property>
         <property name="visible">True</property>
         <property name="tooltip_text" translatable="yes">No time recorded</property>
-        <property name="image">image3</property>
         <property name="use_stock">False</property>
         <signal name="activate" handler="tod_context_ntr_activate_cb"/>
       </object>
@@ -39,7 +38,6 @@
         <property name="label" translatable="yes">dsq</property>
         <property name="visible">True</property>
         <property name="tooltip_text" translatable="yes">Disqualify rider.</property>
-        <property name="image">image1</property>
         <property name="use_stock">False</property>
         <signal name="activate" handler="tod_context_dsq_activate_cb"/>
       </object>
@@ -49,7 +47,6 @@
         <property name="label" translatable="yes">rel</property>
         <property name="visible">True</property>
         <property name="tooltip_text" translatable="yes">Relegate rider.</property>
-        <property name="image">image2</property>
         <property name="use_stock">False</property>
         <signal name="activate" handler="tod_context_rel_activate_cb"/>
       </object>
@@ -59,9 +56,17 @@
         <property name="label" translatable="yes">dns</property>
         <property name="visible">True</property>
         <property name="tooltip_text" translatable="yes">Rider did not start.</property>
-        <property name="image">image4</property>
         <property name="use_stock">False</property>
         <signal name="activate" handler="tod_context_dns_activate_cb"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkImageMenuItem" id="tod_context_dnf">
+        <property name="label" translatable="yes">dnf</property>
+        <property name="visible">True</property>
+        <property name="tooltip_text" translatable="yes">Rider did not finish.</property>
+        <property name="use_stock">False</property>
+        <signal name="activate" handler="tod_context_dnf_activate_cb"/>
       </object>
     </child>
     <child>
@@ -88,25 +93,5 @@
         <signal name="activate" handler="tod_context_del_activate_cb"/>
       </object>
     </child>
-  </object>
-  <object class="GtkImage" id="image1">
-    <property name="visible">True</property>
-    <property name="stock">gtk-dialog-error</property>
-    <property name="icon-size">1</property>
-  </object>
-  <object class="GtkImage" id="image2">
-    <property name="visible">True</property>
-    <property name="stock">gtk-goto-bottom</property>
-    <property name="icon-size">1</property>
-  </object>
-  <object class="GtkImage" id="image3">
-    <property name="visible">True</property>
-    <property name="stock">gtk-apply</property>
-    <property name="icon-size">1</property>
-  </object>
-  <object class="GtkImage" id="image4">
-    <property name="visible">True</property>
-    <property name="stock">gtk-no</property>
-    <property name="icon-size">1</property>
   </object>
 </interface>

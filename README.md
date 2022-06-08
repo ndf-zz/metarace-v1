@@ -6,7 +6,7 @@ This is a transitional, and in some cases, incompatible update
 of the metarace package toward Python3 and gtk/gi. Before updating
 from version 1.11 to 1.12, please read [Changes](#Changes) below
 and check the example systems default file
-[metarace.json](src/data/metarace.json) for any required updates.
+[metarace.json](src/metarace/data/metarace.json) for any required updates.
 
 Version 1.12 will be the final release of metarace version 1.
 See related package [metarace](https://github.com/ndf-zz/metarace)
@@ -40,6 +40,7 @@ Support libraries:
 In preparation for version 2, this library makes the following major
 departures from older releases:
 
+   - System defaults moved to ~/Documents/metarace/default
    - "Meet" is now the toplevel type for both track and road races.
    - Telegraph is a thin wrapper on MQTT, completely replacing
      the IRC-backed library with a simpler publish/subscribe
@@ -59,8 +60,9 @@ departures from older releases:
      with JSON-backed jsonconfigs throughout.
    - All configuration and setting files are written to disk via
      metarace.savefile(). Related meets which share resources through
-     symbolic links should be aware that savefile disconnects symbolic 
-     links and enforces a real file in the meet folder.
+     symbolic links should be aware that savefile() writes to real file
+     contained in the meet folder, ignoring symbolic links out of the
+     meet if they exist.
    - Meet and event configuration options have been adjusted, and in many
      cases, older configs (v1.11 and earlier) may not be correctly read.
    - Default file handling no longer allows fetching of resource files

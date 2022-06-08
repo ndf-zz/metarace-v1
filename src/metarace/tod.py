@@ -517,16 +517,16 @@ class todlist(object):
             found = False
             for lt in self.__store:
                 if rt0 < lt[0]:  # primary time is faster, insert ok
-                    self.__store.insert(i, [rt0, rt1])
+                    self.__store.insert(i, (rt0, rt1))
                     found = True
                     break
                 elif rt0 == lt[0]:  # primary same, compare on secondary
                     if rt1 < lt[1]:  # secondary time faster - insert ok
-                        self.__store.insert(i, [rt0, rt1])
+                        self.__store.insert(i, (rt0, rt1))
                         found = True
                         break
                 i += 1
             if not found:
-                self.__store.append([rt0, rt1])
+                self.__store.append((rt0, rt1))
             ret = i
         return ret

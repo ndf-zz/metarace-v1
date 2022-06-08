@@ -269,7 +269,14 @@ class timerpane(object):
         self.biblbl = gtk.Label(u'')
         self.biblbl.show()
         h.pack_start(self.biblbl, True)
+
+        # mantimer entry
+        self.tment = gtk.Entry()
+        self.tment.set_width_chars(10)
+        h.pack_start(self.tment, False)
+        #h.set_focus_chain([self.bibent, self.tment, self.bibent])
         h.show()
+
         v.pack_start(h, False)
 
         # Clock row 'HHhMM:SS.DCMZ'

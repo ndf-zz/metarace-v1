@@ -12,6 +12,14 @@
   "roadmeet": {
     "timertopic": "timer"
   },
+  "irtt": {
+    "sloppystart": false,
+    "startloop": null,
+    "starttrig": null,
+    "finishloop": null,
+    "precision": 2,
+    "autoexport": false
+  },
   "rms": {
     "allowspares": false,
     "autoexport": false,

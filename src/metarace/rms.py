@@ -50,6 +50,16 @@ LAPCOLUMN = 5
 STARTCOLUMN = 6
 BUNCHCOLUMN = 7
 
+ROADRACE_TYPES = {
+    u'road': u'Road Race',
+    u'circuit': u'Circuit',
+    u'criterium': u'Criterium',
+    u'handicap': u'Handicap',
+    u'cross': u'Cyclocross',
+    u'irtt': u'Road Time Trial',
+    u'trtt': u'Team Road Time Trial',
+}
+
 # rider commands
 RIDER_COMMANDS_ORD = [
     u'add', u'del', u'que', u'dns', u'otl', u'wd', u'dnf', u'dsq', u'com',
@@ -663,7 +673,11 @@ class rms(object):
     def set_titlestr(self, titlestr=None):
         """Update the title string label."""
         if titlestr is None or titlestr == u'':
-            titlestr = u'Mass Start Road Event'
+            etype = self.event[u'type']
+            if etype in ROADRACE_TYPES:
+                titlestr = u'[' + ROADRACE_TYPES[etype] + u']'
+            else:
+                titlestr = u'[Road Event]'
         self.title_namestr.set_text(titlestr)
 
     def destroy(self):
@@ -1124,10 +1138,14 @@ class rms(object):
         return ret
 
     def single_catresult(self, cat):
+        LOG.debug(u'Cat result for cat=%r', cat)
         ret = []
+        allin = False
         catname = cat  # fallback emergency
         if cat == u'' and len(self.cats) > 1:
             catname = u'Uncategorised Riders'
+        else:
+            allin = True
         subhead = u''
         footer = u''
         distance = self.meet.get_distance()
@@ -1178,7 +1196,7 @@ class rms(object):
             if rcat.strip():
                 rcats = rcat.split()
             incat = False
-            if cat and cat in rcats:
+            if allin or (cat and cat in rcats):
                 incat = True  # rider is in this category
             elif not cat:  # is the rider uncategorised?
                 incat = rcats[0] not in self.cats  # backward logic

@@ -91,14 +91,14 @@ class telegraph(threading.Thread):
         """Suspend calling thread until command queue is processed."""
         self.__queue.join()
 
-    def publish(self, msg=None, topic=None, qos=0, retain=False):
+    def publish(self, msg=None, topic=None, qos=None, retain=False):
         """Publish the provided msg to topic or deftopic if None."""
         self.__queue.put_nowait((u'PUBLISH', topic, msg, qos, retain))
 
-    def publish_json(self, obj=None, topic=None, qos=0, retain=False):
+    def publish_json(self, obj=None, topic=None, qos=None, retain=False):
         """Pack the provided object into JSON and publish to topic."""
         try:
-            self.publish(unicode(json.dumps(obj)), topic)
+            self.publish(unicode(json.dumps(obj)), topic, qod, retain)
         except Exception as e:
             LOG.error(u'Error publishing object %r: %s', obj, e)
 
@@ -311,11 +311,14 @@ class telegraph(threading.Thread):
                         ntopic = self.__deftopic
                         if m[1] is not None:  # topic is set
                             ntopic = m[1]
+                        nqos = m[3]
+                        if nqos is None:
+                            nqos = self.__qos
                         if ntopic:
                             msg = None
                             if m[2] is not None:
                                 msg = m[2].encode(u'utf-8')
-                            self.__client.publish(ntopic, msg, m[3], m[4])
+                            self.__client.publish(ntopic, msg, nqos, m[4])
                         else:
                             #LOG.debug(u'No topic, msg ignored: %r', m[1])
                             pass

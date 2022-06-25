@@ -1250,13 +1250,16 @@ class rms(object):
                         dtlap = rlap
                         if leadpass is None and rlap > 0:
                             risleader = True
-                            leadpass = r[COL_RFSEEN][-1]
                             leadlap = rlap
-                            leadsplits = [tv for tv in r[COL_RFSEEN]]
+                            if len(r[COL_RFSEEN]) > 0:
+                                # an untimed leader with manual lap count
+                                leadpass = r[COL_RFSEEN][-1]
+                                leadsplits = [tv for tv in r[COL_RFSEEN]]
                         if rlap > 0 and leadpass is not None:
-                            rpass = r[COL_RFSEEN][-1]
+                            if len(r[COL_RFSEEN]) > 0:
+                                rpass = r[COL_RFSEEN][-1]
                             if bt is None:
-                                if rpass < leadpass:
+                                if rpass is not None and rpass < leadpass:
                                     # rider is still finishing a lap
                                     rlap += 1
                                     ronlap = False
@@ -1274,10 +1277,11 @@ class rms(object):
                                 bwt = None
                                 bt = None
                         if risleader and self.start is not None:
-                            et = leadpass - self.start
-                            if sof is not None:
-                                et = et - sof
-                            dstr = et.rawtime(0)
+                            if leadpass is not None:
+                                et = leadpass - self.start
+                                if sof is not None:
+                                    et = et - sof
+                                dstr = et.rawtime(0)
                         elif bt is None and self.showdowntimes:
                             # synthesise down time if possible
                             if dtlap > 0:

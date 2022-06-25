@@ -471,6 +471,14 @@ def reformat_placelist(placestr):
     return u' '.join(placestr.strip(u'-').split())
 
 
+def confopt_str(confob, default=None):
+    """Check and return a plain string for the provided value."""
+    ret = default
+    if isinstance(confob, basestring):
+        ret = confob
+    return ret
+
+
 def confopt_bool(confstr):
     """Check and return a boolean option from config."""
     if isinstance(confstr, basestring):

@@ -1,4 +1,13 @@
+# SPDX-License-Identifier: MIT
 """Tag Heuer/Chronelec Decoder Interface."""
+
+# todo: handle man, box, and cel combinations:
+#	CELL1   <STA 000255 00:00'31"957 01 01 1 1555>
+#	CELL2   <BOX 000255 00:01'32"663 01 01 1 1552>
+#	MAN     <MAN 000000 00:18'16"964 01 01 1 1541>
+#	box L   <B01 093367 03:45'08"388 44 01 0 1522>
+#	box R   <B02 093367 03:45'53"976 74 01 0 1529>
+#	box Cel <B01 000255 03:47'07"566 00 01 0 1497>
 
 # For connections to multiple decoders, use thbchub
 
@@ -98,6 +107,7 @@ DEFAULT_IPCFG = {
     u'Host': u'192.168.0.255'
 }
 DEFPORT = u'/dev/ttyS0'
+
 
 def thbc_sum(msgstr=b''):
     """Return sum of character values as decimal string."""
@@ -343,7 +353,7 @@ class thbc(decoder):
         self._boxname = u''
         for c in msg[43:47]:
             self._boxname += unichr(ord(c) + ord('0'))
-        self._version=unicode(hexval2val(ibuf[47]))
+        self._version = unicode(hexval2val(ibuf[47]))
         stalvl = hex(ord(msg[25]))  # ? question this
         boxlvl = hex(ord(msg[26]))
         LOG.info(u'Info Decoder ID: %s', self._boxname)

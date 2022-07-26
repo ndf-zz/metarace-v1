@@ -1349,8 +1349,8 @@ class trackmeet(object):
                           evt,
                           priority=glib.PRIORITY_HIGH)
 
-    def __controlcb(self, topic=None, msg=None):
-        LOG.debug(u'Unsupported control %r: %r', topic, msg)
+    def __controlcb(self, topic=None, message=None):
+        LOG.debug(u'Unsupported control %r: %r', topic, message)
 
     def start(self):
         """Start the timer and scoreboard threads."""

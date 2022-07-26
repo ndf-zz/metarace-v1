@@ -1404,8 +1404,8 @@ class roadmeet(object):
             glib.idle_add(self.alttimercb, evt, priority=glib.PRIORITY_HIGH)
         glib.idle_add(self.timer_announce, evt, self.alttimer, u'timy')
 
-    def _controlcb(self, topic=None, msg=None):
-        glib.idle_add(self.remote_command, topic, msg)
+    def _controlcb(self, topic=None, message=None):
+        glib.idle_add(self.remote_command, topic, message)
 
     def __init__(self, etype=None):
         """Meet constructor."""

@@ -1312,7 +1312,7 @@ class trackmeet(object):
             key = gtk.gdk.keyval_name(event.keyval) or u'None'  # str
             if event.state & gtk.gdk.CONTROL_MASK:
                 if key in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
-                    self.main_timer.trig(tod.now(index=u'FAKE', chan=key))
+                    self._timercb(tod.now(index=u'FAKE', chan=key))
                     return True
             if self.curevent is not None:
                 return self.curevent.key_event(widget, event)

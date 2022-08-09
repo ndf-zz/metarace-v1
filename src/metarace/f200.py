@@ -725,7 +725,7 @@ class f200(object):
                         rank = pls + u'.'
                     else:
                         rank = pls
-                    plcount += 1
+                    pcount += 1
                 if r[COL_FINISH] is not None:
                     time = (r[COL_FINISH] - r[COL_START]).truncate(3)
                     if ftime is None:
@@ -794,9 +794,7 @@ class f200(object):
         """Register finish trigger."""
         sp.finish(t)
         ri = self.getiter(sp.getrider())
-        split = None
-        if len(sp.splits) > 0:
-            split = sp.splits[0]
+        split = sp.getsplit(0)
         if ri is not None:
             self.settimes(ri, self.curstart, t, split)
         else:
@@ -1011,7 +1009,7 @@ class f200(object):
         """Arm timer for a split."""
         if self.timerstat == u'running':
             if sp.getstatus() == u'running':
-                sp.toarmint()
+                sp.toarmint(u'100m Armed')
                 self.meet.main_timer.arm(self.chan_I)
             elif sp.getstatus() == u'armint':
                 sp.torunning()
@@ -1398,6 +1396,7 @@ class f200(object):
         self.fs = timerpane.timerpane(u'Timer')
         self.fs.bibent.connect(u'activate', self.bibent_cb, self.fs)
         self.fs.hide_splits()
+        self.fs.splitlbls = [u'100\u2006m Split', u'Finish']
         self.fslog = None
         mf.pack_start(self.fs.frame)
 

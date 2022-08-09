@@ -176,10 +176,10 @@ class timerpane(object):
         self.status = u'armfin'
         self.b.buttonchg(uiutil.bg_armfin, u'Finish Armed')
 
-    def toarmint(self):
+    def toarmint(self, label=u'Lap Armed'):
         """Arm timer for intermediate."""
         self.status = u'armint'
-        self.b.buttonchg(uiutil.bg_armint, u'Lap Armed')
+        self.b.buttonchg(uiutil.bg_armint, label)
 
     def torunning(self):
         """Update timer state to running."""

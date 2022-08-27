@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Timing and data handling application wrapper for road events."""
 
 import pygtk
@@ -194,11 +195,17 @@ class fakemeet(object):
 
         self.announce = telegraph.telegraph()
         self.title_str = ''
+        self.subtitle_str = ''
         self.date_str = ''
         self.organiser_str = ''
         self.commissaire_str = ''
         self.distance = None
         self.docindex = 0
+        self.linkbase = u'.'
+        self.provisionalstart = False
+        self.indexlink = None
+        self.nextlink = None
+        self.prevlink = None
         self.bibs_in_results = True
 
     def get_distance(self):
@@ -232,6 +239,15 @@ class fakemeet(object):
         else:
             rep.strings[u'diststr'] = self.diststr
 
+        if self.prevlink:
+            rep.prevlink = self.prevlink
+        if self.nextlink:
+            rep.nextlink = self.nextlink
+        if self.indexlink:
+            rep.indexlink = self.indexlink
+        if self.shortname:
+            rep.shortname = self.shortname
+
     def loadconfig(self):
         """Load meet config from disk."""
         cr = jsonconfig.config({
@@ -246,7 +262,12 @@ class fakemeet(object):
                 u'distance': None,
                 u'diststr': u'',
                 u'docindex': u'0',
+                u'linkbase': u'.',
+                u'indexlink': None,
+                u'nextlink': None,
+                u'prevlink': None,
                 u'resultnos': u'Yes',
+                u'provisionalstart': False,
                 u'competitioncode': u'',
                 u'eventcode': u'',
                 u'racetype': u'',
@@ -272,17 +293,20 @@ class fakemeet(object):
         self.organiser_str = cr.get(u'roadmeet', u'organiser')
         self.commissaire_str = cr.get(u'roadmeet', u'commissaire')
         self.linkbase = cr.get(u'roadmeet', u'linkbase')
-        self.distance = strops.confopt_float(cr.get(u'roadmeet', u'distance'))
+        self.distance = cr.get_float(u'roadmeet', u'distance')
         self.diststr = cr.get(u'roadmeet', u'diststr')
-        self.docindex = strops.confopt_posint(cr.get(u'roadmeet', u'docindex'),
-                                              0)
+        self.docindex = cr.get_posint(u'roadmeet', u'docindex', 0)
         self.competitioncode = cr.get(u'roadmeet', u'competitioncode')
         self.eventcode = cr.get(u'roadmeet', u'eventcode')
         self.racetype = cr.get(u'roadmeet', u'racetype')
+        self.linkbase = cr.get(u'roadmeet', u'linkbase')
+        self.indexlink = cr.get(u'roadmeet', u'indexlink')
+        self.prevlink = cr.get(u'roadmeet', u'prevlink')
+        self.nextlink = cr.get(u'roadmeet', u'nextlink')
         self.competitortype = cr.get(u'roadmeet', u'competitortype')
         self.documentversion = cr.get(u'roadmeet', u'documentversion')
-        self.bibs_in_results = strops.confopt_bool(
-            cr.get(u'roadmeet', u'resultnos'))
+        self.bibs_in_results = cr.get_bool(u'roadmeet', u'resultnos')
+        self.provisionalstart = cr.get_bool(u'roadmeet', u'provisionalstart')
 
     def event_configfile(self, evno):
         """Return a config filename for the given event no."""
@@ -475,8 +499,17 @@ class roadmeet(object):
         else:
             rep.strings[u'diststr'] = self.diststr
 
+        if self.prevlink:
+            rep.prevlink = self.prevlink
+        if self.nextlink:
+            rep.nextlink = self.nextlink
+        if self.indexlink:
+            rep.indexlink = self.indexlink
+        if self.shortname:
+            rep.shortname = self.shortname
         for sec in sections:
             rep.add_section(sec)
+
         print_op = gtk.PrintOperation()
         print_op.set_allow_async(True)
         print_op.set_print_settings(self.printprefs)
@@ -793,8 +826,17 @@ class roadmeet(object):
         else:
             pass
 
+        fnv = []
+        if filebase:
+            fnv.append(filebase)
+        fnv.append(u'startlist')
+        sfile = u'_'.join(fnv)
+        fnv[-1] = 'result'
+        ffile = u'_'.join(fnv)
+
         # Write out a startlist if event idle
         if self.curevent.timerstat in ['idle']:
+            filename = sfile
             rep = report.report()
             rep.strings[u'title'] = self.title_str
             rep.strings[u'subtitle'] = self.subtitle_str
@@ -810,11 +852,21 @@ class roadmeet(object):
                     unicode(self.distance) + u'\u2006km')
             else:
                 rep.strings[u'diststr'] = self.diststr
+            if self.provisionalstart:
+                rep.set_provisional(True)
             rep.indexlink = u'index'
+            if self.prevlink:
+                rep.prevlink = u'_'.join((self.prevlink, u'startlist'))
+            if self.nextlink:
+                rep.nextlink = u'_'.join((self.nextlink, u'startlist'))
+            if self.indexlink:
+                rep.indexlink = self.indexlink
+            if self.shortname:
+                rep.shortname = self.shortname
+            rep.resultlink = ffile
             for sec in self.curevent.startlist_report():
                 rep.add_section(sec)
 
-            filename = filebase + u'startlist'
             lb = os.path.join(self.linkbase, filename)
             lt = [u'pdf', u'xls']
             rep.canonical = u'.'.join([lb, u'json'])
@@ -847,7 +899,6 @@ class roadmeet(object):
                 unicode(self.distance) + u'\u2006km')
         else:
             rep.strings[u'diststr'] = self.diststr
-        rep.indexlink = u'index'
 
         # Set provisional status	# TODO: other tests for prov flag?
         if self.curevent.timerstat != u'finished':
@@ -857,7 +908,17 @@ class roadmeet(object):
         for sec in self.curevent.result_report():
             rep.add_section(sec)
 
-        filename = filebase + u'result'
+        filename = ffile
+        rep.indexlink = u'index'
+        if self.prevlink:
+            rep.prevlink = u'_'.join((self.prevlink, u'result'))
+        if self.nextlink:
+            rep.nextlink = u'_'.join((self.nextlink, u'result'))
+        if self.indexlink:
+            rep.indexlink = self.indexlink
+        if self.shortname:
+            rep.shortname = self.shortname
+        rep.startlink = sfile
         lb = os.path.join(self.linkbase, filename)
         lt = [u'pdf', u'xls']
         rep.canonical = u'.'.join([lb, u'json'])
@@ -888,7 +949,8 @@ class roadmeet(object):
                     cw = ucsv.UnicodeWriter(f, quoting=csv.QUOTE_MINIMAL)
                     for r in lifdat:
                         cw.writerow(r)
-        self.export_result_maker()
+        if self.resfiles:
+            self.export_result_maker()
         glib.idle_add(self.mirror_start)
 
     ## Directory utilities
@@ -1039,6 +1101,7 @@ class roadmeet(object):
             if self.mirror is not None:
                 if not self.mirror.is_alive():
                     self.mirror = None
+                    LOG.debug(u'Removing completed export thread.')
         else:
             return False
         return True
@@ -1134,6 +1197,9 @@ class roadmeet(object):
         cw.set(u'roadmeet', u'alttimer', self.alttimer_port)
         cw.set(u'roadmeet', u'shortname', self.shortname)
         cw.set(u'roadmeet', u'linkbase', self.linkbase)
+        cw.set(u'roadmeet', u'indexlink', self.indexlink)
+        cw.set(u'roadmeet', u'nextlink', self.nextlink)
+        cw.set(u'roadmeet', u'prevlink', self.prevlink)
         cw.set(u'roadmeet', u'title', self.title_str)
         cw.set(u'roadmeet', u'subtitle', self.subtitle_str)
         cw.set(u'roadmeet', u'document', self.document_str)
@@ -1143,6 +1209,8 @@ class roadmeet(object):
 
         cw.set(u'roadmeet', u'resultnos', self.bibs_in_results)
         cw.set(u'roadmeet', u'lifexport', self.lifexport)
+        cw.set(u'roadmeet', u'resfiles', self.resfiles)
+        cw.set(u'roadmeet', u'provisionalstart', self.provisionalstart)
         cw.set(u'roadmeet', u'distance', self.distance)
         cw.set(u'roadmeet', u'diststr', self.diststr)
         cw.set(u'roadmeet', u'docindex', self.docindex)
@@ -1191,7 +1259,12 @@ class roadmeet(object):
                 u'timertopic': None,
                 u'remote_enable': False,
                 u'linkbase': u'.',
+                u'indexlink': None,
+                u'nextlink': None,
+                u'prevlink': None,
                 u'lifexport': False,
+                u'resfiles': True,
+                u'provisionalstart': False,
                 u'mirrorpath': u'',
                 u'mirrorcmd': u'echo',
                 u'mirrorfile': u'',
@@ -1246,8 +1319,7 @@ class roadmeet(object):
 
         # fetch the remote timer topic and update remote control
         self.timertopic = cr.get(u'roadmeet', u'timertopic')
-        self.remote_enable = strops.confopt_bool(
-            cr.get(u'roadmeet', u'remote_enable'))
+        self.remote_enable = cr.get_bool(u'roadmeet', u'remote_enable')
         self.remote_reset()
 
         # set meet meta, and then copy into text entries
@@ -1258,13 +1330,14 @@ class roadmeet(object):
         self.date_str = cr.get(u'roadmeet', u'date')
         self.organiser_str = cr.get(u'roadmeet', u'organiser')
         self.commissaire_str = cr.get(u'roadmeet', u'commissaire')
-        self.distance = strops.confopt_float(cr.get(u'roadmeet', u'distance'))
+        self.distance = cr.get_float(u'roadmeet', u'distance')
         self.diststr = cr.get(u'roadmeet', u'diststr')
-        self.docindex = strops.confopt_posint(cr.get(u'roadmeet', u'docindex'),
-                                              0)
+        self.docindex = cr.get_posint(u'roadmeet', u'docindex', 0)
         self.linkbase = cr.get(u'roadmeet', u'linkbase')
-        self.bibs_in_results = strops.confopt_bool(
-            cr.get(u'roadmeet', u'resultnos'))
+        self.indexlink = cr.get(u'roadmeet', u'indexlink')
+        self.prevlink = cr.get(u'roadmeet', u'prevlink')
+        self.nextlink = cr.get(u'roadmeet', u'nextlink')
+        self.bibs_in_results = cr.get_bool(u'roadmeet', u'resultnos')
         self.mirrorpath = cr.get(u'roadmeet', u'mirrorpath')
         self.mirrorcmd = cr.get(u'roadmeet', u'mirrorcmd')
         self.mirrorfile = cr.get(u'roadmeet', u'mirrorfile')
@@ -1273,7 +1346,9 @@ class roadmeet(object):
         self.racetype = cr.get(u'roadmeet', u'racetype')
         self.competitortype = cr.get(u'roadmeet', u'competitortype')
         self.documentversion = cr.get(u'roadmeet', u'documentversion')
-        self.lifexport = strops.confopt_bool(cr.get(u'roadmeet', u'lifexport'))
+        self.lifexport = cr.get_bool(u'roadmeet', u'lifexport')
+        self.resfiles = cr.get_bool(u'roadmeet', u'resfiles')
+        self.provisionalstart = cr.get_bool(u'roadmeet', u'provisionalstart')
 
         # Re-Initialise rider and event databases
         self.rdb.clear()
@@ -1341,7 +1416,7 @@ class roadmeet(object):
         return False
 
     def mirror_start(self):
-        """Create a new mirror thread unless in progress."""
+        """Create a new mirror thread unless already in progress."""
         if self.mirrorpath and self.mirror is None:
             self.mirror = export.mirror(localpath=os.path.join(u'export', u''),
                                         remotepath=self.mirrorpath,
@@ -1425,10 +1500,15 @@ class roadmeet(object):
         self.diststr = u''
         self.docindex = 0
         self.linkbase = u'.'
+        self.provisionalstart = False
+        self.indexlink = None
+        self.nextlink = None
+        self.prevlink = None
 
         self.bibs_in_results = True
         self.remote_enable = False
         self.lifexport = False
+        self.resfiles = True
 
         # printer preferences
         paper = gtk.paper_size_new_custom('metarace-full', 'A4 for reports',

@@ -124,6 +124,8 @@ for nonempty in (
         u'title',
         u'div',
         u'nav',
+        u'header',
+        u'main',
         u'style',
         u'script',
         u'p',

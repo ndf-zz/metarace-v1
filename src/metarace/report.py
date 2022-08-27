@@ -301,10 +301,14 @@ def vec2htmllinkrow(vec=[], xtn=u'', rep=None):
     return htlib.tr(cols)
 
 
-def vec2htmlrow(vec=[]):
+def vec2htmlrow(vec=[], orank=False):
     rowmap = vecmapstr(vec, 7)
     cols = []
-    cols.append(htlib.td(htlib.escapetext(rowmap[0])))  # Rank (left)
+    if orank:
+        cols.append(htlib.td(htlib.i(htlib.escapetext(
+            rowmap[0]))))  # seed, left, oblique
+    else:
+        cols.append(htlib.td(htlib.escapetext(rowmap[0])))  # Rank (left)
     cols.append(htlib.td(htlib.escapetext(rowmap[1]),
                          {u'class': u'text-end'}))  # No (right)
     cols.append(htlib.td(htlib.escapetext(rowmap[2])))  # Name (left)
@@ -620,7 +624,9 @@ class dual_ittt_startlist(object):
             f.write(u'\n')
 
         if self.footer:
-            f.write(self.footer.strip() + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.footer.strip()),
+                        {"class": "small"}) + u'\n')
         return False
 
 
@@ -824,7 +830,9 @@ class signon_list(object):
                 htlib.table(htlib.tbody(trows), {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
-            f.write(self.footer.strip() + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.footer.strip()),
+                        {"class": "small"}) + u'\n')
         return False
 
 
@@ -1015,12 +1023,14 @@ class twocol_startlist(object):
                 rows.append(nv)
             trows = []
             for l in rows:
-                trows.append(vec2htmlrow(l))
+                trows.append(vec2htmlrow(l, orank=True))
             f.write(
                 htlib.table(htlib.tbody(trows), {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
-            f.write(self.footer.strip() + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.footer.strip()),
+                        {"class": "small"}) + u'\n')
         return False
 
 
@@ -1213,7 +1223,9 @@ class sprintround(object):
                 htlib.table(htlib.tbody(trows), {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
-            f.write(self.footer.strip() + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.footer.strip()),
+                        {"class": "small"}) + u'\n')
         return u''
 
 
@@ -1420,7 +1432,9 @@ class sprintfinal(object):
                 htlib.table(htlib.tbody(trows), {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
-            f.write(self.footer.strip() + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.footer.strip()),
+                        {"class": "small"}) + u'\n')
         return u''
 
 
@@ -1618,7 +1632,9 @@ class rttstartlist(object):
                 htlib.table(htlib.tbody(trows), {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
-            f.write(self.footer.strip() + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.footer.strip()),
+                        {"class": "small"}) + u'\n')
         return None
 
 
@@ -2428,7 +2444,9 @@ class judge24rep(object):
                             {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
-            f.write(self.footer.strip() + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.footer.strip()),
+                        {"class": "small"}) + u'\n')
         return None
 
 
@@ -2688,7 +2706,9 @@ class judgerep(object):
                             {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
-            f.write(self.footer.strip() + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.footer.strip()),
+                        {"class": "small"}) + u'\n')
         return None
 
 
@@ -2925,8 +2945,9 @@ class teampage(object):
                 htlib.p(htlib.escapetext(self.subheading.strip()),
                         {u'class': u'lead'}) + u'\n')
         if self.footer:
-            f.write(htlib.p(htlib.small(htlib.escapetext(
-                self.footer.strip()))))
+            f.write(
+                htlib.p(htlib.escapetext(self.footer.strip()),
+                        {"class": "small"}) + u'\n')
         rcount = 0
         if len(self.lines) > 0:
             for t in self.lines:
@@ -3129,7 +3150,9 @@ class gamut(object):
         if len(self.lines) > 0:
             pass
         if self.footer:
-            f.write(self.footer.strip() + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.footer.strip()),
+                        {"class": "small"}) + u'\n')
         return None
 
 
@@ -3357,7 +3380,9 @@ class threecol_section(object):
                             {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
-            f.write(self.footer.strip() + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.footer.strip()),
+                        {"class": "small"}) + u'\n')
         return None
 
 
@@ -3591,7 +3616,9 @@ class section(object):
                             {u'class': report.tablestyle}))
             f.write(u'\n')
         if self.footer:
-            f.write(self.footer.strip() + u'\n')
+            f.write(
+                htlib.p(htlib.escapetext(self.footer.strip()),
+                        {"class": "small"}) + u'\n')
         return None
 
 
@@ -3899,9 +3926,12 @@ class report(object):
         self.eventid = None  # stage no or other identifier
         self.customlinks = []  # manual override links
         self.navbar = u''  # meet navigation
+        self.shortname = None
         self.prevlink = None
         self.nextlink = None
         self.indexlink = None
+        self.resultlink = None
+        self.startlink = None
         self.canonical = None
         self.pagemarks = False
         self.s = None
@@ -4289,6 +4319,8 @@ class report(object):
         rep[u'prevlink'] = self.prevlink
         rep[u'nextlink'] = self.nextlink
         rep[u'indexlink'] = self.indexlink
+        rep[u'resultlink'] = self.resultlink
+        rep[u'startlink'] = self.startlink
         rep[u'canonical'] = self.canonical
         rep[u'strings'] = self.strings
         rep[u'sections'] = []
@@ -4356,47 +4388,101 @@ class report(object):
         """Output a html version of the report."""
         cw = file
         navbar = []
-        for link in self.customlinks:  # to build custom toolbars
-            navbar.append(
-                htlib.a(htlib.escapetext(link[0]), {
-                    u'href': link[1] + u'.html',
-                    u'class': u'nav-link'
-                }))
+        #for link in self.customlinks:  # to build custom toolbars
+        #navbar.append(
+        #htlib.a(htlib.escapetext(link[0]), {
+        #u'href': link[1] + u'.html',
+        #u'class': u'nav-link'
+        #}))
         if self.prevlink:
             navbar.append(
-                htlib.a(htlib.escapetext(u'\u2190 Previous'), {
-                    u'href': self.prevlink + u'.html',
-                    u'class': u'nav-link'
-                }))
+                htlib.a(
+                    htlib.span((), {"class": "bi-caret-left"}), {
+                        u'href': self.prevlink + u'.html',
+                        u'class': u'nav-link',
+                        u'title': u'Previous'
+                    }))
         if self.indexlink:
-            hrf = self.indexlink + u'.html'
+            hrf = self.indexlink
+            if hrf.startswith(u'.') or hrf.endswith(u'/') or hrf.endswith(
+                    u'html'):
+                pass
+            else:
+                hrf += u'.html'
             if hrf == u'index.html':
                 hrf = u'./'
+
             navbar.append(
-                htlib.a(htlib.escapetext(u'\u2191 Index'), {
+                htlib.a(htlib.span((), {"class": "bi-caret-up"}), {
                     u'href': hrf,
-                    u'class': u'nav-link'
+                    u'class': u'nav-link',
+                    u'title': u'Index'
                 }))
+        if self.startlink:
+            navbar.append(
+                htlib.a(
+                    htlib.span((), {"class": "bi-file-earmark-person"}), {
+                        u'href': self.startlink + u'.html',
+                        u'class': u'nav-link',
+                        u'title': u'Startlist'
+                    }))
+        if self.resultlink:
+            navbar.append(
+                htlib.a(
+                    htlib.span((), {"class": "bi-file-earmark-text"}), {
+                        u'href': self.resultlink + u'.html',
+                        u'class': u'nav-link',
+                        u'title': u'Result'
+                    }))
         if self.provisional:  # add refresh button
             navbar.append(
                 htlib.a(
-                    htlib.escapetext(u'Reload \u21bb'), {
+                    htlib.span((), {"class": "bi-arrow-repeat"}), {
                         u'href': u'#',
                         u'class': u'nav-link',
+                        u'title': u'Reload',
                         u'onclick': u'return rl();'
                     }))
         if self.nextlink:
             navbar.append(
-                htlib.a(htlib.escapetext(u'Next \u2192'), {
-                    u'href': self.nextlink + u'.html',
-                    u'class': u'nav-link'
-                }))
-        if len(navbar) > 0:  # write out bar if non-empty
-            self.navbar = htlib.nav(
-                htlib.div(navbar, {u'class': u'container-fluid navbar-nav'}), {
-                    u'class':
-                    u'navbar navbar-expand navbar-dark sticky-top bg-dark mb-4'
+                htlib.a(
+                    htlib.span((), {"class": "bi-caret-right"}), {
+                        u'href': self.nextlink + u'.html',
+                        u'title': u'Next',
+                        u'class': u'nav-link'
+                    }))
+        brand = None
+        if self.shortname:
+            brand = htlib.a(htlib.escapetext(self.shortname), {
+                u'href': u'./',
+                u'class': u'navbar-brand'
+            })
+        if len(navbar) > 0 or brand:  # write out bar if non-empty
+            if not brand:
+                brand = htlib.a(u'', {
+                    u'href': u'#',
+                    u'class': u'navbar-brand'
                 })
+            self.navbar = htlib.header(
+                htlib.nav((brand,
+                           htlib.p(navbar,
+                                   {u'class': u'navbar-nav d-flex flex-row'})),
+                          {u'class': u'container'}),
+                {
+                    u'class':
+                    u'navbar sticky-top navbar-expand-sm navbar-dark bg-dark mb-4'
+                })
+
+
+##htlib.nav(
+##htlib.div((
+##brand,
+##htlib.ul(navbar, {u'class':u'navbar-nav'}),
+##),
+##{u'class': u'container navbar-nav'}), {
+##u'class':
+##u'navbar navbar-expand navbar-dark sticky-top bg-dark mb-4'
+##})
 
         (top, sep, bot) = self.html_template.partition(u'__REPORT_CONTENT__')
 
@@ -5126,7 +5212,7 @@ class report(object):
     def rms_rider(self, rvec, w, h):
         baseline = self.get_baseline(h)
         if len(rvec) > 0 and rvec[0] is not None:
-            self.text_left(w, h, rvec[0], self.fonts[u'body'])
+            self.text_left(w, h, rvec[0], self.fonts[u'bodyoblique'])
         else:
             self.drawline(w, baseline, w + mm2pt(4), baseline)
         doline = True

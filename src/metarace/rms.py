@@ -954,6 +954,11 @@ class rms(object):
 
         return ret
 
+    def analysis_report(self):
+        """Return an analysis report."""
+        # temporary fall through to camera report
+        return self.camera_report()
+
     def camera_report(self):
         """Return the judges (camera) report."""
         # Note: camera report treats all riders as a single blob
@@ -969,9 +974,16 @@ class rms(object):
         if self.timerstat != u'idle':
             sec = report.judgerep(u'judging')
             sec.heading = u'Judges Report'
-            sec.colheader = [
-                u'', u'no', u'rider', u'lap', u'finish', u'rftime', u'passings'
-            ]
+            if self.event[u'type'] == u'cross':
+                sec.colheader = [
+                    u'', u'no', u'rider', u'lap', u'finish', u'lap avg',
+                    u'passings'
+                ]
+            else:
+                sec.colheader = [
+                    u'', u'no', u'rider', u'lap', u'finish', u'rftime',
+                    u'passings'
+                ]
             if self.start is not None:
                 sec.start = self.start
             if self.finish is not None:
@@ -1025,7 +1037,14 @@ class rms(object):
                                     if not sec.lines[-1][7]:  # not placed
                                         sec.lines[-1][8] = True
                             if self.start is not None:
-                                es = (r[COL_RFTIME] - self.start).rawtime(2)
+                                et = r[COL_RFTIME] - self.start
+                                if self.event[u'type'] == u'cross':
+                                    if r[COL_LAPS] > 0:
+                                        al = tod.mktod(et.timeval /
+                                                       r[COL_LAPS])
+                                        es = al.rawtime(1)
+                                else:
+                                    es = et.rawtime(2)
                             else:
                                 es = r[COL_RFTIME].rawtime(2)
                             lrf = r[COL_RFTIME]
@@ -1142,10 +1161,12 @@ class rms(object):
         ret = []
         allin = False
         catname = cat  # fallback emergency
-        if cat == u'' and len(self.cats) > 1:
-            catname = u'Uncategorised Riders'
-        else:
-            allin = True
+        if cat == u'':
+            if len(self.cats) > 1:
+                catname = u'Uncategorised Riders'
+            else:
+                # There is only one cat - so all riders are in it
+                allin = True
         subhead = u''
         footer = u''
         distance = self.meet.get_distance()

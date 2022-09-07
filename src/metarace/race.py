@@ -360,11 +360,11 @@ class race(object):
         """Update state and ui to match timetype."""
         if data is not None:
             self.timetype = strops.confopt_pair(data, u'200m', u'start/finish')
-            self.finchan = timy.CHAN_FINISH
+            self.finchan = 1
             if self.timetype == u'200m':
-                self.startchan = timy.CHAN_200
+                self.startchan = 4
             else:
-                self.startchan = timy.CHAN_START
+                self.startchan = 0
 
     def set_start(self, start=None, lstart=None):
         """Set the race start."""
@@ -721,7 +721,7 @@ class race(object):
             self.meet.main_timer.arm(self.startchan)
             if self.timetype == u'200m':
                 # also accept C0 on sprint types
-                self.meet.main_timer.arm(timy.CHAN_START)
+                self.meet.main_timer.arm(0)
         elif self.timerstat == u'armstart':
             self.timerstat = u'idle'
             self.time_lbl.set_text(u'')
@@ -729,7 +729,7 @@ class race(object):
             self.meet.main_timer.dearm(self.startchan)
             if self.timetype == u'200m':
                 # also accept C0 on sprint types
-                self.meet.main_timer.dearm(timy.CHAN_START)
+                self.meet.main_timer.dearm(0)
 
     def armfinish(self):
         """Toggle timer arm finish state."""
@@ -1121,7 +1121,7 @@ class race(object):
     def timercb(self, e):
         """Handle a timer event."""
         chan = timy.chan2id(e.chan)
-        if chan == self.startchan or chan == timy.CHAN_START:
+        if chan == self.startchan or chan == 0:
             LOG.debug(u'Got a start impulse')
             self.starttrig(e)
         elif chan == self.finchan:
@@ -1329,8 +1329,8 @@ class race(object):
         self.seedsrc = None
         self.doscbplaces = True  # auto show result on scb
         self.reorderflag = 0
-        self.startchan = timy.CHAN_START
-        self.finchan = timy.CHAN_FINISH
+        self.startchan = 0
+        self.finchan = 1
 
         self.riders = gtk.ListStore(
             gobject.TYPE_STRING,  # 0 bib

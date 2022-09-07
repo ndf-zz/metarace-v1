@@ -254,7 +254,7 @@ class hourrec(object):
 
         # arm the front straight
         if self.winopen:
-            self.meet.main_timer.arm(timy.CHAN_PA)
+            self.meet.main_timer.arm(2)
             self.meet.main_timer.armlock(True)
             self.meet.scbwin = scbwin.scbtt(scb=self.meet.scb,
                                             header=self.event[u'pref'],
@@ -642,7 +642,7 @@ class hourrec(object):
     def timercb(self, e):
         """Handle a timer event."""
         chan = timy.chan2id(e.chan)
-        if chan == timy.CHAN_START:
+        if chan == 0:
             if self.start is None:
                 self.lstart = tod.now()
                 self.start = e
@@ -650,7 +650,7 @@ class hourrec(object):
                 LOG.info(u'Set Start: %s', e.rawtime())
             else:
                 LOG.info(u'Spurious start trig: %s', e.rawtime())
-        elif chan == timy.CHAN_PA:
+        elif chan == 2:
             self.split_trig(e)
         else:
             LOG.info(u'Trigger: %r @ %s', chan, e.rawtime())
@@ -752,6 +752,7 @@ class hourrec(object):
 
         ## updates and running lap
 
+
 # hl board,
         return True
 
@@ -760,11 +761,11 @@ class hourrec(object):
         if self.start is None:
             LOG.info(u'Arm Start.')
             self.stat_but.buttonchg(uiutil.bg_armint, u'Arm Start')
-            self.meet.main_timer.arm(timy.CHAN_START)
+            self.meet.main_timer.arm(0)
         else:
             LOG.info(u'Event already started.')
 
-    def armsplit(self, sp, cid=timy.CHAN_200):
+    def armsplit(self, sp, cid=4):
         """Arm timer for a 50m/200m split."""
         self.DiC = 0.0  # additional distance
         LOG.info(u'armsplit')

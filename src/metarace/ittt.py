@@ -230,9 +230,9 @@ class ittt(object):
         defdistance = u''
         defdistunits = u'metres'
         defprecision = 3
-        defchans = timy.CHAN_START
-        defchana = timy.CHAN_PA
-        defchanb = timy.CHAN_PB
+        defchans = 0
+        defchana = 2
+        defchanb = 3
         defautotime = False  # without splits, this is not reliable
         self.seedsrc = 1  # fetch seed from the rank col
 
@@ -1860,9 +1860,9 @@ class ittt(object):
         self.precision = 3
         self.teampursuit = False
         self.teamnames = False  # team names only shown
-        self.chan_A = timy.CHAN_PA  # default is ITT/Pursuit
-        self.chan_B = timy.CHAN_PB
-        self.chan_S = timy.CHAN_START
+        self.chan_A = 2  # default is ITT/Pursuit
+        self.chan_B = 3
+        self.chan_S = 0
         self.fsvec = None
         self.bsvec = None
         self.fslog = None

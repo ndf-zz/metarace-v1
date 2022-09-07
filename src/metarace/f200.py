@@ -159,16 +159,16 @@ class f200(object):
         defautoarm = True
         defdistance = 200
         defunits = u'metres'
-        defchans = timy.CHAN_200
-        defchani = timy.CHAN_100
-        defchanf = timy.CHAN_FINISH
+        defchans = 4
+        defchani = 5
+        defchanf = 1
         if self.evtype == u'flying lap':
             # override defaults for flying lap type
             defdistance = 1
             defunits = u'laps'
-            defchans = timy.CHAN_FINISH
-            defchani = timy.CHAN_200
-            defchanf = timy.CHAN_FINISH
+            defchans = 1
+            defchani = 4
+            defchanf = 1
 
         self.seedsrc = 1  # for autospec loads, fetch seed from the rank col
 
@@ -1342,9 +1342,9 @@ class f200(object):
         self.units = u'metres'
         self.autoarm = True
         self.comments = []
-        self.chan_S = timy.CHAN_200
-        self.chan_I = timy.CHAN_100
-        self.chan_F = timy.CHAN_FINISH
+        self.chan_S = 4
+        self.chan_I = 5
+        self.chan_F = 1
 
         # race run time attributes
         self.onestart = False

@@ -493,8 +493,8 @@ class ps(object):
         self.set_finish()
         self.set_start()
         self.timerstat = 'idle'
-        self.meet.timer.dearm(timy.CHAN_START)
-        self.meet.timer.dearm(timy.CHAN_FINISH)
+        self.meet.timer.dearm(0)
+        self.meet.timer.dearm(1)
         uiutil.buttonchg(self.stat_but, uiutil.bg_none, 'Idle')
         self.stat_but.set_sensitive(True)
         self.set_elapsed()
@@ -504,31 +504,31 @@ class ps(object):
         if self.timerstat == 'idle':
             self.timerstat = 'armstart'
             uiutil.buttonchg(self.stat_but, uiutil.bg_armstart, 'Arm Start')
-            self.meet.timer.arm(timy.CHAN_START)
+            self.meet.timer.arm(0)
         elif self.timerstat == 'armstart':
             self.timerstat = 'idle'
             uiutil.buttonchg(self.stat_but, uiutil.bg_none, 'Idle')
-            self.meet.timer.dearm(timy.CHAN_START)
+            self.meet.timer.dearm(0)
             self.curtimerstr = ''
         elif self.timerstat == 'running':
             self.timerstat = 'armsprintstart'
             uiutil.buttonchg(self.stat_but, uiutil.bg_armstart, 'Arm Sprint')
-            self.meet.timer.arm(timy.CHAN_START)
+            self.meet.timer.arm(0)
         elif self.timerstat == 'armsprintstart':
             self.timerstat = 'running'
             uiutil.buttonchg(self.stat_but, uiutil.bg_none, 'Running')
-            self.meet.timer.dearm(timy.CHAN_START)
+            self.meet.timer.dearm(0)
 
     def armfinish(self):
         """Toggle timer arm finish state."""
         if self.timerstat in ['running', 'armsprint', 'armsprintstart']:
             self.timerstat = 'armfinish'
             uiutil.buttonchg(self.stat_but, uiutil.bg_armfin, 'Arm Finish')
-            self.meet.timer.arm(timy.CHAN_FINISH)
+            self.meet.timer.arm(1)
         elif self.timerstat == 'armfinish':
             self.timerstat = 'running'
             uiutil.buttonchg(self.stat_but, uiutil.bg_none, 'Running')
-            self.meet.timer.dearm(timy.CHAN_FINISH)
+            self.meet.timer.dearm(1)
 
     def sort_handicap(self, x, y):
         """Sort function for handicap marks."""
@@ -1163,7 +1163,7 @@ class ps(object):
             self.set_start(e, tod.now())
         elif self.timerstat == 'armsprintstart':
             uiutil.buttonchg(self.stat_but, uiutil.bg_armfin, 'Arm Sprint')
-            self.meet.timer.arm(timy.CHAN_FINISH)
+            self.meet.timer.arm(1)
             self.timerstat = 'armsprint'
             self.sprintstart = e
             self.sprintlstart = tod.now()
@@ -1213,10 +1213,10 @@ class ps(object):
     def timercb(self, e):
         """Handle a timer event."""
         chan = timy.chan2id(e.chan)
-        if chan == timy.CHAN_START:
+        if chan == 0:
             self.log.debug('Got a start impulse.')
             self.starttrig(e)
-        elif chan == timy.CHAN_FINISH:
+        elif chan == 1:
             self.log.debug('Got a finish impulse.')
             self.fintrig(e)
         return False

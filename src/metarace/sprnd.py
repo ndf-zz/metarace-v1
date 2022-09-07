@@ -344,7 +344,7 @@ class sprnd(object):
         self.curelap = None
         self.timerstat = 'idle'
         self.meet.timer.dearm(self.startchan)
-        self.meet.timer.dearm(timy.CHAN_START)
+        self.meet.timer.dearm(0)
         self.meet.timer.dearm(self.finchan)
         uiutil.buttonchg(self.stat_but, uiutil.bg_none, 'Idle')
         self.stat_but.set_sensitive(True)
@@ -367,13 +367,13 @@ class sprnd(object):
             self.timerstat = 'armstart'
             uiutil.buttonchg(self.stat_but, uiutil.bg_armstart, 'Arm Start')
             self.meet.timer.arm(self.startchan)
-            self.meet.timer.arm(timy.CHAN_START)
+            self.meet.timer.arm(0)
         elif self.timerstat == 'armstart':
             self.timerstat = 'idle'
             self.time_lbl.set_text('')
             uiutil.buttonchg(self.stat_but, uiutil.bg_none, 'Idle')
             self.meet.timer.dearm(self.startchan)
-            self.meet.timer.dearm(timy.CHAN_START)
+            self.meet.timer.dearm(0)
         return False  # for use in delayed callback
 
     def armfinish(self):
@@ -633,7 +633,7 @@ class sprnd(object):
     def timercb(self, e):
         """Handle a timer event."""
         chan = timy.chan2id(e.chan)
-        if chan == self.startchan or chan == timy.CHAN_START:
+        if chan == self.startchan or chan == 0:
             self.log.debug(u'Got a start impulse.')
             self.starttrig(e)
         elif chan == self.finchan:
@@ -996,8 +996,8 @@ class sprnd(object):
         self.timerstat = 'idle'
         self.autospec = ''  # automatic startlist
         self.inomnium = False
-        self.startchan = timy.CHAN_200
-        self.finchan = timy.CHAN_FINISH
+        self.startchan = 4
+        self.finchan = 1
         self.contests = []
         self.comment = u''
 

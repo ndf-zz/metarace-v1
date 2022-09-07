@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Road mass-start, crit, categorised and handicap handler for roadmeet."""
 
 import gtk
@@ -32,23 +33,25 @@ COL_COMMENT = 4
 COL_INRACE = 5  # boolean in the race
 COL_PLACE = 6  # Place assigned in result
 COL_LAPS = 7  # Incremented if inrace and not finished
+COL_SEED = 8  # Seeding number (overrides startlist ordering)
 
 # timing infos
-COL_RFTIME = 8  # one-off finish time by rfid
-COL_CBUNCH = 9  # computed bunch time   -> derived from rftime
-COL_MBUNCH = 10  # manual bunch time     -> manual overrive
-COL_STOFT = 11  # start time 'offset' - only reported in result
-COL_BONUS = 12
-COL_PENALTY = 13
-COL_RFSEEN = 14  # list of tods this rider 'seen' by rfid
+COL_RFTIME = 9  # one-off finish time by rfid
+COL_CBUNCH = 10  # computed bunch time   -> derived from rftime
+COL_MBUNCH = 11  # manual bunch time     -> manual overrive
+COL_STOFT = 12  # start time 'offset' - only reported in result
+COL_BONUS = 13
+COL_PENALTY = 14
+COL_RFSEEN = 15  # list of tods this rider 'seen' by rfid
 
 # listview column nos (used for hiding)
 CATCOLUMN = 2
 COMCOLUMN = 3
 INCOLUMN = 4
 LAPCOLUMN = 5
-STARTCOLUMN = 6
-BUNCHCOLUMN = 7
+SEEDCOLUMN = 6
+STARTCOLUMN = 7
+BUNCHCOLUMN = 8
 
 ROADRACE_TYPES = {
     u'road': u'Road Race',
@@ -110,11 +113,17 @@ key_clearfrom = u'F7'  # clear places on selected rider and all following
 key_clearplace = u'F8'  # clear rider from place list
 
 # config version string
-EVENT_ID = u'roadrace-3.0'
+EVENT_ID = u'roadrace-3.1'
 
 
-def key_bib(x):
-    """Sort on bib field of aux row."""
+def key_callup(x):
+    seed = 9999
+    if x[2] > 0:
+        seed = x[2]
+    return (seed, strops.riderno_key(x[1]))
+
+
+def key_startlist(x):
     return strops.riderno_key(x[1])
 
 
@@ -255,11 +264,11 @@ class rms(object):
                 if cr.has_option(crkey, u'descr'):
                     descr = cr.get(crkey, u'descr')
                 if cr.has_option(crkey, u'dist'):
-                    km = strops.confopt_float(cr.get(crkey, u'dist'), None)
+                    km = cr.get_float(crkey, u'dist', None)
                 if cr.has_option(crkey, u'abbr'):
                     abbr = cr.get(crkey, u'abbr')
                 if cr.has_option(crkey, u'show'):
-                    doshow = strops.confopt_bool(cr.get(crkey, u'show'))
+                    doshow = cr.get_bool(crkey, u'show')
                 if cr.has_option(crkey, u'places'):
                     places = strops.reformat_placelist(cr.get(
                         crkey, u'places'))
@@ -332,12 +341,12 @@ class rms(object):
                 self.contestmap[i][u'points'] = points
                 allsrc = False  # all riders in source get same pts
                 if cr.has_option(crkey, u'all_source'):
-                    allsrc = strops.confopt_bool(cr.get(crkey, u'all_source'))
+                    allsrc = cr.get_bool(crkey, u'all_source')
                 self.contestmap[i][u'all_source'] = allsrc
                 self.contestmap[i][u'category'] = 0
                 if cr.has_option(crkey, u'category'):  # for climbs
-                    self.contestmap[i][u'category'] = strops.confopt_posint(
-                        cr.get(crkey, u'category'))
+                    self.contestmap[i][u'category'] = cr.get_posint(
+                        crkey, u'category')
             else:
                 LOG.info(u'Ignoring duplicate contest %r', i)
 
@@ -368,7 +377,7 @@ class rms(object):
                 self.tallymap[i][u'descr'] = descr
                 keepdnf = False
                 if cr.has_option(crkey, u'keepdnf'):
-                    keepdnf = strops.confopt_bool(cr.get(crkey, u'keepdnf'))
+                    keepdnf = cr.get_bool(crkey, u'keepdnf')
                 self.tallymap[i][u'keepdnf'] = keepdnf
             else:
                 LOG.info(u'Ignoring duplicate points tally %r', i)
@@ -376,8 +385,9 @@ class rms(object):
         starters = cr.get(u'rms', u'startlist').split()
         if len(starters) == 1 and starters[0] == u'all':
             starters = strops.riderlist_split(u'all', self.meet.rdb)
-        self.allowspares = strops.confopt_bool(cr.get(u'rms', u'allowspares'))
+        self.allowspares = cr.get_bool(u'rms', u'allowspares')
         onestoft = False
+        oneseed = False
         for r in starters:
             self.addrider(r)
             if cr.has_option(u'riders', r):
@@ -392,15 +402,27 @@ class rms(object):
                 if lr > 2:
                     nr[COL_LAPS] = strops.confopt_posint(ril[2])
                 if lr > 3:
-                    nr[COL_RFTIME] = tod.mktod(ril[3])
+                    nr[COL_SEED] = strops.confopt_posint(ril[3], 0)
+                    if nr[COL_SEED] == 0:
+                        # HACK: try to pull in seed from UCI code
+                        if r in self.ucicache:
+                            seedno = strops.confopt_posint(self.ucicache[r], 0)
+                            if seedno > 0 and seedno < 9999:
+                                nr[COL_SEED] = seedno
+                                LOG.info('Set rider %r seed from UCICODE = %r',
+                                         r, seedno)
+                    if nr[COL_SEED] != 0:
+                        oneseed = True
                 if lr > 4:
-                    nr[COL_MBUNCH] = tod.mktod(ril[4])
+                    nr[COL_RFTIME] = tod.mktod(ril[4])
                 if lr > 5:
-                    nr[COL_STOFT] = tod.mktod(ril[5])
+                    nr[COL_MBUNCH] = tod.mktod(ril[5])
+                if lr > 6:
+                    nr[COL_STOFT] = tod.mktod(ril[6])
                     if nr[COL_STOFT] is not None:
                         onestoft = True
-                if lr > 6:
-                    for i in range(6, lr):
+                if lr > 7:
+                    for i in range(7, lr):
                         laptod = tod.mktod(ril[i])
                         if laptod is not None:
                             nr[COL_RFSEEN].append(laptod)
@@ -430,16 +452,14 @@ class rms(object):
         self.timelimit = cr.get(u'rms', u'timelimit')
         self.places = strops.reformat_placelist(cr.get(u'rms', u'places'))
         self.comment = cr.get(u'rms', u'comment')
-        self.dofastestlap = strops.confopt_bool(cr.get(u'rms',
-                                                       u'dofastestlap'))
-        self.autoexport = strops.confopt_bool(cr.get(u'rms', u'autoexport'))
-        if strops.confopt_bool(cr.get(u'rms', u'finished')):
+        self.dofastestlap = cr.get_bool(u'rms', u'dofastestlap')
+        self.autoexport = cr.get_bool(u'rms', u'autoexport')
+        if cr.get_bool(u'rms', u'finished'):
             self.set_finished()
-        self.showdowntimes = strops.confopt_bool(
-            cr.get(u'rms', u'showdowntimes'))
-        self.showuciids = strops.confopt_bool(cr.get(u'rms', u'showuciids'))
-        self.clubmode = strops.confopt_bool(cr.get(u'rms', u'clubmode'))
-        self.laplength = strops.confopt_posint(cr.get(u'rms', u'laplength'))
+        self.showdowntimes = cr.get_bool(u'rms', u'showdowntimes')
+        self.showuciids = cr.get_bool(u'rms', u'showuciids')
+        self.clubmode = cr.get_bool(u'rms', u'clubmode')
+        self.laplength = cr.get_posint(u'rms', u'laplength')
         self.recalculate()
 
         self.hidecols = cr.get(u'rms', u'hidecols')
@@ -453,9 +473,14 @@ class rms(object):
         for c in self.catstarts:
             if self.catstarts[c] is not None:
                 onestoft = True
+
+        # auto-hide the start column
         if not onestoft:
-            # auto-hide the start column, but don't stick if starts added
             self.hidecolumn(STARTCOLUMN)
+
+        # auto-hide the seed column
+        if not oneseed:
+            self.hidecolumn(SEEDCOLUMN)
 
         if self.targetlaps:
             self.curlap = -1
@@ -471,7 +496,7 @@ class rms(object):
         if self.totlaps is not None:
             self.totlapentry.set_text(unicode(self.totlaps))
 
-        if strops.confopt_bool(cr.get(u'rms', u'autofinish')):
+        if cr.get_bool(u'rms', u'autofinish'):
             # then override targetlaps if autofinish was set
             self.targetlaps = True
 
@@ -642,8 +667,8 @@ class rms(object):
             # bib = comment,in,laps,rftod,mbunch,stoft,seen...
             bib = r[COL_BIB].decode('utf-8')
             slice = [
-                r[COL_COMMENT].decode('utf-8'), r[COL_INRACE], r[COL_LAPS], rt,
-                mb, sto
+                r[COL_COMMENT].decode('utf-8'), r[COL_INRACE], r[COL_LAPS],
+                r[COL_SEED], rt, mb, sto
             ]
             for t in r[COL_RFSEEN]:
                 if t is not None:
@@ -740,16 +765,19 @@ class rms(object):
             LOG.warning(u'No data available for points report')
         return ret
 
-    def reorder_startlist(self):
+    def reorder_startlist(self, callup=False):
         """Reorder riders for a startlist."""
         self.calcset = False
         aux = []
         cnt = 0
         for r in self.riders:
-            aux.append([cnt, r[COL_BIB]])
+            aux.append([cnt, r[COL_BIB], r[COL_SEED]])
             cnt += 1
         if len(aux) > 1:
-            aux.sort(key=key_bib)
+            if callup:
+                aux.sort(key=key_callup)
+            else:
+                aux.sort(key=key_startlist)
             self.riders.reorder([a[0] for a in aux])
         return cnt
 
@@ -808,6 +836,21 @@ class rms(object):
             ret.append(sec)
         return ret
 
+    def callup_report(self):
+        """Return a callup report."""
+        # Note: this is just a startlist with different ordering and ranks
+        ret = []
+        self.reorder_startlist(callup=True)
+        if len(self.cats) > 1:
+            LOG.debug(u'Preparing categorised callup for %r', self.cats)
+            for c in self.cats:
+                LOG.debug(u'Callup cat %r', c)
+                ret.extend(self.startlist_report_gen(c, callup=True))
+        else:
+            LOG.debug(u'Preparing flat callup')
+            ret = self.startlist_report_gen(callup=True)
+        return ret
+
     def startlist_report(self):
         """Return a startlist report."""
         ret = []
@@ -860,7 +903,7 @@ class rms(object):
                     LOG.warning(u'Categories missing target lap count: %s',
                                 u', '.join(missing))
 
-    def startlist_report_gen(self, cat=None):
+    def startlist_report_gen(self, cat=None, callup=False):
         catname = u''
         subhead = u''
         footer = u''
@@ -889,7 +932,10 @@ class rms(object):
         ret = []
         sec = None
         sec = report.twocol_startlist(u'startlist')
-        sec.heading = u'Startlist'
+        if callup:
+            sec.heading = u'Call-up'
+        else:
+            sec.heading = u'Startlist'
         if catname:
             sec.heading += u': ' + catname
             sec.subheading = subhead
@@ -900,6 +946,7 @@ class rms(object):
             # add rider to startlist if primary cat matches
             cs = r[COL_CAT].decode(u'utf-8')
             rcat = self.ridercat(riderdb.primary_cat(cs))
+            LOG.debug(u'rcat = %r cat = %r', rcat, cat)
             if cat == rcat:
                 ucicode = None
                 name = r[COL_NAMESTR].decode(u'utf-8')
@@ -913,6 +960,8 @@ class rms(object):
                     # Rider may have a typo in cat, show the catlist
                     ucicode = cs
                 comment = u''
+                if callup:
+                    comment = str(rcnt + 1) + '.'
                 if not r[COL_INRACE]:
                     cmt = r[COL_COMMENT].decode(u'utf-8')
                     if cmt == u'dns':
@@ -1221,6 +1270,8 @@ class rms(object):
                 incat = True  # rider is in this category
             elif not cat:  # is the rider uncategorised?
                 incat = rcats[0] not in self.cats  # backward logic
+            LOG.debug('allin=%r, cat=%r, rcat=%r, rcats=%r, incat=%r', allin,
+                      cat, rcat, rcats, incat)
             if incat:
                 if cat:
                     rcat = cat
@@ -2043,8 +2094,8 @@ class rms(object):
             return None
         if bib == u'' or self.getrider(bib) is None:
             nr = [
-                bib, u'', u'', u'', u'', True, u'', 0, None, None, None, None,
-                None, None, []
+                bib, u'', u'', u'', u'', True, u'', 0, 0, None, None, None,
+                None, None, None, []
             ]
             dbr = self.meet.rdb.getrider(bib, self.series)
             if dbr is not None:
@@ -2056,6 +2107,8 @@ class rms(object):
                     self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
                     self.meet.rdb.getvalue(dbr, riderdb.COL_LAST))
                 nr[COL_CAT] = self.meet.rdb.getvalue(dbr, riderdb.COL_CAT)
+                self.ucicache[bib] = self.meet.rdb.getvalue(
+                    dbr, riderdb.COL_UCICODE)
             return self.riders.append(nr)
         else:
             return None
@@ -3175,6 +3228,14 @@ class rms(object):
         else:
             LOG.error(u'Invalid lap count')
 
+    def editseed_cb(self, cell, path, new_text, col):
+        """Edit the lap field if valid."""
+        new_text = new_text.decode(u'utf-8').strip()
+        if new_text.isdigit():
+            self.riders[path][col] = int(new_text)
+        else:
+            LOG.error(u'Invalid lap count')
+
     def resetplaces(self):
         """Clear places off all riders."""
         for r in self.riders:
@@ -4119,6 +4180,7 @@ class rms(object):
         self.bonuses = {}
         self.points = {}
         self.pointscb = {}
+        self.ucicache = {}
         self.dofastestlap = False
         self.autoexport = False
         self.timelimit = None
@@ -4160,15 +4222,16 @@ class rms(object):
             gobject.TYPE_STRING,  # CAT = 3
             gobject.TYPE_STRING,  # COMMENT = 4
             gobject.TYPE_BOOLEAN,  # INRACE = 5
-            gobject.TYPE_STRING,  # PLACE = 5
+            gobject.TYPE_STRING,  # PLACE = 6
             gobject.TYPE_INT,  # LAP COUNT = 7
-            gobject.TYPE_PYOBJECT,  # RFTIME = 8
-            gobject.TYPE_PYOBJECT,  # CBUNCH = 9
-            gobject.TYPE_PYOBJECT,  # MBUNCH =10 
-            gobject.TYPE_PYOBJECT,  # STOFT = 11
-            gobject.TYPE_PYOBJECT,  # BONUS = 12
-            gobject.TYPE_PYOBJECT,  # PENALTY = 13
-            gobject.TYPE_PYOBJECT)  # RFSEEN = 14
+            gobject.TYPE_INT,  # SEED = 8
+            gobject.TYPE_PYOBJECT,  # RFTIME = 9
+            gobject.TYPE_PYOBJECT,  # CBUNCH = 10
+            gobject.TYPE_PYOBJECT,  # MBUNCH =11 
+            gobject.TYPE_PYOBJECT,  # STOFT = 12
+            gobject.TYPE_PYOBJECT,  # BONUS = 13
+            gobject.TYPE_PYOBJECT,  # PENALTY = 14
+            gobject.TYPE_PYOBJECT)  # RFSEEN = 15
 
         uifile = os.path.join(metarace.UI_PATH, u'rms.ui')
         LOG.debug(u'Building event interface from %r', uifile)
@@ -4208,6 +4271,11 @@ class rms(object):
                                 COL_LAPS,
                                 width=40,
                                 cb=self.editlap_cb)
+            uiutil.mkviewcoltxt(t,
+                                u'Seed',
+                                COL_SEED,
+                                width=40,
+                                cb=self.editseed_cb)
             uiutil.mkviewcoltod(t,
                                 u'Start',
                                 cb=self.showstart_cb,

@@ -201,6 +201,26 @@
                           </object>
                         </child>
                         <child>
+                          <object class="GtkMenuItem" id="menu_reports_callup">
+                            <property name="label" translatable="yes">_Callup</property>
+                            <property name="visible">True</property>
+                            <property name="tooltip_text" translatable="yes">Start line call-up report</property>
+                            <property name="use_underline">True</property>
+                            <accelerator key="F3" signal="activate" modifiers="GDK_CONTROL_MASK"/>
+                            <signal name="activate" handler="menu_reports_callup_activate_cb"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="menu_reports_analysis">
+                            <property name="label" translatable="yes">_Analysis</property>
+                            <property name="visible">True</property>
+                            <property name="tooltip_text" translatable="yes">Event analysis report</property>
+                            <property name="use_underline">True</property>
+                            <accelerator key="F2" signal="activate"/>
+                            <signal name="activate" handler="menu_reports_analysis_activate_cb"/>
+                          </object>
+                        </child>
+                        <child>
                           <object class="GtkImageMenuItem" id="menu_reports_signon">
                             <property name="label" translatable="yes">S_ignon</property>
                             <property name="visible">True</property>
@@ -208,7 +228,7 @@
                             <property name="use_underline">True</property>
                             <property name="image">image22</property>
                             <property name="use_stock">False</property>
-                            <accelerator key="F3" signal="activate" modifiers="GDK_CONTROL_MASK"/>
+                            <accelerator key="F2" signal="activate" modifiers="GDK_CONTROL_MASK"/>
                             <signal name="activate" handler="menu_reports_signon_activate_cb"/>
                           </object>
                         </child>

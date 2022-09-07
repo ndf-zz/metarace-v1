@@ -9,6 +9,7 @@ import datetime
 
 from . import (decoder, DECODER_LOG_LEVEL)
 from metarace import tod
+from metarace import sysconf
 
 LOG = logging.getLogger(u'metarace.decoder.rrs')
 LOG.setLevel(logging.DEBUG)
@@ -73,9 +74,8 @@ class rrs(decoder):
 
     def _sane(self, data=None):
         if sysconf.has_option(u'rrs', u'allowstored'):
-            self._allowstored = strops.confopt_bool(
-                sysconf.get(u'rrs', u'allowstored'))
-            LOG.info(u'Allow stored passings: %r', self._allowstored)
+            self._allowstored = sysconf.get_bool(u'rrs', u'allowstored')
+            LOG.info('Allow stored passings: %r', self._allowstored)
         for m in [
                 u'GETPROTOCOL',
                 u'SETPROTOCOL;{}'.format(RRS_PROTOCOL),
@@ -119,7 +119,7 @@ class rrs(decoder):
         if self._io is not None:
             ob = (msg + RRS_EOL)
             self._io.sendall(ob.encode(RRS_ENCODING))
-            #LOG.debug(u'SEND: %r', ob)
+            LOG.debug(u'SEND: %r', ob)
 
     def _passing(self, pv):
         """Process a RRS protocol passing."""
@@ -150,7 +150,11 @@ class rrs(decoder):
             if not loopid:
                 loopid = u'C1'  # add faked id for passives
             else:
-                loopid = strops.id2chan(strops.chan2id(loopid))
+                try:
+                    loopid = u'C' + str(int(loopid))
+                except Exception as e:
+                    LOG.debug(u'%s reading loop id: %s', e.__class__.__name__,
+                              e)
             activestore = False
             if adata:
                 activestore = (int(adata) & 0x40) == 0x40
@@ -256,7 +260,7 @@ class rrs(decoder):
 
     def _procmsg(self, msg):
         """Process a decoder response message."""
-        #LOG.debug(u'RECV: %r', msg)
+        LOG.debug(u'RECV: %r', msg)
         mv = msg.strip().split(u';')
         if mv[0].isdigit():  # Requested passing
             self._pending_command = u'PASSING'

@@ -655,6 +655,15 @@ class roadmeet(object):
             else:
                 LOG.info(u'Startlist - Nothing to print')
 
+    def menu_reports_callup_activate_cb(self, menuitem, data=None):
+        """Generate a start line call-up."""
+        if self.curevent is not None:
+            sections = self.curevent.callup_report()
+            if sections:
+                self.print_report(sections)
+            else:
+                LOG.info(u'Callup - Nothing to print')
+
     def menu_reports_signon_activate_cb(self, menuitem, data=None):
         """Generate a sign on sheet."""
         if self.curevent is not None:
@@ -663,6 +672,13 @@ class roadmeet(object):
                 self.print_report(sections)
             else:
                 LOG.info(u'Sign-on - Nothing to print')
+
+    def menu_reports_analysis_activate_cb(self, menuitem, data=None):
+        """Generate the analysis report."""
+        if self.curevent is not None:
+            sections = self.curevent.analysis_report()
+            if sections:
+                self.print_report(sections)
 
     def menu_reports_camera_activate_cb(self, menuitem, data=None):
         """Generate the camera operator report."""

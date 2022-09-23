@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """String filtering, truncation and padding."""
 
 # Note: These functions consider unicode string length and
@@ -96,7 +97,7 @@ def cmp_dnf(x, y):
 
 def rand_key(data=None):
     """Return a random integer key for shuffling."""
-    return randint(0,0xffffffff)
+    return randint(0, 0xffffffff)
 
 
 def riderno_key(bib):
@@ -249,7 +250,9 @@ def rank2ord(place):
     }
     ret = place
     if place.isdigit():
-        if len(place) > 1 and place[-2:] in omap:
+        if place in omap:
+            ret = place + omap[place]
+        elif len(place) > 1 and place[-2:] in omap:
             ret = place + omap[place[-2:]]
         else:
             if len(place) > 1 and place[-1] in omap:  # last digit 1,2,3

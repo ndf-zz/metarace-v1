@@ -2590,9 +2590,15 @@ class judgerep(object):
             if ft is None and self.start is not None:
                 ft = tod.now()
             for r in self.lines:
+                lstart = self.start
+                if len(r) > 9 and r[9] is not None:
+                    lstart = r[9]
+                lfinish = ft
+                if len(r) > 11 and r[11] is not None:
+                    lfinish = r[11]
                 if len(r) > 6 and r[6] is not None and len(
-                        r[6]) > 0 and self.start is not None:
-                    report.laplines(report.h, r[6], self.start, ft)
+                        r[6]) > 0 and lstart is not None:
+                    report.laplines(report.h, r[6], lstart, lfinish)
                 report.h += report.judges_row(report.h, r, cnt % 2)
                 cnt += 1
             eh = report.h  # - for the column shade box
@@ -4921,6 +4927,7 @@ class report(object):
                                      font=self.fonts[u'body'])
             strikeright = self.col_oft_name + tw
         if len(rvec) > 10 and rvec[10]:
+            # Cat name
             catw = mm2pt(8.0)
             (tw, th) = self.fit_text(self.col_oft_cat - mm2pt(34.0),
                                      h,
@@ -4928,6 +4935,10 @@ class report(object):
                                      catw,
                                      font=self.fonts[u'body'])
             strikeright = self.col_oft_cat
+        if len(rvec) > 12 and rvec[12]:
+            # bunch time chevron
+            self.text_right(self.col_oft_time - mm2pt(16.0), h, rvec[12],
+                            self.fonts[u'body'])
         if omap[3]:
             (tw, th) = self.text_left(self.col_oft_cat - mm2pt(25.0), h,
                                       omap[3], self.fonts[u'body'])

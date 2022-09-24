@@ -358,7 +358,8 @@ def edit_times_dlg(window,
                    btxt=None,
                    ptxt=None,
                    bonus=False,
-                   penalty=False):
+                   penalty=False,
+                   finish=True):
     """Display times edit dialog and return updated time strings."""
     b = gtk.Builder()
     b.add_from_file(os.path.join(metarace.UI_PATH, u'edit_times.ui'))
@@ -376,8 +377,11 @@ def edit_times_dlg(window,
     fe.modify_font(MONOFONT)
     if ftxt is not None:
         fe.set_text(ftxt)
-    b.get_object(u'timing_finish_now').connect(u'clicked',
-                                               now_button_clicked_cb, fe)
+    if finish:
+        b.get_object(u'timing_finish_now').connect(u'clicked',
+                                                   now_button_clicked_cb, fe)
+    else:
+        b.get_object(u'timing_finish_now').set_sensitive(False)
 
     be = b.get_object(u'timing_bonus_entry')
     be.modify_font(MONOFONT)

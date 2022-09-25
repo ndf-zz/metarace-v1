@@ -46,8 +46,13 @@ COL_RFSEEN = 14  # list of tods this rider 'seen' by rfid
 COL_TEAM = 15  # stored team ref for quick refs
 
 # Nth wheel decides whose time is counted to the team
-NTH_WHEEL = 4  # 4th wheel for NRS/ToT (default)
-STARTFUDGE = tod.tod(u'2:00')  # min lap time
+NTH_WHEEL = 3
+
+# Minimum lap/elap time, should be at least the same as start gaps
+MINLAP = tod.tod(u'2:00')
+
+# Add a gap in the startlist when gap is larger than TEAMGAP
+TEAMGAP = tod.tod(u'4:00')
 
 # listview column nos
 CATCOLUMN = 2
@@ -180,6 +185,7 @@ class trtt(object):
                 u'id': EVENT_ID,
                 u'finished': False,
                 u'showuciids': False,
+                u'relativestart': False,
                 u'showriders': True,
                 u'places': u'',
                 u'comment': [],
@@ -399,7 +405,7 @@ class trtt(object):
         self.owntime = cr.get_bool(u'trtt', u'owntime')
         self.minlap = tod.mktod(cr.get(u'trtt', u'minlap'))
         if self.minlap is None:
-            self.minlap = STARTFUDGE
+            self.minlap = MINLAP
         _log.debug(u'Minimum lap time: %s', self.minlap.rawtime())
 
         self.set_start(cr.get(u'trtt', u'start'))
@@ -409,6 +415,7 @@ class trtt(object):
         self.autoexport = cr.get_bool(u'trtt', u'autoexport')
         self.showuciids = cr.get_bool(u'trtt', u'showuciids')
         self.showriders = cr.get_bool(u'trtt', u'showriders')
+        self.relativestart = cr.get_bool(u'trtt', u'relativestart')
         if strops.confopt_bool(cr.get(u'trtt', u'finished')):
             self.set_finished()
         self.recalculate()
@@ -460,6 +467,7 @@ class trtt(object):
                 if missing:
                     _log.warning(u'Categories missing target lap count: %s',
                                  u', '.join(missing))
+            _log.debug(u'Category laps: %r', self.catlaps)
 
     def get_ridercmdorder(self):
         """Return rider command list order."""
@@ -526,6 +534,7 @@ class trtt(object):
             cw.set(u'trtt', u'minlap', None)
         cw.set(u'trtt', u'showuciids', self.showuciids)
         cw.set(u'trtt', u'showriders', self.showriders)
+        cw.set(u'trtt', u'relativestart', self.relativestart)
         cw.set(u'trtt', u'finished', self.timerstat == 'finished')
         cw.set(u'trtt', u'places', self.places)
         cw.set(u'trtt', u'totlaps', self.totlaps)
@@ -844,7 +853,7 @@ class trtt(object):
                 tname = rteam  # use key and only replace if avail
                 if rteam in self.teamnames:
                     tname = self.teamnames[rteam]
-                if ltod is not None and rstart - ltod > tod.tod(u'2:00'):
+                if ltod is not None and rstart - ltod > TEAMGAP:
                     sec.lines.append([])
                 ltod = rstart
                 cstr = u''
@@ -852,8 +861,11 @@ class trtt(object):
                 tcodestr = rteam.upper()
                 if rteam.isdigit():
                     tcodestr = None
+                startStr = rstart.meridiem()
+                if self.relativestart:
+                    startStr = rstart.rawtime(0)
                 sec.lines.append(
-                    [rstart.meridiem(), tcodestr, tname, tuci, u'___', cstr])
+                    [startStr, tcodestr, tname, tuci, u'___', cstr])
                 lteam = rteam
             if self.showriders:
                 if self.showuciids:
@@ -1421,23 +1433,28 @@ class trtt(object):
         else:
             _log.info(u'%r not in startlist', bib)
 
-    def startlist_gen(self, cat=''):
+    def startlist_gen(self, cat=u''):
         """Generator function to export a startlist."""
         mcat = self.ridercat(cat)
         self.reorder_startlist()
+        eventStart = tod.ZERO
+        if self.start is not None:
+            eventStart = self.start
         for r in self.riders:
-            if mcat == '' or mcat == self.ridercat(r[COL_CAT]):
-                start = ''
+            cs = r[COL_CAT].decode(u'utf-8')
+            rcat = self.ridercat(riderdb.primary_cat(cs))
+            if mcat == rcat:
+                start = u''
                 if r[COL_STOFT] is not None and r[COL_STOFT] != tod.ZERO:
-                    start = r[COL_STOFT].rawtime(0)
-                bib = r[COL_BIB]
+                    start = (eventStart + r[COL_STOFT]).rawtime(0)
+                bib = r[COL_BIB].decode(u'utf-8')
                 series = self.series
-                name = r[COL_NAMESTR]
-                cat = r[COL_CAT]
-                firstxtra = ''
-                lastxtra = ''
-                clubxtra = ''
-                dbr = self.meet.rdb.getrider(r[COL_BIB], self.series)
+                name = r[COL_NAMESTR].decode(u'utf-8')
+                cat = rcat
+                firstxtra = u''
+                lastxtra = u''
+                clubxtra = u''
+                dbr = self.meet.rdb.getrider(bib, self.series)
                 if dbr is not None:
                     firstxtra = self.meet.rdb.getvalue(
                         dbr, riderdb.COL_FIRST).capitalize()
@@ -1449,14 +1466,18 @@ class trtt(object):
                     clubxtra
                 ]
 
-    def result_gen(self, cat=''):
+    def result_gen(self, cat=u''):
         """Generator function to export a final result."""
-        self.recalculate()  # fix up ordering of rows
+        # This is for stage race export, each rider gets a stage ranking and
+        # time - based on configuration. Rankings will be incomplete until
+        # all riders arrival order is confirmed
+        self.recalculate()
         mcat = self.ridercat(cat)
         rcount = 0
-        lrank = None
-        lcrank = None
+        cnt = 0
+        aux = []
         for r in self.riders:
+            cnt += 1
             rcat = r[COL_CAT].decode(u'utf-8').upper()
             rcats = [u'']
             if rcat.strip():
@@ -1467,22 +1488,16 @@ class trtt(object):
                 else:
                     rcat = rcats[0]
                 rcount += 1
+                # this rider is 'in' the cat
                 bib = r[COL_BIB].decode(u'utf-8')
-                crank = None
-                rank = None
                 bonus = None
                 ft = None
+                crank = u''
                 if r[COL_INRACE]:
-                    bt = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
-                    ft = bt
-                if r[COL_PLACE].isdigit():
-                    rank = int(r[COL_PLACE])
-                    if rank != lrank:
-                        crank = rcount
-                    else:
-                        crank = lcrank
-                    lcrank = crank
-                    lrank = rank
+                    # start offset is already accounted for in recalc
+                    ft = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
+                    if r[COL_PLACE] and r[COL_PLACE].isdigit():
+                        crank = r[COL_PLACE]
                 else:
                     crank = r[COL_COMMENT]
                 if (bib in self.bonuses or r[COL_BONUS] is not None):
@@ -1494,7 +1509,28 @@ class trtt(object):
                 penalty = None
                 if r[COL_PENALTY] is not None:
                     penalty = r[COL_PENALTY]
-                yield [crank, bib, ft, bonus, penalty]
+                indRank = strops.dnfcode_key(crank)
+                ftRank = tod.MAX
+                if r[COL_INRACE] and ft is not None:
+                    ftRank = ft
+                yrec = [crank, bib, ft, bonus, penalty]
+                aux.append((ftRank, indRank, cnt, yrec))
+        aux.sort()
+        lrank = None
+        crank = None
+        cnt = 0
+        for r in aux:
+            cnt += 1
+            yrec = r[3]
+            if yrec[0].isdigit():
+                if yrec[2] is not None:
+                    if r[1] != lrank:
+                        crank = cnt
+                        lrank = r[1]
+                    yrec[0] = crank
+                else:
+                    yrec[0] = None
+            yield yrec
 
     def clear_results(self):
         """Clear all data from event model."""
@@ -1565,7 +1601,8 @@ class trtt(object):
                     self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
                     self.meet.rdb.getvalue(dbr, riderdb.COL_LAST))
                 nr[COL_CAT] = self.meet.rdb.getvalue(dbr, riderdb.COL_CAT)
-                nr[COL_TEAM] = self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB)
+                nr[COL_TEAM] = self.meet.rdb.getvalue(
+                    dbr, riderdb.COL_CLUB).upper()
             return self.riders.append(nr)
         else:
             return None
@@ -2579,6 +2616,7 @@ class trtt(object):
 
     def bounceteam(self, team, cat, time):
         """Bounce a teamname and time onto the panel"""
+        team = team.upper()
         tname = u''
         tcat = self.ridercat(cat)
         # lookup team name in rdb
@@ -2982,7 +3020,7 @@ class trtt(object):
     def rms_context_chg_activate_cb(self, menuitem, data=None):
         """Update selected rider from event."""
         change = menuitem.get_label().lower()
-        _log.debug(u'menuitem: %r: %r', menuitem, change)
+        #_log.debug(u'menuitem: %r: %r', menuitem, change)
         sel = self.view.get_selection().get_selected()
         bib = None
         if sel is not None:
@@ -3043,6 +3081,7 @@ class trtt(object):
         self.autoexport = False
         self.autofinish = False
         self.showuciids = False
+        self.relativestart = False
         self.showriders = True
         self.owntime = True  # dropped riders get own time
         self.start = None
@@ -3136,6 +3175,7 @@ class trtt(object):
                                 maxwidth=500)
             uiutil.mkviewcoltxt(t, u'Cat', COL_CAT)
             uiutil.mkviewcoltxt(t, u'Com', COL_COMMENT, cb=self.editcol_cb)
+            # don't show in column for team time trial
             #uiutil.mkviewcolbool(t, u'In', COL_INRACE, width=50)
             uiutil.mkviewcoltxt(t,
                                 u'Lap',
@@ -3148,11 +3188,11 @@ class trtt(object):
                                 width=50,
                                 editcb=self.editstart_cb)
             uiutil.mkviewcoltod(t,
-                                u'Bunch',
+                                u'Time',
                                 cb=self.showbunch_cb,
                                 editcb=self.editbunch_cb,
                                 width=50)
-            uiutil.mkviewcoltxt(t, u'Place', COL_PLACE, calign=0.5, width=50)
+            uiutil.mkviewcoltxt(t, u'Arvl', COL_PLACE, calign=0.5, width=50)
             t.show()
             b.get_object(u'race_result_win').add(t)
 

@@ -39,7 +39,7 @@
   "minlap": "2:00",
   "autofinish": true,
   "autoexport": false,
-  "defaultnth": 4
+  "defaultnth": 3
  },
  "rrs": {
   "allowstored": false

@@ -394,6 +394,8 @@ class roadmeet(object):
         di_ent = b.get_object(u'distance_entry')
         if self.distance is not None:
             di_ent.set_text(str(self.distance))
+        dis_ent = b.get_object(u'diststr_entry')
+        dis_ent.set_text(self.diststr)
         ate = b.get_object(u'announce_topic_entry')
         if self.anntopic is not None:
             ate.set_text(self.anntopic)
@@ -417,6 +419,7 @@ class roadmeet(object):
             self.commissaire_str = c_ent.get_text().decode(u'utf-8')
             self.distance = strops.confopt_float(
                 di_ent.get_text().decode(u'utf-8'))
+            self.diststr = dis_ent.get_text().decode(u'utf-8')
 
             # 'announce' topic
             ntopic = ate.get_text().decode(u'utf-8')
@@ -578,7 +581,7 @@ class roadmeet(object):
 
     def menu_race_armlap_activate_cb(self, menuitem, data=None):
         """Default armlap handler."""
-        LOG.info(u'Arm Lap')
+        LOG.debug(u'Arm Lap')
         try:
             self.curevent.armlap()
         except Exception as e:

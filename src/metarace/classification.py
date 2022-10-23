@@ -152,8 +152,12 @@ class classification(object):
 
         # start with the overall result
         sec = report.section()
-        sec.heading = u'Event ' + self.evno + u': ' + u' '.join(
-            [self.event[u'pref'], self.event[u'info']]).strip()
+        if self.event[u'evov']:
+            sec.heading = u' '.join([self.event[u'pref'],
+                                     self.event[u'info']]).strip()
+        else:
+            sec.heading = u'Event ' + self.evno + u': ' + u' '.join(
+                [self.event[u'pref'], self.event[u'info']]).strip()
         sec.lines = []
         lapstring = strops.lapstring(self.event[u'laps'])
         substr = u' '.join(
@@ -306,7 +310,7 @@ class classification(object):
                         LOG.warning(u'Invalid placegroup %r at rank %r',
                                     placegroup, currank)
             else:
-                LOG.warning(u'Empty placegroup at rank %r', currank)
+                LOG.debug(u'Empty placegroup at rank %r', currank)
 
         # Pass 2: create an ordered list of rider numbers using lookup
         placemap = {}

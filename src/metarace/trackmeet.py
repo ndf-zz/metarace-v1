@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Timing and data handling application for track meets."""
 
 import pygtk
@@ -46,8 +47,8 @@ EXPORTPATH = u'export'
 MAXREP = 10000  # communique max number
 SESSBREAKTHRESH = 0.075  # forced page break threshold
 ANNOUNCE_LINELEN = 80  # length of lines on text-only DHI announcer
-LOG = logging.getLogger(u'metarace.trackmeet')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.trackmeet')
+_log.setLevel(logging.DEBUG)
 
 
 def mkrace(meet, event, ui=True):
@@ -145,12 +146,12 @@ class trackmeet(object):
         if self.main_port is not None:
             mte.set_text(self.main_port)
         mtb = b.get_object(u'timing_main_dfl')
-        mtb.connect(u'clicked', self.set_default, mte, timy.DEFPORT)
+        mtb.connect(u'clicked', self.set_default, mte, u'DEFAULT')
 
         # run dialog
         response = dlg.run()
         if response == 1:  # id 1 set in glade for "Apply"
-            LOG.debug(u'Updating meet properties')
+            _log.debug(u'Updating meet properties')
 
             # update meet meta
             self.titlestr = tent.get_text().decode('utf-8', 'replace')
@@ -185,9 +186,9 @@ class trackmeet(object):
             if nport != self.main_port:
                 self.main_port = nport
                 self.main_timer.setport(nport)
-            LOG.debug(u'Properties updated')
+            _log.debug(u'Properties updated')
         else:
-            LOG.debug(u'Edit properties cancelled')
+            _log.debug(u'Edit properties cancelled')
         dlg.destroy()
 
     def menu_meet_fullscreen_toggled_cb(self, button, data=None):
@@ -222,7 +223,7 @@ class trackmeet(object):
                      doprint=True,
                      exportfile=None):
         """Print the suuplied sections in a standard report."""
-        LOG.info(u'Printing report %s %s', subtitle, docstr)
+        _log.info(u'Printing report %s %s', subtitle, docstr)
 
         rep = report.report()
         rep.set_provisional(prov)
@@ -266,13 +267,13 @@ class trackmeet(object):
         print_op.set_default_page_setup(self.pageset)
         print_op.connect(u'begin_print', self.begin_print, rep)
         print_op.connect(u'draw_page', self.draw_print_page, rep)
-        LOG.debug(u'Calling into print_op.run()')
+        _log.debug(u'Calling into print_op.run()')
         res = print_op.run(gtk.PRINT_OPERATION_ACTION_PREVIEW, None)
         if res == gtk.PRINT_OPERATION_RESULT_APPLY:
             self.printprefs = print_op.get_print_settings()
-            LOG.debug(u'Updated print preferences')
+            _log.debug(u'Updated print preferences')
         elif res == gtk.PRINT_OPERATION_RESULT_IN_PROGRESS:
-            LOG.debug(u'Print operation in progress')
+            _log.debug(u'Print operation in progress')
 
         # may be called via idle_add
         return False
@@ -296,7 +297,7 @@ class trackmeet(object):
         for c in self.commalloc:
             if c == lookup:  # previous allocation
                 ret = self.commalloc[c]
-                LOG.debug(u'Found allocation: ' + ret + u' -> ' + lookup)
+                _log.debug(u'Found allocation: ' + ret + u' -> ' + lookup)
                 break
             else:
                 noset.add(self.commalloc[c])
@@ -305,12 +306,12 @@ class trackmeet(object):
                 ret = unicode(cnt)
                 if ret not in noset:
                     self.commalloc[lookup] = ret  # write back
-                    LOG.debug(u'Add allocation: ' + ret + u' -> ' + lookup)
+                    _log.debug(u'Add allocation: ' + ret + u' -> ' + lookup)
                     break
                 else:
                     cnt += 1
                     if cnt > MAXREP:
-                        LOG.error(u'Gave up looking for communique no')
+                        _log.error(u'Gave up looking for communique no')
                         break  # safer
         return ret
 
@@ -341,8 +342,8 @@ class trackmeet(object):
                 reptypestr = u'Program of Events'
                 secs.extend(h.startlist_report(True))  # startlist in program
             else:
-                LOG.error(u'Unknown report type in eventdb calback: ' +
-                          repr(reptype))
+                _log.error(u'Unknown report type in eventdb calback: ' +
+                           repr(reptype))
             h.destroy()
             secs.append(report.pagebreak())
         if len(secs) > 0:
@@ -371,7 +372,7 @@ class trackmeet(object):
                               docstr=reptypestr,
                               exportfile=u'trackmeet_' + reptype)
         else:
-            LOG.info(reptype + u' callback: Nothing to report')
+            _log.info(reptype + u' callback: Nothing to report')
         return False
 
     ## Race menu callbacks.
@@ -398,7 +399,7 @@ class trackmeet(object):
         if os.path.isfile(oldconf):
             # There is already a config file for this event id
             bakfile = oldconf + u'.old'
-            LOG.info(u'Existing config saved to %r', bakfile)
+            _log.info(u'Existing config saved to %r', bakfile)
             os.rename(oldconf, bakfile)  ## TODO: replace with shutil
         self.open_event(event)
         self.menu_race_properties.activate()
@@ -440,13 +441,13 @@ class trackmeet(object):
             if nh is not None:
                 self.open_event(nh)
             else:
-                LOG.warning(u'No next event to open')
+                _log.warning(u'No next event to open')
         else:
             eh = self.edb.getselected()
             if eh is not None:
                 self.open_event(eh)
             else:
-                LOG.warning(u'No next event to open')
+                _log.warning(u'No next event to open')
 
     def menu_race_prev_activate_cb(self, menuitem, data=None):
         """Open the previous event on the program."""
@@ -455,13 +456,13 @@ class trackmeet(object):
             if ph is not None:
                 self.open_event(ph)
             else:
-                LOG.warning(u'No previous event to open')
+                _log.warning(u'No previous event to open')
         else:
             eh = self.edb.getselected()
             if eh is not None:
                 self.open_event(eh)
             else:
-                LOG.warning(u'No previous event to open')
+                _log.warning(u'No previous event to open')
 
     def menu_race_close_activate_cb(self, menuitem, data=None):
         """Close currently open event."""
@@ -491,8 +492,8 @@ class trackmeet(object):
                 if u'auto' in starters:
                     spec = starters.lower().replace(u'auto', u'').strip()
                     self.curevent.autospec += spec
-                    LOG.info(u'Transferred autospec ' + repr(spec) +
-                             u' to event ' + self.curevent.evno)
+                    _log.info(u'Transferred autospec ' + repr(spec) +
+                              u' to event ' + self.curevent.evno)
                 else:
                     self.addstarters(
                         self.curevent,
@@ -514,12 +515,12 @@ class trackmeet(object):
             else:
                 race.addrider(st)
 
-    def autoplace_riders(self, race, autospec=u'', infocol=None):
+    def autoplace_riders(self, race, autospec=u'', infocol=None, final=False):
         """Fetch a flat list of places from the autospec."""
         # TODO: Consider an alternative since this is only used by ps
         places = {}
         for egroup in autospec.split(u';'):
-            LOG.debug(u'Autospec group: ' + repr(egroup))
+            _log.debug(u'Autospec group: ' + repr(egroup))
             specvec = egroup.split(u':')
             if len(specvec) == 2:
                 evno = specvec[0].strip()
@@ -530,28 +531,33 @@ class trackmeet(object):
                     if e is not None:
                         h = mkrace(self, e, False)
                         h.loadconfig()
-                        for ri in h.result_gen():
-                            if isinstance(ri[1], int) and ri[1] in placeset:
-                                rank = ri[1]
-                                if rank not in places:
-                                    places[rank] = []
-                                places[rank].append(ri[0])
+                        isFinal = h.standingstr() == u'Result'
+                        _log.debug(u'Event %r status: %r, final=%r', evno,
+                                   h.standingstr(), isFinal)
+                        if not final or isFinal:
+                            for ri in h.result_gen():
+                                if isinstance(ri[1],
+                                              int) and ri[1] in placeset:
+                                    rank = ri[1]
+                                    if rank not in places:
+                                        places[rank] = []
+                                    places[rank].append(ri[0])
                         h.destroy()
                     else:
-                        LOG.warning(u'Autospec event number not found: ' +
-                                    repr(evno))
+                        _log.warning(u'Autospec event number not found: ' +
+                                     repr(evno))
                     self.autorecurse.remove(evno)
                 else:
-                    LOG.debug(u'Ignoring loop in auto placelist: ' +
-                              repr(evno))
+                    _log.debug(u'Ignoring loop in auto placelist: ' +
+                               repr(evno))
             else:
-                LOG.warning(u'Ignoring erroneous autospec group: ' +
-                            repr(egroup))
+                _log.warning(u'Ignoring erroneous autospec group: ' +
+                             repr(egroup))
         ret = u''
         for place in sorted(places):
             ret += u' ' + u'-'.join(places[place])
         ## TODO: append to [] then join
-        LOG.debug(u'Place set: ' + ret)
+        _log.debug(u'Place set: ' + ret)
         return ret
 
     def autostart_riders(self, race, autospec=u'', infocol=None):
@@ -563,7 +569,7 @@ class trackmeet(object):
         # TODO: check default, maybe defer to None
         # TODO: IMPORTANT cache result gens for fast recall
         for egroup in autospec.split(u';'):
-            LOG.debug(u'Autospec group: ' + repr(egroup))
+            _log.debug(u'Autospec group: ' + repr(egroup))
             specvec = egroup.split(u':')
             if len(specvec) == 2:
                 evno = specvec[0].strip()
@@ -573,6 +579,7 @@ class trackmeet(object):
                     e = self.edb[evno]
                     if e is not None:
                         evplacemap = {}
+                        _log.debug('Loading places from event %r', evno)
                         ## load the place set map rank -> [[rider,seed],..]
                         h = mkrace(self, e, False)
                         h.loadconfig()
@@ -585,23 +592,25 @@ class trackmeet(object):
                                 if infocol is not None and infocol < len(ri):
                                     seed = ri[infocol]
                                 evplacemap[rank].append([ri[0], seed])
-
+                                #_log.debug('Event %r add place=%r, rider=%r, info=%r',
+                                #evno, rank, ri[0], seed)
                         h.destroy()
                         # maintain ordering of autospec
                         for p in placeset:
                             if p in evplacemap:
                                 for ri in evplacemap[p]:
+                                    #_log.debug(u'Adding rider: %r/%r', ri[0], ri[1])
                                     race.addrider(ri[0], ri[1])
                     else:
-                        LOG.warning(u'Autospec event number not found: ' +
-                                    repr(evno))
+                        _log.warning(u'Autospec event number not found: ' +
+                                     repr(evno))
                     self.autorecurse.remove(evno)
                 else:
-                    LOG.debug(u'Ignoring loop in auto startlist: ' +
-                              repr(evno))
+                    _log.debug(u'Ignoring loop in auto startlist: ' +
+                               repr(evno))
             else:
-                LOG.warning(u'Ignoring erroneous autospec group: ' +
-                            repr(egroup))
+                _log.warning(u'Ignoring erroneous autospec group: ' +
+                             repr(egroup))
 
     def close_event(self):
         """Close the currently opened race."""
@@ -624,18 +633,18 @@ class trackmeet(object):
     def race_evno_change(self, old_no, new_no):
         """Handle a change in a race number."""
         if self.curevent is not None and self.curevent.evno == old_no:
-            LOG.warning(u'Ignoring change to open event: %r', old_no)
+            _log.warning(u'Ignoring change to open event: %r', old_no)
             return False
         newconf = self.event_configfile(new_no)
         if os.path.isfile(newconf):
             rnconf = newconf + u'.old'
-            LOG.debug(u'Backup existing config to %r', rnconf)
+            _log.debug(u'Backup existing config to %r', rnconf)
             os.rename(newconf, rnconf)
         oldconf = self.event_configfile(old_no)
         if os.path.isfile(oldconf):
-            LOG.debug(u'Rename config %r to %r', oldconf, newconf)
+            _log.debug(u'Rename config %r to %r', oldconf, newconf)
             os.rename(oldconf, newconf)
-        LOG.debug(u'Event %r changed to %r', old_no, new_no)
+        _log.debug(u'Event %r changed to %r', old_no, new_no)
         return True
 
     ## Data menu callbacks.
@@ -644,7 +653,7 @@ class trackmeet(object):
         if not uiutil.questiondlg(self.window,
                                   u'Re-load event and rider data from disk?',
                                   u'Note: The current event will be closed.'):
-            LOG.debug(u'Re-load events & riders aborted')
+            _log.debug(u'Re-load events & riders aborted')
             return False
 
         cureventno = None
@@ -661,14 +670,14 @@ class trackmeet(object):
         if cureventno and cureventno in self.edb:
             self.open_event(self.edb[cureventno])
         else:
-            LOG.warning(u'Running event was removed from the event list')
+            _log.warning(u'Running event was removed from the event list')
 
     def menu_data_result_activate_cb(self, menuitem, data=None):
         """Export final result."""
         try:
             self.finalresult()  # TODO: Call in sep thread
         except Exception as e:
-            LOG.error(u'Error writing result: ' + unicode(e))
+            _log.error(u'Error writing result: ' + unicode(e))
             raise
 
     def finalresult(self):
@@ -682,9 +691,9 @@ class trackmeet(object):
                 if nsess != lastsess:
                     sections.append(
                         report.pagebreak(SESSBREAKTHRESH))  # force break
-                    LOG.debug(u'Break between events: ' + repr(e[u'evid']) +
-                              u' with ' + repr(lastsess) + u' != ' +
-                              repr(nsess))
+                    _log.debug(u'Break between events: ' + repr(e[u'evid']) +
+                               u' with ' + repr(lastsess) + u' != ' +
+                               repr(nsess))
                 lastsess = nsess
                 if r.evtype in [u'break', u'session']:
                     sec = report.section()
@@ -744,35 +753,35 @@ class trackmeet(object):
         ofile = os.path.join(u'export', filebase + u'.pdf')
         with metarace.savefile(ofile) as f:
             r.output_pdf(f, docover=True)
-            LOG.info(u'Exported pdf program to %r', ofile)
+            _log.info(u'Exported pdf program to %r', ofile)
         ofile = os.path.join(u'export', filebase + u'.html')
         with metarace.savefile(ofile) as f:
             r.output_html(f)
-            LOG.info(u'Exported html program to %r', ofile)
+            _log.info(u'Exported html program to %r', ofile)
         ofile = os.path.join(u'export', filebase + u'.xls')
         with metarace.savefile(ofile) as f:
             r.output_xls(f)
-            LOG.info(u'Exported xls program to %r', ofile)
+            _log.info(u'Exported xls program to %r', ofile)
         ofile = os.path.join(u'export', filebase + u'.json')
         with metarace.savefile(ofile) as f:
             r.output_json(f)
-            LOG.info(u'Exported json program to %r', ofile)
+            _log.info(u'Exported json program to %r', ofile)
 
     def menu_data_program_activate_cb(self, menuitem, data=None):
         """Export race program."""
         try:
             self.printprogram()  # TODO: call from sep thread
         except Exception as e:
-            LOG.error(u'Error writing report: ' + unicode(e))
+            _log.error(u'Error writing report: ' + unicode(e))
             raise
 
     def menu_data_update_activate_cb(self, menuitem, data=None):
         """Update meet, session, event and riders in external database."""
         try:
-            LOG.info(u'Exporting data:')
+            _log.info(u'Exporting data:')
             self.updateindex()  # TODO: push into sep thread
         except Exception as e:
-            LOG.error(u'Error exporting event data: ' + unicode(e))
+            _log.error(u'Error exporting event data: ' + unicode(e))
             raise
 
     def updatenexprev(self):
@@ -819,6 +828,8 @@ class trackmeet(object):
                                                        self.orgstr)
             orep.strings[u'diststr'] = self.locstr
             orep.set_provisional(self.provisional)  # ! TODO
+            orep.shortname = self.titlestr
+            orep.indexlink = u'/'
             if self.provisional:
                 orep.reportstatus = u'provisional'
             else:
@@ -859,7 +870,7 @@ class trackmeet(object):
                         evno = eh[u'evov'].strip()
                     sec.lines.append([evno, None, descr, extra, linkfile])
             orep.add_section(sec)
-            basename = u'program'
+            basename = u'index'
             ofile = os.path.join(self.exportpath, basename + u'.html')
             with metarace.savefile(ofile) as f:
                 orep.output_html(f, linkbase=lb, linktypes=lt)
@@ -872,11 +883,11 @@ class trackmeet(object):
     def mirror_completion(self, status, updates):
         """Send notifies for any changed files sent after export."""
         # NOTE: called in the mirror thread
-        LOG.debug(u'Mirror status: %r', status)
+        _log.debug(u'Mirror status: %r', status)
         if status == 0:
             pass
         else:
-            LOG.error(u'Mirror failed')
+            _log.error(u'Mirror failed')
         return False
 
     def mirror_start(self, dirty=None):
@@ -894,21 +905,21 @@ class trackmeet(object):
     def menu_data_export_activate_cb(self, menuitem, data=None):
         """Export race data."""
         if not self.exportlock.acquire(False):
-            LOG.info(u'Export already in progress')
+            _log.info(u'Export already in progress')
             return None  # allow only one entry
         if self.exporter is not None:
-            LOG.warning(u'Export in progress, re-run required')
+            _log.warning(u'Export in progress, re-run required')
             return False
         try:
             self.exporter = threading.Thread(target=self.__run_data_export)
             self.exporter.start()
-            LOG.debug(u'Created export worker %r: ', self.exporter)
+            _log.debug(u'Created export worker %r: ', self.exporter)
         finally:
             self.exportlock.release()
 
     def __run_data_export(self):
         try:
-            LOG.debug('Exporting race info')
+            _log.debug('Exporting race info')
             self.updatenexprev()  # re-compute next/prev link struct
 
             # determine 'dirty' events 	## TODO !!
@@ -933,7 +944,7 @@ class trackmeet(object):
                 if dirty:
                     dord.append(key)  # maintains ordering
                     dmap[key] = [e, evno, etype, series, prefix, info, export]
-            LOG.debug(u'Marked ' + unicode(len(dord)) + u' events dirty')
+            _log.debug(u'Marked ' + unicode(len(dord)) + u' events dirty')
 
             dirty = {}
             for k in dmap:  # only output dirty events
@@ -970,7 +981,8 @@ class trackmeet(object):
                         orep.reportstatus = u'final'
 
                     # in page links
-                    orep.indexlink = u'program'  # url to program of events
+                    orep.shortname = evstr
+                    orep.indexlink = u'./'  # url to program of events
                     if evno in self.prevlinks:
                         orep.prevlink = self.prevlinks[evno]
                     if evno in self.nextlinks:
@@ -996,9 +1008,9 @@ class trackmeet(object):
                         orep.output_json(f)
                 r.destroy()
             glib.idle_add(self.mirror_start)
-            LOG.debug(u'Race info export')
+            _log.debug(u'Race info export')
         except Exception as e:
-            LOG.error(u'Error exporting results: %s', e)
+            _log.error(u'Error exporting results: %s', e)
 
     ## SCB menu callbacks
     def menu_scb_enable_toggled_cb(self, button, data=None):
@@ -1017,7 +1029,7 @@ class trackmeet(object):
         self.scbwin = None  # stop sending any new updates
         self.scb.clrall()  # force clear of current text page
         self.scb.sendmsg(unt4.OVERLAY_CLOCK)
-        LOG.debug(u'Show facility clock')
+        _log.debug(u'Show facility clock')
 
     def menu_scb_blank_cb(self, menuitem, data=None):
         """Select blank scoreboard overlay."""
@@ -1025,20 +1037,20 @@ class trackmeet(object):
         self.scbwin = None
         self.scb.clrall()
         self.txt_announce(unt4.GENERAL_CLEARING)
-        LOG.debug(u'Blank scoreboard')
+        _log.debug(u'Blank scoreboard')
 
     def menu_scb_test_cb(self, menuitem, data=None):
         """Select test scoreboard overlay."""
         self.scbwin = None
         self.scbwin = scbwin.scbtest(self.scb)
         self.scbwin.reset()
-        LOG.debug(u'Scoreboard testpage')
+        _log.debug(u'Scoreboard testpage')
 
     def menu_scb_connect_activate_cb(self, menuitem, data=None):
         """Force a reconnect to scoreboards."""
         self.scb.setport(self.scbport)
         self.announce.reconnect()
-        LOG.debug(u'Re-connect scoreboard')
+        _log.debug(u'Re-connect scoreboard')
         if self.gemport != u'':
             self.gemini.setport(self.gemport)
 
@@ -1078,19 +1090,19 @@ class trackmeet(object):
     def menu_timing_clear_activate_cb(self, menuitem, data=None):
         """Clear memory in attached timing devices."""
         self.main_timer.clrmem()
-        LOG.info(u'Clear timer memory')
+        _log.info(u'Clear timer memory')
 
     def menu_timing_dump_activate_cb(self, menuitem, data=None):
         """Request memory dump from attached timy."""
         self.main_timer.dumpall()
-        LOG.info(u'Dump timer memory')
+        _log.info(u'Dump timer memory')
 
     def menu_timing_reconnect_activate_cb(self, menuitem, data=None):
         """Reconnect timer and initialise."""
         self.main_timer.setport(self.main_port)
         if self.main_port:
             self.main_timer.sane()
-        LOG.info(u'Re-connect and initialise timer')
+        _log.info(u'Re-connect and initialise timer')
 
     ## Help menu callbacks
     def menu_help_about_cb(self, menuitem, data=None):
@@ -1132,10 +1144,10 @@ class trackmeet(object):
             if self.exporter is not None:
                 if not self.exporter.is_alive(
                 ):  # replaces join() non-blocking
-                    LOG.debug(u'Deleting complete export: %r', self.exporter)
+                    _log.debug(u'Deleting complete export: %r', self.exporter)
                     self.exporter = None
                 else:
-                    LOG.info(u'Incomplete export: %r', self.exporter)
+                    _log.info(u'Incomplete export: %r', self.exporter)
         return True
 
     def timeout(self):
@@ -1143,12 +1155,12 @@ class trackmeet(object):
         if not self.running:
             return False
         try:
-            if self.curevent is not None:  # this is expected to
-                self.curevent.timeout()  # collect any timer events
+            if self.curevent is not None:
+                self.curevent.timeout()
             if self.scbwin is not None:
                 self.scbwin.update()
         except Exception as e:
-            LOG.error(u'Timeout: ' + unicode(e))  # use a stack trace
+            _log.error(u'%s in timeout: %s', e.__class__.__name__, e)
         return True
 
     ## Timy utility methods.
@@ -1312,7 +1324,7 @@ class trackmeet(object):
             key = gtk.gdk.keyval_name(event.keyval) or u'None'  # str
             if event.state & gtk.gdk.CONTROL_MASK:
                 if key in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
-                    self._timercb(tod.now(index=u'FAKE', chan=key))
+                    self.__timercb(tod.now(index=u'FAKE', chan=key))
                     return True
             if self.curevent is not None:
                 return self.curevent.key_event(widget, event)
@@ -1325,22 +1337,22 @@ class trackmeet(object):
         self.announce.exit(msg)
         self.scb.exit(msg)
         self.main_timer.exit(msg)
-        LOG.info(u'Waiting for workers to exit')
+        _log.info(u'Waiting for workers to exit')
         if self.exporter is not None:
-            LOG.debug(u'Result compiler')
+            _log.debug(u'Result compiler')
             self.exporter.join()
             self.exporter = None
         if self.mirror is not None:
-            LOG.debug(u'Result export')
+            _log.debug(u'Result export')
             self.mirror.join()
             self.mirror = None
-        LOG.debug(u'Gemini scoreboard')
+        _log.debug(u'Gemini scoreboard')
         self.gemini.join()
-        LOG.debug(u'DHI scoreboard')
+        _log.debug(u'DHI scoreboard')
         self.scb.join()
-        LOG.debug(u'Telegraph/announce')
+        _log.debug(u'Telegraph/announce')
         self.announce.join()
-        LOG.debug(u'Main timer')
+        _log.debug(u'Main timer')
         self.main_timer.join()
 
     def __timercb(self, evt, data=None):
@@ -1350,12 +1362,12 @@ class trackmeet(object):
                           priority=glib.PRIORITY_HIGH)
 
     def __controlcb(self, topic=None, message=None):
-        LOG.debug(u'Unsupported control %r: %r', topic, message)
+        _log.debug(u'Unsupported control %r: %r', topic, message)
 
     def start(self):
         """Start the timer and scoreboard threads."""
         if not self.started:
-            LOG.debug(u'Meet startup')
+            _log.debug(u'Meet startup')
             self.announce.start()
             self.scb.start()
             self.main_timer.setcb(self.__timercb)
@@ -1377,10 +1389,10 @@ class trackmeet(object):
             if os.path.isfile(backup):
                 os.remove(backup)
             if os.path.isfile(conf):
-                LOG.debug(u'Backing up %r to %r', conf, backup)
+                _log.debug(u'Backing up %r to %r', conf, backup)
                 os.link(conf, backup)
         except Exception as e:
-            LOG.debug(u'Backup of %r to %r failed: %s', conf, backup, e)
+            _log.debug(u'Backup of %r to %r failed: %s', conf, backup, e)
         self.curevent.saveconfig()
         self.curevent.event[u'dirt'] = True
 
@@ -1432,7 +1444,7 @@ class trackmeet(object):
             cw.write(f)
         self.rdb.save(u'riders.csv')
         self.edb.save(u'events.csv')
-        LOG.info(u'Meet configuration saved')
+        _log.info(u'Meet configuration saved')
 
     def reload_riders(self):
         # make a prelim mapped rider struct
@@ -1475,10 +1487,10 @@ class trackmeet(object):
         })
         cr.add_section(u'trackmeet')
         cr.merge(metarace.sysconf, u'trackmeet')
-        LOG.debug(u'Load system meet defaults')
+        _log.debug(u'Load system meet defaults')
 
         # re-set main log file
-        LOG.debug(u'Adding meet logfile handler %r', LOGFILE)
+        _log.debug(u'Adding meet logfile handler %r', LOGFILE)
         rootlogger = logging.getLogger()
         if self.loghandler is not None:
             rootlogger.removeHandler(self.loghandler)
@@ -1493,9 +1505,9 @@ class trackmeet(object):
         try:
             with open(CONFIGFILE, 'rb') as f:
                 cr.read(f)
-            LOG.debug(u'Read meet config from %r', CONFIGFILE)
+            _log.debug(u'Read meet config from %r', CONFIGFILE)
         except Exception as e:
-            LOG.error(u'Unable to read meet config: %s', e)
+            _log.error(u'Unable to read meet config: %s', e)
 
         # set main timer port (only main timer now)
         nport = cr.get(u'trackmeet', u'maintimer')
@@ -1555,10 +1567,10 @@ class trackmeet(object):
             self.tracklen_n = n
             self.tracklen_d = d
             setlen = True
-            LOG.debug(u'Track length updated to %r/%r', n, d)
+            _log.debug(u'Track length updated to %r/%r', n, d)
         if not setlen:
-            LOG.warning(u'Ignoring invalid track length %r/%r default used', n,
-                        d)
+            _log.warning(u'Ignoring invalid track length %r/%r default used',
+                         n, d)
 
         # document id
         self.docindex = strops.confopt_posint(
@@ -1576,12 +1588,12 @@ class trackmeet(object):
         # make sure export path exists
         if not os.path.exists(self.exportpath):
             os.mkdir(self.exportpath)
-            LOG.info(u'Created export path: %r', self.exportpath)
+            _log.info(u'Created export path: %r', self.exportpath)
 
         # check and warn of config mismatch
         cid = cr.get(u'trackmeet', u'id')
         if cid != TRACKMEET_ID:
-            LOG.warning(u'Meet config mismatch: %r != %r', cid, TRACKMEET_ID)
+            _log.warning(u'Meet config mismatch: %r != %r', cid, TRACKMEET_ID)
 
     def newgetrider(self, bib, series=u''):
         ret = None
@@ -1600,7 +1612,7 @@ class trackmeet(object):
         elif col == riderdb.COL_CLUB:
             self.rdb.editrider(ref=dbr, club=value)
         else:
-            LOG.debug(u'Attempt to edit unsupported rider column: %r', col)
+            _log.debug(u'Attempt to edit unsupported rider column: %r', col)
         self.reload_riders()
 
     def get_clubmode(self):
@@ -1617,9 +1629,9 @@ class trackmeet(object):
                     ret = self.tracklen_n * int(count)
                     if self.tracklen_d != 1 and self.tracklen_d > 0:
                         ret //= self.tracklen_d
-                LOG.debug(u'get_distance: %r %r -> %dm', count, units, ret)
+                _log.debug(u'get_distance: %r %r -> %dm', count, units, ret)
             except (ValueError, TypeError, ArithmeticError) as v:
-                LOG.warning(u'Error computing race distance: %s', v)
+                _log.warning(u'Error computing race distance: %s', v)
         return ret
 
     def __init__(self):
@@ -1661,23 +1673,23 @@ class trackmeet(object):
         self.pageset.set_right_margin(0, gtk.UNIT_POINTS)
 
         # hardware connections
-        LOG.debug(u'Adding hardware connections')
+        _log.debug(u'Adding hardware connections')
         self.scb = sender.mksender()
         self.announce = telegraph.telegraph()
         self.announce.setcb(self.__controlcb)
         self.scbport = u''
         self.anntopic = None
         self.timerprint = False  # enable timer printer?
-        self.main_timer = timy.timy(u'', name=u'main')
+        self.main_timer = timy.timy()
         self.main_port = u''
-        self.gemini = gemini.gemini(u'')
+        self.gemini = gemini.gemini()
         self.gemport = u''
         self.mirror = None  # file mirror thread
         self.exporter = None  # export worker thread
         self.exportlock = threading.Lock()  # one only exporter
 
         uifile = os.path.join(metarace.UI_PATH, u'trackmeet.ui')
-        LOG.debug(u'Building user interface from %r', uifile)
+        _log.debug(u'Building user interface from %r', uifile)
         b = gtk.Builder()
         b.add_from_file(uifile)
         self.window = b.get_object(u'meet')
@@ -1710,7 +1722,7 @@ class trackmeet(object):
         self.autorecurse = set()
 
         # connect UI log handlers
-        LOG.debug(u'Connecting interface log handlers')
+        _log.debug(u'Connecting interface log handlers')
         rootlogger = logging.getLogger()
         f = logging.Formatter(metarace.LOGFORMAT)
         self.sh = loghandler.statusHandler(self.status, self.context)
@@ -1724,7 +1736,7 @@ class trackmeet(object):
         rootlogger.addHandler(self.lh)
 
         # get rider db and pack into scrolled pane
-        LOG.debug(u'Add riderdb and eventdb')
+        _log.debug(u'Add riderdb and eventdb')
         self.rdb = riderdb.riderdb()
         self.ridermap = {}
         b.get_object(u'rider_box').add(self.rdb.mkview(ucicode=True,
@@ -1744,7 +1756,7 @@ class trackmeet(object):
                 mi.connect(u'activate', self.menu_race_make_activate_cb, etype)
 
         # start timers
-        LOG.debug(u'Starting meet timers')
+        _log.debug(u'Starting meet timers')
         glib.timeout_add_seconds(1, self.menu_clock_timeout)
         glib.timeout_add(50, self.timeout)
 
@@ -1761,13 +1773,13 @@ def main():
     metarace.init(withgtk=True)
     configpath = metarace.DATA_PATH
     if len(sys.argv) > 2:
-        LOG.error(u'Usage: trackmeet [configdir]')
+        _log.error(u'Usage: trackmeet [configdir]')
         sys.exit(1)
     elif len(sys.argv) == 2:
         configpath = sys.argv[1]
     configpath = metarace.config_path(configpath)
     if configpath is None:
-        LOG.error(u'Unable to open meet config %r', sys.argv[1])
+        _log.error(u'Unable to open meet config %r', sys.argv[1])
         sys.exit(1)
     app = runapp(configpath)
     try:
@@ -1782,9 +1794,9 @@ def runapp(configpath):
     """Create the trackmeet object, start in configpath and return a handle."""
     lf = metarace.lockpath(configpath)
     if lf is None:
-        LOG.error(u'Unable to lock meet config, already in use')
+        _log.error(u'Unable to lock meet config, already in use')
         sys.exit(1)
-    LOG.debug(u'Entering meet folder %r', configpath)
+    _log.debug(u'Entering meet folder %r', configpath)
     os.chdir(configpath)
     app = trackmeet()
     app.loadconfig()

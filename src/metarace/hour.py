@@ -632,13 +632,6 @@ class hourrec(object):
 
         return False
 
-    def rftimercb(self, e):
-        """Handle rftimer event."""
-        if e.refid == '':  # got a trigger
-            #return self.starttrig(e)
-            return False
-        return False
-
     def timercb(self, e):
         """Handle a timer event."""
         chan = timy.chan2id(e.chan)

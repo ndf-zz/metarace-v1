@@ -626,10 +626,6 @@ class sprnd(object):
                     self.meet.gemini.rtick(self.finish - self.start, 2)
             glib.idle_add(self.delayed_announce)
 
-    def rftimercb(self, e):
-        """Handle a RF timer event."""
-        return False  # todo... auto win if thresh met
-
     def timercb(self, e):
         """Handle a timer event."""
         chan = timy.chan2id(e.chan)

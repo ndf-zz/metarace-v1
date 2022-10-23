@@ -206,14 +206,11 @@
                 <property name="n_columns">4</property>
                 <child>
                   <object class="GtkButton" id="ps_ctrl_stat_but">
-                    <property name="label" translatable="yes">Idle</property>
-                    <property name="width_request">120</property>
+                    <property name="width_request">160</property>
                     <property name="visible">True</property>
+                    <property name="sensitive">True</property>
                     <property name="can_focus">False</property>
                     <property name="receives_default">True</property>
-                    <property name="tooltip_text" translatable="yes">Race timing control and status</property>
-                    <property name="border_width">1</property>
-                    <property name="focus_on_click">False</property>
                   </object>
                   <packing>
                     <property name="x_options">GTK_FILL</property>

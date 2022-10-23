@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 """Generic race handler for trackmeet."""
 
 import gtk
@@ -16,8 +17,8 @@ from metarace import strops
 from metarace import report
 from metarace import jsonconfig
 
-LOG = logging.getLogger(u'metarace.race')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.race')
+_log.setLevel(logging.DEBUG)
 
 # config version string
 EVENT_ID = u'race-2.0'
@@ -113,9 +114,9 @@ class race(object):
             r = self.getrider(bib)
             if r is not None:
                 r[COL_DNF] = True
-                LOG.info(u'Rider %r withdrawn', bib)
+                _log.info(u'Rider %r withdrawn', bib)
             else:
-                LOG.warn(u'Did not withdraw rider %r', bib)
+                _log.warn(u'Did not withdraw rider %r', bib)
         return False
 
     def delrider(self, bib):
@@ -154,10 +155,11 @@ class race(object):
             club = r[COL_CLUB].decode(u'utf-8')
             if len(club) > 3:
                 # look it up?
-                if self.series in self.meet.ridermap:
-                    rh = self.meet.ridermap[self.series][bib]
-                    if rh is not None:
-                        club = rh[u'note']
+                #if self.series in self.meet.ridermap:
+                #rh = self.meet.ridermap[self.series][bib]
+                #if rh is not None:
+                #club = rh[u'note']
+                club = u''
             outriders.insert(0, [
                 unicode(rank) + u'.', bib,
                 strops.fitname(r[COL_FIRSTNAME].decode(u'utf-8'),
@@ -176,12 +178,12 @@ class race(object):
             for bib in placegroup.split(u'-'):
                 if bib not in placeset:
                     if count >= incnt and not clubmode:
-                        LOG.error(u'Error: More places than available')
+                        _log.error(u'Error: More places than available')
                         break
                     placeset.add(bib)
                     r = self.getrider(bib)
                     if r is None:  # ensure rider exists at this point
-                        LOG.warn(u'Adding non-starter: %r', bib)
+                        _log.warn(u'Adding non-starter: %r', bib)
                         self.addrider(bib)
                         r = self.getrider(bib)
                     rank = place + self.startplace
@@ -189,10 +191,11 @@ class race(object):
                     club = r[COL_CLUB].decode(u'utf-8')
                     if len(club) > 3:
                         # look it up?
-                        if self.series in self.meet.ridermap:
-                            rh = self.meet.ridermap[self.series][bib]
-                            if rh is not None:
-                                club = rh[u'note']
+                        #if self.series in self.meet.ridermap:
+                        #rh = self.meet.ridermap[self.series][bib]
+                        #if rh is not None:
+                        #club = rh[u'note']
+                        club = u''
                     self.results.append([
                         unicode(rank) + u'.', bib,
                         strops.fitname(r[COL_FIRSTNAME].decode(u'utf-8'),
@@ -203,7 +206,7 @@ class race(object):
                     self.riders.swap(self.riders.get_iter(count), i)
                     count += 1
                 else:
-                    LOG.error(u'Ignoring duplicate no: %r', bib)
+                    _log.error(u'Ignoring duplicate no: %r', bib)
             place = count + 1
         self.results.extend(outriders)
         if count > 0 or len(outriders) > 0:
@@ -262,9 +265,9 @@ class race(object):
                 with open(self.configfile, 'rb') as f:
                     cr.read(f)
             except Exception as e:
-                LOG.error(u'Unable to read config: %s', e)
+                _log.error(u'Unable to read config: %s', e)
         else:
-            LOG.info(u'%r not found, loading defaults', self.configfile)
+            _log.info(u'%r not found, loading defaults', self.configfile)
         self.inomnium = strops.confopt_bool(cr.get(u'event', u'inomnium'))
         if self.inomnium:
             self.seedsrc = 1  # fetch start list seeding from omnium
@@ -321,7 +324,7 @@ class race(object):
         # After load complete - check config and report.
         eid = cr.get(u'event', u'id')
         if eid and eid != EVENT_ID:
-            LOG.info(u'Event config mismatch: %r != %r', eid, EVENT_ID)
+            _log.info(u'Event config mismatch: %r != %r', eid, EVENT_ID)
 
     def sort_riderno(self, x, y):
         """Sort riders by rider no."""
@@ -408,12 +411,12 @@ class race(object):
             self.time_lbl.set_text(runtm)
             if self.runlap is not None:
                 if self.runlap != self.lastrunlap:
-                    LOG.debug(u'Runlap: %r', self.runlap)
+                    _log.debug(u'Runlap: %r', self.runlap)
                     self.lastrunlap = self.runlap
         elif self.timerstat == u'armstart':
             self.time_lbl.set_text(u'       0.0   ')  # tod.ZERO.timestr(1)
             if self.runlap and self.runlap != self.lastrunlap:
-                LOG.debug(u'Runlap: %r', self.runlap)
+                _log.debug(u'Runlap: %r', self.runlap)
                 self.lastrunlap = self.runlap
         else:
             self.time_lbl.set_text(u'')
@@ -563,7 +566,7 @@ class race(object):
     def saveconfig(self):
         """Save race to disk."""
         if self.readonly:
-            LOG.error(u'Attempt to save readonly event')
+            _log.error(u'Attempt to save readonly event')
             return
         cw = jsonconfig.config()
         cw.add_section(u'event')
@@ -595,7 +598,7 @@ class race(object):
                 r[COL_PLACE].decode(u'utf-8')
             ])
         cw.set(u'event', u'id', EVENT_ID)
-        LOG.debug(u'Saving event config %r', self.configfile)
+        _log.debug(u'Saving event config %r', self.configfile)
         with metarace.savefile(self.configfile) as f:
             cw.write(f)
 
@@ -604,7 +607,7 @@ class race(object):
         rstr = u''
         if self.readonly:
             rstr = u'readonly '
-        LOG.debug(u'Shutdown %sevent %s: %s', rstr, self.evno, msg)
+        _log.debug(u'Shutdown %sevent %s: %s', rstr, self.evno, msg)
         if not self.readonly:
             self.saveconfig()
         self.winopen = False
@@ -612,7 +615,7 @@ class race(object):
     def do_properties(self):
         """Run event properties dialog."""
         prfile = os.path.join(metarace.UI_PATH, u'race_properties.ui')
-        LOG.debug(u'Building event properties from %r', prfile)
+        _log.debug(u'Building event properties from %r', prfile)
         b = gtk.Builder()
         b.add_from_file(prfile)
         dlg = b.get_object(u'properties')
@@ -638,7 +641,7 @@ class race(object):
         as_e.set_text(self.autospec)
         response = dlg.run()
         if response == 1:  # id 1 set in glade for "Apply"
-            LOG.debug(u'Updating event properties')
+            _log.debug(u'Updating event properties')
             if rt.get_active() == 0:
                 self.set_timetype(u'start/finish')
             else:
@@ -678,7 +681,7 @@ class race(object):
                 self.addrider(s)
             glib.idle_add(self.delayed_announce)
         else:
-            LOG.debug(u'Edit event properties cancelled')
+            _log.debug(u'Edit event properties cancelled')
 
         # if prefix is empty, grab input focus
         if not self.prefix_ent.get_text():
@@ -699,7 +702,7 @@ class race(object):
         self.stat_but.buttonchg(uiutil.bg_none, u'Idle')
         self.stat_but.set_sensitive(True)
         self.set_elapsed()
-        LOG.info(u'Event reset - all places cleared.')
+        _log.info(u'Event reset - all places cleared.')
 
     def setrunning(self):
         """Set timer state to 'running'."""
@@ -856,19 +859,20 @@ class race(object):
                     nfo = r[COL_CLUB].decode(u'utf-8')
                     if len(nfo) > 3:
                         # look it up?
-                        if self.series in self.meet.ridermap:
-                            rh = self.meet.ridermap[self.series][r[0]]
-                            if rh is not None:
-                                nfo = rh[u'note']
+                        #if self.series in self.meet.ridermap:
+                        #rh = self.meet.ridermap[self.series][r[0]]
+                        #if rh is not None:
+                        #nfo = rh[u'note']
+                        nfo = u''
                 startlist.append([
                     r[COL_BIB].decode(u'utf-8'),
                     strops.fitname(r[COL_FIRSTNAME].decode(u'utf-8'),
                                    r[COL_LASTNAME].decode(u'utf-8'), name_w),
                     nfo
                 ])
-                inf = r[COL_INFO].decode(u'utf-8').strip()
-                if self.evtype in [u'keirin', u'sprint']:  # encirc draw no
-                    inf = strops.drawno_encirc(inf)
+                #inf = r[COL_INFO].decode(u'utf-8').strip()
+                #if self.evtype in [u'keirin', u'sprint']:  # encirc draw no
+                #inf = strops.drawno_encirc(inf)
                 ##self.meet.announce.gfx_add_row([r[COL_BIB].decode(u'utf-8'),
                 ##strops.resname(r[COL_FIRSTNAME].decode(u'utf-8'),
                 ##r[COL_LASTNAME].decode(u'utf-8'),
@@ -897,20 +901,20 @@ class race(object):
         for no in strops.reformat_biblist(places).split():
             # repetition? - already in place set?
             if no in placeset:
-                LOG.error(u'Duplicate no in places: %r', no)
+                _log.error(u'Duplicate no in places: %r', no)
                 ret = False
             placeset.add(no)
             # rider in the model?
             lr = self.getrider(no)
             if lr is None:
                 if not self.meet.get_clubmode():
-                    LOG.error(u'Non-starter in places: %r', no)
+                    _log.error(u'Non-starter in places: %r', no)
                     ret = False
                 # otherwise club mode allows non-starter in places
             else:
                 # rider still in the race?
                 if lr[COL_DNF]:
-                    LOG.error(u'DNF rider in places: %r', no)
+                    _log.error(u'DNF rider in places: %r', no)
                     ret = False
         return ret
 
@@ -923,7 +927,7 @@ class race(object):
             glib.idle_add(self.delayed_announce)
             self.meet.delayed_export()
         else:
-            LOG.error(u'Places not updated')
+            _log.error(u'Places not updated')
 
     def race_ctrl_action_activate_cb(self, entry, data=None):
         """Perform current action on bibs listed."""
@@ -945,7 +949,7 @@ class race(object):
             entry.set_text(u'')
         elif acode == u'lap':
             self.runlap = strops.confopt_posint(rlist)
-            LOG.debug(u'Manually set runlap to: %r', self.runlap)
+            _log.debug(u'Manually set runlap to: %r', self.runlap)
         elif acode == u'out' and self.evtype == u'elimination':
             bib = rlist.strip()
             if self.eliminate(bib):
@@ -959,7 +963,7 @@ class race(object):
             # Short-circuit method to avoid re-announce
             return False
         else:
-            LOG.error(u'Ignoring invalid action')
+            _log.error(u'Ignoring invalid action')
             return False
         glib.idle_add(self.delayed_announce)
 
@@ -977,15 +981,15 @@ class race(object):
                     self.eliminated.remove(bib)
                     self.placexfer(
                         self.ctrl_places.get_text().decode(u'utf-8'))
-                    LOG.info(u'Rider %r removed from eliminated riders.', bib)
+                    _log.info(u'Rider %r removed from eliminated riders.', bib)
                     glib.idle_add(self.delayed_announce)
                     ret = True
                 else:
-                    LOG.error(u'Rider %r not eliminated', bib)
+                    _log.error(u'Rider %r not eliminated', bib)
             else:
-                LOG.error(u'Cannot un-eliminate dnf rider: %r', bib)
+                _log.error(u'Cannot un-eliminate dnf rider: %r', bib)
         else:
-            LOG.error(u'Cannot un-eliminate non-starter: %r', bib)
+            _log.error(u'Cannot un-eliminate non-starter: %r', bib)
 
         return ret
 
@@ -999,7 +1003,7 @@ class race(object):
                     self.eliminated.append(bib)
                     self.placexfer(
                         self.ctrl_places.get_text().decode(u'utf-8'))
-                    LOG.error(u'Rider %r eliminated.', bib)
+                    _log.error(u'Rider %r eliminated.', bib)
                     ret = True
                     fname = r[COL_FIRSTNAME].decode(u'utf-8')
                     lname = r[COL_LASTNAME].decode(u'utf-8')
@@ -1027,11 +1031,11 @@ class race(object):
                     self.meet.txt_postxt(21, 0, u'Out: ' + nrstr)
                     glib.timeout_add_seconds(10, self.delayed_result)
                 else:
-                    LOG.error(u'Rider %r already eliminated.', bib)
+                    _log.error(u'Rider %r already eliminated.', bib)
             else:
-                LOG.error(u'Cannot eliminate dnf rider: %r', bib)
+                _log.error(u'Cannot eliminate dnf rider: %r', bib)
         else:
-            LOG.error(u'Cannot eliminate non-starter: %r', bib)
+            _log.error(u'Cannot eliminate non-starter: %r', bib)
 
         return ret
 
@@ -1099,7 +1103,7 @@ class race(object):
         if self.timerstat == u'armstart':
             if self.distance and self.units == u'laps':
                 self.runlap = self.distance - 1
-                LOG.debug(u'Set runlap: %r', self.runlap)
+                _log.debug(u'Set runlap: %r', self.runlap)
             self.start = e
             self.lstart = tod.now()
             self.setrunning()
@@ -1122,10 +1126,10 @@ class race(object):
         """Handle a timer event."""
         chan = timy.chan2id(e.chan)
         if chan == self.startchan or chan == 0:
-            LOG.debug(u'Got a start impulse')
+            _log.debug(u'Got a start impulse')
             self.starttrig(e)
         elif chan == self.finchan:
-            LOG.debug('Got a finish impulse')
+            _log.debug('Got a finish impulse')
             self.fintrig(e)
         return False
 
@@ -1160,19 +1164,19 @@ class race(object):
                 if ret[2]:
                     ftod = tod.tod(ret[2], u'MANU', u'C1i')
                     self.meet.main_timer.printline(u' ' + str(ftod))
-                LOG.info(u'Updating race times st=%r, ft=%r', stod, ftod)
+                _log.info(u'Updating race times st=%r, ft=%r', stod, ftod)
                 self.set_start(stod)
                 self.set_finish(ftod)
                 self.set_elapsed()
                 if self.start is not None and self.finish is not None:
                     self.log_elapsed()
             except Exception as v:
-                LOG.error(u'Error updating times %s: %s', v.__class__.__name__,
-                          v)
+                _log.error(u'Error updating times %s: %s',
+                           v.__class__.__name__, v)
 
             glib.idle_add(self.delayed_announce)
         else:
-            LOG.info('Edit race times cancelled')
+            _log.info('Edit race times cancelled')
 
     def result_gen(self):
         """Generator function to export a final result."""
@@ -1254,10 +1258,7 @@ class race(object):
             shvec = []
             if substr:
                 shvec.append(substr)
-            if rcount > 0 and pcount < rcount:
-                shvec.append(u'Provisional Result')
-            else:
-                shvec.append(u'Result')
+            shvec.append(self.standingstr())
             sec.subheading = u' - '.join(shvec)
         else:
             if substr:
@@ -1271,6 +1272,29 @@ class race(object):
             for c in self.comments:
                 sec.lines.append([None, c])
             ret.append(sec)
+        return ret
+
+    def standingstr(self, width=None):
+        """Return an event status string for reports and scb."""
+        ret = u''
+        if self.onestart:
+            ret = u'Standings'
+            rcount = 0
+            pcount = 0
+            winner = False
+            for r in self.riders:
+                if r[COL_DNF]:
+                    pcount += 1
+                elif r[COL_PLACE] != u'':
+                    if r[COL_PLACE] == u'1':
+                        winner = True
+                    pcount += 1
+                rcount += 1
+            if winner:
+                if rcount > 0 and pcount < rcount:
+                    ret = u'Provisional Result'
+                else:
+                    ret = u'Result'
         return ret
 
     def destroy(self):
@@ -1308,7 +1332,7 @@ class race(object):
         rstr = u''
         if self.readonly:
             rstr = u'readonly '
-        LOG.debug(u'Init %sevent %s', rstr, self.evno)
+        _log.debug(u'Init %sevent %s', rstr, self.evno)
         self.comments = []
         self.eliminated = []
         self.onestart = False
@@ -1342,7 +1366,7 @@ class race(object):
             gobject.TYPE_STRING)  # 6 placing
 
         uifile = os.path.join(metarace.UI_PATH, u'race.ui')
-        LOG.debug(u'Building event interface from %r', uifile)
+        _log.debug(u'Building event interface from %r', uifile)
         b = gtk.Builder()
         b.add_from_file(uifile)
 
@@ -1372,7 +1396,7 @@ class race(object):
 
         # start timer and show window
         if ui:
-            LOG.debug(u'Connecting event ui handlers')
+            _log.debug(u'Connecting event ui handlers')
             # riders pane
             t = gtk.TreeView(self.riders)
             self.view = t

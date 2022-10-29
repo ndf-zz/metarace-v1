@@ -468,11 +468,12 @@ class irtt(object):
                 u'startdelay': None,
                 u'startloop': None,
                 u'starttrig': None,
-                u'finishloop': u'thbc',
+                u'finishloop': None,
                 u'finishpass': None,
                 u'interloops': {},
                 u'tallys': [],
                 u'onestartlist': True,
+                u'showuciids': False,
                 u'timelimit': None,
                 u'finished': False,
                 u'showinter': None,
@@ -523,6 +524,8 @@ class irtt(object):
         self.autoexport = strops.confopt_bool(cr.get(u'irtt', u'autoexport'))
         # sloppy start times
         self.sloppystart = strops.confopt_bool(cr.get(u'irtt', u'sloppystart'))
+        # uci ids on startlists and results
+        self.showuciids = cr.get_bool(u'irtt', u'showuciids')
 
         # transponder-based timing
         self.startloop = cr.get(u'irtt', u'startloop')
@@ -772,6 +775,7 @@ class irtt(object):
         cw.set(u'irtt', u'finishloop', self.finishloop)
         cw.set(u'irtt', u'finishpass', self.finishpass)
         cw.set(u'irtt', u'onestartlist', self.onestartlist)
+        cw.set(u'irtt', u'showuciids', self.showuciids)
         cw.set(u'irtt', u'precision', self.precision)
         cw.set(u'irtt', u'timelimit', self.timelimit)
 
@@ -952,15 +956,19 @@ class irtt(object):
         ret.append(sec)
         return ret
 
+    def callup_report(self):
+        """Return startlist report."""
+        return self.startlist_report()
+
     def startlist_report(self):
         """Return a startlist report."""
         self.reorder_startlist()
         ret = []
         if len(self.cats) > 1 and not self.onestartlist:
             for c in self.cats:
-                if c:
-                    ret.extend(self.startlist_report_gen(c))
-                    ret.append(report.pagebreak(0.05))
+                #if c:
+                ret.extend(self.startlist_report_gen(c))
+                ret.append(report.pagebreak(0.05))
         else:
             ret = self.startlist_report_gen()
         return ret
@@ -969,11 +977,17 @@ class irtt(object):
         catnamecache = {}
         catname = u''
         subhead = u''
+        footer = u''
+        uncat = False
         if cat is not None:
             dbr = self.meet.rdb.getrider(cat, u'cat')
             if dbr is not None:
                 catname = self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST)
                 subhead = self.meet.rdb.getvalue(dbr, riderdb.COL_LAST)
+                footer = self.meet.rdb.getvalue(dbr, riderdb.COL_NOTE)
+            if cat == u'':
+                catname = u'Uncategorised Riders'
+                uncat = True
         else:
             cat = u''  # match all riders
 
@@ -996,34 +1010,39 @@ class irtt(object):
         cat = self.ridercat(cat)
         lt = None
         for r in self.riders:
-            rcat = r[COL_CAT].decode('utf-8').upper()
-            if cat == u'' or rcat == cat:
+            # add rider to startlist if primary cat matches
+            bib = r[COL_BIB].decode(u'utf-8')
+            series = r[COL_SERIES].decode(u'utf-8')
+            cs = r[COL_CAT].decode(u'utf-8')
+            pricat = riderdb.primary_cat(cs)
+            rcat = self.ridercat(pricat)
+            if self.onestartlist or cat == rcat:
                 rcnt += 1
                 ucicode = None
-                ## replace with ridermap
-                dbr = self.meet.rdb.getrider(r[COL_BIB], r[COL_SERIES])
-                if dbr is not None:
-                    ucicode = self.meet.rdb.getvalue(dbr, riderdb.COL_UCICODE)
-                    nat = self.meet.rdb.getvalue(
-                        dbr, riderdb.COL_NOTE)[0:3].upper()
-                    if nat:
-                        ucicode = nat
-                ## to here
-                bstr = r[COL_BIB].decode('utf-8').upper()
+                name = r[COL_NAMESTR].decode(u'utf-8')
+                if self.showuciids:
+                    dbr = self.meet.rdb.getrider(bib, series)
+                    if dbr is not None:
+                        ucicode = self.meet.rdb.getvalue(
+                            dbr, riderdb.COL_UCICODE)
+                #if not ucicode and cat == u'':
+                ## Rider may have a typo in cat, show the catlist
+                #ucicode = cs
+                comment = u''
+                bstr = bib.upper()
                 stxt = u''
                 if r[COL_WALLSTART] is not None:
                     stxt = r[COL_WALLSTART].meridiem()
                     if lt is not None:
                         if r[COL_WALLSTART] - lt > self.startgap:
-                            sec.lines.append([None, None, None])  # GAP!!
+                            sec.lines.append([None, None, None])  # add space
                     lt = r[COL_WALLSTART]
-                nstr = r[COL_NAMESTR]
                 cstr = None
-                if self.onestartlist and r[COL_CAT] != cat:  # show if not
-                    cstr = r[COL_CAT].decode('utf-8')
+                if self.onestartlist and pricat != cat:
+                    cstr = pricat
                     if cstr in catnamecache and len(catnamecache[cstr]) < 8:
                         cstr = catnamecache[cstr]
-                sec.lines.append([stxt, bstr, nstr, ucicode, u'____', cstr])
+                sec.lines.append([stxt, bstr, name, ucicode, u'____', cstr])
                 if cstr in [u'MB', u'WB']:
                     # lookup pilot - series lookup
                     dbr = self.meet.rdb.getrider(r[COL_BIB], u'pilot')
@@ -1110,7 +1129,8 @@ class irtt(object):
             speedstr = u''
             rankstr = u''
             noshow = False
-            cat = self.ridercat(r[COL_CAT].decode('utf-8'))
+            cs = r[COL_CAT].decode(u'utf-8')
+            cat = self.ridercat(riderdb.primary_cat(cs))
             i = self.getiter(r[COL_BIB], r[COL_SERIES])
             if plstr.isdigit():  # rider placed at finish
                 ## only show for a short while
@@ -1162,6 +1182,10 @@ class irtt(object):
             #sec.lines = sec.lines[0:limit]
             ret.append(sec)
         return ret
+
+    def analysis_report(self):
+        """Return judges report."""
+        return self.camera_report()
 
     def camera_report(self):
         """Return a judges report."""
@@ -1270,27 +1294,34 @@ class irtt(object):
         """Return a categorised result report."""
         ret = []
         for cat in self.cats:
-            if not cat:
-                continue  # ignore empty and None cat
             ret.extend(self.single_catresult(cat))
         return ret
 
     def single_catresult(self, cat=u''):
         ret = []
+        allin = False
         catname = cat  # fallback emergency, cat is never '' here
+        if cat == u'':
+            if len(self.cats) > 1:
+                catname = u'Uncategorised Riders'
+            else:
+                # There is only one cat - so all riders are in it
+                allin = True
         subhead = u''
+        footer = u''
         distance = self.meet.distance  # fall on meet dist
         dbr = self.meet.rdb.getrider(cat, u'cat')
         if dbr is not None:
-            catname = self.meet.rdb.getvalue(
-                dbr, riderdb.COL_FIRST)  # already decode
+            catname = self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST)
             subhead = self.meet.rdb.getvalue(dbr, riderdb.COL_LAST)
+            footer = self.meet.rdb.getvalue(dbr, riderdb.COL_NOTE)
             dist = self.meet.rdb.getvalue(dbr, riderdb.COL_REFID)
-            try:
-                distance = float(dist)
-            except:
-                LOG.warning(u'Invalid distance %r for cat %r', dist, cat)
-        sec = report.section(cat + u'result')
+            if dist:
+                try:
+                    distance = float(dist)
+                except Exception:
+                    LOG.warning(u'Invalid distance %r for cat %r', dist, cat)
+        sec = report.section(u'result-' + cat)
         rsec = sec
         ret.append(sec)
         ct = None
@@ -1302,7 +1333,22 @@ class irtt(object):
         hdcount = 0
         fincount = 0
         for r in self.riders:  # scan whole list even though cat are sorted.
-            if cat == u'' or cat == self.ridercat(r[COL_CAT].decode('utf-8')):
+            rcat = r[COL_CAT].decode(u'utf-8').upper()
+            rcats = [u'']
+            if rcat.strip():
+                rcats = rcat.split()
+            incat = False
+            if allin or (cat and cat in rcats):
+                incat = True  # rider is in this category
+            elif not cat:  # is the rider uncategorised?
+                incat = rcats[0] not in self.cats  # backward logic
+            LOG.debug('allin=%r, cat=%r, rcat=%r, rcats=%r, incat=%r', allin,
+                      cat, rcat, rcats, incat)
+            if incat:
+                if cat:
+                    rcat = cat
+                else:
+                    rcat = rcats[0]  # (work-around mis-categorised rider)
                 placed = False
                 totcount += 1
                 i = self.getiter(r[COL_BIB], r[COL_SERIES])
@@ -1311,17 +1357,11 @@ class irtt(object):
                 nstr = r[COL_NAMESTR].decode('utf-8')
                 cstr = u''
                 if cat == u'':  # categorised result does not need cat
-                    cstr = r[COL_CAT].decode('utf-8')
-                # this should be inserted separately in specific reports
-                ucicode = None
-                ## replace with rmap lookup
-                dbr = self.meet.rdb.getrider(r[COL_BIB], r[COL_SERIES])
-                if dbr is not None:
-                    ucicode = self.meet.rdb.getvalue(dbr, riderdb.COL_UCICODE)
-                ## to here
-                if ucicode:
-                    ## overwrite category string
-                    cstr = ucicode
+                    cstr = rcat
+                if self.showuciids:
+                    dbr = self.meet.rdb.getrider(bstr, self.series)
+                    if dbr is not None:
+                        cstr = self.meet.rdb.getvalue(dbr, riderdb.COL_UCICODE)
                 if ct is None:
                     ct = ft
                 pstr = None
@@ -1403,9 +1443,13 @@ class irtt(object):
 
         # finish report title manipulation
         if catname:
-            rsec.heading += u': ' + catname
+            cv = []
+            if rsec.heading:
+                cv.append(rsec.heading)
+            cv.append(catname)
+            rsec.heading = u': '.join(cv)
             rsec.subheading = subhead
-            ret.append(report.pagebreak())
+        ret.append(report.pagebreak())
         return ret
 
     def result_report(self):
@@ -1436,7 +1480,9 @@ class irtt(object):
         mcat = self.ridercat(cat)
         self.reorder_startlist()
         for r in self.riders:
-            if mcat == u'' or mcat == self.ridercat(r[COL_CAT]):
+            cs = r[COL_CAT].decode(u'utf-8')
+            rcat = self.ridercat(riderdb.primary_cat(cs))
+            if mcat == u'' or mcat == rcat:
                 start = u''
                 if r[COL_WALLSTART] is not None:
                     start = r[COL_WALLSTART].rawtime(0)
@@ -1450,7 +1496,7 @@ class irtt(object):
                         self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
                         self.meet.rdb.getvalue(dbr, riderdb.COL_LAST), None)
                 ## to here
-                cat = r[COL_CAT]
+                cat = cs
                 yield [start, bib, series, name, cat]
 
     def lifexport(self):
@@ -1467,7 +1513,9 @@ class irtt(object):
         lrank = None
         lpl = None
         for r in self.riders:
-            if mcat == u'' or mcat == self.ridercat(r[COL_CAT]):
+            cs = r[COL_CAT].decode(u'utf-8')
+            rcat = self.ridercat(riderdb.primary_cat(cs))
+            if mcat == u'' or mcat == rcat:
                 i = self.getiter(r[COL_BIB], r[COL_SERIES])
                 ft = self.getelapsed(i)
                 if ft is not None:
@@ -1539,8 +1587,8 @@ class irtt(object):
                     rank = self.setinter(nri, e, split)
                     place = u'(' + unicode(rank + 1) + u'.)'
                     namestr = lr[COL_NAMESTR].decode('utf-8')
-                    cat = lr[COL_CAT].decode('utf-8')
-                    rcat = self.ridercat(cat)
+                    cs = lr[COL_CAT].decode(u'utf-8')
+                    rcat = self.ridercat(riderdb.primary_cat(cs))
                     # use cat field for split label
                     label = self.ischem[split][u'label']
                     rts = u''
@@ -1617,7 +1665,8 @@ class irtt(object):
                         bibstr, e.chan, e.rawtime(2), e.source)
             return False
 
-        cat = self.ridercat(lr[COL_CAT])
+        cs = lr[COL_CAT].decode(u'utf-8')
+        cat = self.ridercat(riderdb.primary_cat(cs))
         finishpass = self.finishpass
         if cat in self.catlaps:
             finishpass = self.catlaps[cat]
@@ -1742,7 +1791,8 @@ class irtt(object):
                 series = self.fl.serent.get_text()
                 i = self.getiter(bib, series)
                 if i is not None:
-                    cat = self.ridercat(self.riders.get_value(i, COL_CAT))
+                    cs = self.riders.get_value(i, COL_CAT)
+                    cat = self.ridercat(riderdb.primary_cat(cs))
                     self.curcat = cat
                     self.settimes(i,
                                   tst=self.riders.get_value(i, COL_TODSTART),
@@ -2214,7 +2264,8 @@ class irtt(object):
         """Update the intermediate time for this rider and return rank."""
         bib = self.riders.get_value(iter, COL_BIB)
         series = self.riders.get_value(iter, COL_SERIES)
-        cat = self.ridercat(self.riders.get_value(iter, COL_CAT))
+        cs = self.riders.get_value(iter, COL_CAT)
+        cat = self.ridercat(riderdb.primary_cat(cs))
         ret = None
 
         # fetch handles
@@ -2255,7 +2306,8 @@ class irtt(object):
         """Transfer race times into rider model."""
         bib = self.riders.get_value(iter, COL_BIB)
         series = self.riders.get_value(iter, COL_SERIES)
-        cat = self.ridercat(self.riders.get_value(iter, COL_CAT))
+        cs = self.riders.get_value(iter, COL_CAT)
+        cat = self.ridercat(riderdb.primary_cat(cs))
         #LOG.debug('Check: ' + repr(bib) + ', ' + repr(series)
         #+ ', ' + repr(cat))
 
@@ -2538,6 +2590,7 @@ class irtt(object):
         self.winopen = True
         self.timerstat = u'idle'
         self.racestat = u'prerace'
+        self.showuciids = False
         self.start = None
         self.lstart = None
         self.start_unload = None

@@ -226,6 +226,10 @@ class trtt(object):
         self.defaultnth = cr.get_posint(u'trtt', u'defaultnth')
         _log.debug(u'Default Nth Wheel: %r', self.defaultnth)
         self.nthwheel = cr.get(u'trtt', u'nthwheel')
+        if not isinstance(self.nthwheel, dict):
+            _log.warning(u'Invalid nthwheel setting ignored: %r',
+                         self.nthwheel)
+            self.nthwheel = {}
         if len(self.nthwheel) > 0:
             _log.debug(u'Nth Wheel: %r', self.nthwheel)
 

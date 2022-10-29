@@ -854,7 +854,7 @@ class roadmeet(object):
         ffile = u'_'.join(fnv)
 
         # Write out a startlist if event idle
-        if self.curevent.timerstat in ['idle']:
+        if self.curevent.timerstat in [u'idle'] or self.etype == u'irtt':
             filename = sfile
             rep = report.report()
             rep.strings[u'title'] = self.title_str
@@ -1430,7 +1430,8 @@ class roadmeet(object):
                 prec = 3
             if evt.source is not None:
                 source = evt.source
-            tvec = [evt.index, source, evt.chan, evt.refid, evt.rawtime(prec)]
+            tvec = (evt.index, source, evt.chan, evt.refid, evt.rawtime(prec),
+                    u'')
             self.announce.publish(u';'.join(tvec), self.timertopic)
         return False
 
@@ -1460,8 +1461,13 @@ class roadmeet(object):
         """Process and dispatch a remote timer message."""
         # 'INDEX;SOURCE;CHANNEL;REFID;TIMEOFDAY'
         tv = msg.split(u';')
-        if len(tv) == 5:
+        if len(tv) == 5 or len(tv) == 6:
             try:
+                if len(tv) > 5:
+                    # check date against today
+                    # if today != tv[5]:
+                    # log and return
+                    pass
                 tval = tod.mktod(tv[4])
                 tval.source = tv[1]
                 tval.chan = tv[2]

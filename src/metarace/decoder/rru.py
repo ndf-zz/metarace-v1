@@ -223,7 +223,7 @@ class rru(decoder):
             8: 100
         }
         self._config = {}
-        self._boxname = u'rru'
+        self._boxname = None
         self._rrustamp = None
         self._rruht = None
         self._error = False
@@ -255,12 +255,16 @@ class rru(decoder):
         self.write(u'PASSINGINFOGET')
         self.write(u'TIMESTAMPGET')
 
+    def connected(self):
+        return self._boxname is not None and self._io is not None
+
     def clear(self, data=None):
         """Clear internal passing memory."""
         self._cqueue.put_nowait((u'_reset', data))
 
     # Device-specific functions
     def _close(self):
+        self._boxname = None
         if self._io is not None:
             LOG.debug(u'Close connection')
             cp = self._io
@@ -361,7 +365,7 @@ class rru(decoder):
         self._write(u'RESET')
         while True:
             m = self._readline()
-            LOG.debug(u'RECV: %r', m)
+            #LOG.debug(u'RECV: %r', m)
             if m == u'AUTOBOOT':
                 break
         self._rrustamp = None
@@ -375,7 +379,7 @@ class rru(decoder):
         if self._io is not None:
             ob = (msg + RRU_EOL)
             self._io.write(ob.encode(RRU_ENCODING))
-            LOG.debug(u'SEND: %r', ob)
+            #LOG.debug(u'SEND: %r', ob)
 
     def _tstotod(self, ts):
         """Convert a race result timestamp to time of day."""
@@ -387,7 +391,7 @@ class rru(decoder):
             if nsec < 0:
                 LOG.debug(u'Negative timestamp: %r', nsec)
                 nsec = 86400 + nsec
-            ret = tod.tod(nsec).truncate(3)
+            ret = tod.tod(nsec)
         except Exception as e:
             LOG.error(u'%s converting timeval %r: %s', e.__class__.__name__,
                       ts, e)
@@ -564,7 +568,7 @@ class rru(decoder):
         if len(mv) == RRU_BEACONLEN:
             # noise/transponder averages
             chid = int(mv[5], 16) + 1
-            chnoise = 10.0 * int(mv[12],16)
+            chnoise = 10.0 * int(mv[12], 16)
             tlqi = int(mv[13], 16) / 2.56
             trssi = -90 + int(mv[14], 16)
             LOG.info(u'Info Ch {0} Noise: {1:0.0f}%'.format(chid, chnoise))
@@ -709,6 +713,7 @@ class rru(decoder):
         """Decoder main loop."""
         LOG.debug(u'Starting')
         self._running = True
+        self._boxname = None
         while self._running:
             try:
                 m = None  # next commmand
@@ -724,7 +729,7 @@ class rru(decoder):
                                 refetch = True
                                 break
                         else:
-                            LOG.debug(u'RECV: %r', l)
+                            #LOG.debug(u'RECV: %r', l)
                             self._procline(l)
                             if self._curreply == u'PREWARN':
                                 # Note: this does not work

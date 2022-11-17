@@ -62,6 +62,9 @@ class rrs(decoder):
     def status(self, data=None):
         self.write(u'GETSTATUS')
 
+    def connected(self):
+        return self._io is not None
+
     def clear(self, data=None):
         self.stop_session(data)
         self.write(u'CLEARFILES')
@@ -98,9 +101,13 @@ class rrs(decoder):
         _log.debug(u'Connecting to %r', addr)
         self._rdbuf = b''
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        s.settimeout(_RRS_IOTIMEOUT)
+        try:
+            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT, 5000)
+        except Exception as e:
+            _log.debug('%s setting socket option: %s', e.__class__.__name__, e)
         s.connect(addr)
+        s.settimeout(_RRS_IOTIMEOUT)
         self._io = s
         self.sane()
 
@@ -123,7 +130,7 @@ class rrs(decoder):
         if self._io is not None:
             ob = (msg + _RRS_EOL)
             self._io.sendall(ob.encode(_RRS_ENCODING))
-            _log.debug(u'SEND: %r', ob)
+            #_log.debug(u'SEND: %r', ob)
 
     def _passing(self, pv):
         """Process a RRS protocol passing."""
@@ -285,7 +292,7 @@ class rrs(decoder):
 
     def _procmsg(self, msg):
         """Process a decoder response message."""
-        _log.debug(u'RECV: %r', msg)
+        #_log.debug(u'RECV: %r', msg)
         mv = msg.strip().split(u';')
         if mv[0].isdigit():  # Requested passing
             self._pending_command = u'PASSING'

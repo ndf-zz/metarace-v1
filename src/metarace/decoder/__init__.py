@@ -22,8 +22,8 @@ def mkdevice(portstr=u'', curdev=None):
     # Note: If possible, returns the current device
     ret = curdev
     devtype = DEFAULT_HANDLER
-    if sysconf.has_option(u'decoder',u'default'):
-        devtype = sysconf.get(u'decoder',u'default')
+    if sysconf.has_option(u'decoder', u'default'):
+        devtype = sysconf.get(u'decoder', u'default')
         LOG.debug(u'Default type set to %r from sysconf', devtype)
     (a, b, c) = portstr.partition(u':')
     if b:
@@ -75,6 +75,10 @@ class decoder(threading.Thread):
     def running(self):
         """Return state of running flag."""
         return self._running
+
+    def connected(self):
+        """Return true if decoder instance is connected."""
+        return False
 
     def exit(self, msg=None):
         """Request thread termination."""

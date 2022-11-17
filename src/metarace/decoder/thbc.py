@@ -137,7 +137,7 @@ class thbc(decoder):
 
     def __init__(self):
         decoder.__init__(self)
-        self._boxname = u'thbc'
+        self._boxname = None
         self._version = u''
         self._decoderconfig = {}
         self._decoderipconfig = {}
@@ -149,6 +149,9 @@ class thbc(decoder):
     def status(self):
         """Request status message from decoder."""
         self.write(STATCMD)
+
+    def connected(self):
+        return self._io is not None and self._boxname is not None
 
     def stop_session(self):
         """Send a stop command to decoder."""
@@ -194,7 +197,7 @@ class thbc(decoder):
         else:
             # assume device file
             s = serial.Serial(port, THBC_BAUD, rtscts=False, timeout=0.2)
-        self._boxname = u'thbc'
+        self._boxname = None
         self._io = s
         self._write(QUECMD)
 
@@ -224,7 +227,7 @@ class thbc(decoder):
     def _sane(self, data=None):
         """Check decoder config against system settings."""
         doconf = False
-        if self._boxname != u'thbc':
+        if self._boxname is not None:
             if sysconf.has_option(u'thbc', u'decoderconfig'):
                 oconf = sysconf.get(u'thbc', u'decoderconfig')
                 for flag in self._decoderconfig:
@@ -440,14 +443,14 @@ class thbc(decoder):
             if ch == LF and len(self._rdbuf) > 0 and self._rdbuf[-1] == CR:
                 # Return ends the current 'message', if preceeded by return
                 self._rdbuf += ch  # include trailing newline
-                LOG.debug(u'RECV: %r', self._rdbuf)
+                #LOG.debug(u'RECV: %r', self._rdbuf)
                 t = self._parse_message(self._rdbuf.lstrip(b'\0'))
                 if t is not None:
                     self._trig(t)
                 self._rdbuf = b''
             elif len(self._rdbuf) > 40 and b'\x1e\x86\x98' in self._rdbuf:
                 # Assume acknowledge from IP Command
-                LOG.debug(u'RECV: %r', self._rdbuf)
+                #LOG.debug(u'RECV: %r', self._rdbuf)
                 self._rdbuf = b''
                 self._ipcompletion()
             else:
@@ -457,7 +460,7 @@ class thbc(decoder):
     def _write(self, msg):
         if self._io is not None:
             self._io.write(msg)
-            LOG.debug(u'SEND: %r', msg)
+            #LOG.debug(u'SEND: %r', msg)
 
     def run(self):
         """Decoder main loop."""
@@ -481,9 +484,11 @@ class thbc(decoder):
                 pass
             except (serial.SerialException, socket.error) as e:
                 self._close()
+                self._boxname = None
                 LOG.error(u'%s: %s', e.__class__.__name__, e)
             except Exception as e:
                 LOG.critical(u'%s: %s', e.__class__.__name__, e)
+                self._boxname = None
                 self._running = False
         self.setcb()
         LOG.debug(u'Exiting')

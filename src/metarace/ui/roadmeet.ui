@@ -428,7 +428,7 @@
                         <property name="visible">True</property>
                         <child>
                           <object class="GtkImageMenuItem" id="menu_timing_subtract">
-                            <property name="label" translatable="yes">_Subtract</property>
+                            <property name="label" translatable="yes">S_ubtract</property>
                             <property name="visible">True</property>
                             <property name="tooltip_text" translatable="yes">Compute a net time from start and finish ToD</property>
                             <property name="use_underline">True</property>
@@ -493,6 +493,15 @@
                           </object>
                         </child>
                         <child>
+                          <object class="GtkMenuItem" id="menu_timing_status">
+                            <property name="visible">True</property>
+                            <property name="tooltip_text" translatable="yes">Request status from attached decoder</property>
+                            <property name="label" translatable="yes">_Status</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="menu_timing_status_cb"/>
+                          </object>
+                        </child>
+                        <child>
                           <object class="GtkMenuItem" id="menu_timing_configure">
                             <property name="visible">True</property>
                             <property name="tooltip_text" translatable="yes">Configure attached decoder</property>
@@ -533,41 +542,12 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="menu_rfustat">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="focus_on_click">False</property>
-                <signal name="clicked" handler="menu_rfustat_clicked_cb"/>
-                <child>
-                  <object class="GtkImage" id="menu_rfustat_img">
-                    <property name="visible">True</property>
-                    <property name="stock">gtk-info</property>
-                    <property name="icon-size">1</property>
-                  </object>
-                </child>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="position">1</property>
-              </packing>
-            </child>
-            <child>
               <object class="GtkButton" id="menu_clock">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="receives_default">False</property>
                 <property name="focus_on_click">False</property>
                 <signal name="clicked" handler="menu_clock_clicked_cb"/>
-                <child>
-                  <object class="GtkLabel" id="menu_clock_label">
-                    <property name="visible">True</property>
-                    <property name="label" translatable="yes">--:--:--am</property>
-                    <property name="width_chars">12</property>
-                    <property name="single_line_mode">True</property>
-                    <property name="track_visited_links">False</property>
-                  </object>
-                </child>
               </object>
               <packing>
                 <property name="expand">False</property>

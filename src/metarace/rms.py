@@ -902,6 +902,8 @@ class rms(object):
                 if missing:
                     LOG.warning(u'Categories missing target lap count: %s',
                                 u', '.join(missing))
+        LOG.debug(u'Loaded cat data: laps=%r, starts=%r', self.catlaps,
+                  self.catstarts)
 
     def startlist_report_gen(self, cat=None, callup=False):
         catname = u''
@@ -946,7 +948,6 @@ class rms(object):
             # add rider to startlist if primary cat matches
             cs = r[COL_CAT].decode(u'utf-8')
             rcat = self.ridercat(riderdb.primary_cat(cs))
-            LOG.debug(u'rcat = %r cat = %r', rcat, cat)
             if cat == rcat:
                 ucicode = None
                 name = r[COL_NAMESTR].decode(u'utf-8')
@@ -1270,8 +1271,6 @@ class rms(object):
                 incat = True  # rider is in this category
             elif not cat:  # is the rider uncategorised?
                 incat = rcats[0] not in self.cats  # backward logic
-            LOG.debug('allin=%r, cat=%r, rcat=%r, rcats=%r, incat=%r', allin,
-                      cat, rcat, rcats, incat)
             if incat:
                 if cat:
                     rcat = cat

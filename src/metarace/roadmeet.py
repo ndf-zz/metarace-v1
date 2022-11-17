@@ -239,6 +239,8 @@ class fakemeet(object):
         else:
             rep.strings[u'diststr'] = self.diststr
 
+        if self.eventcode:
+            rep.eventid = self.eventcode
         if self.prevlink:
             rep.prevlink = self.prevlink
         if self.nextlink:
@@ -502,6 +504,8 @@ class roadmeet(object):
         else:
             rep.strings[u'diststr'] = self.diststr
 
+        if self.eventcode:
+            rep.eventid = self.eventcode
         if self.prevlink:
             rep.prevlink = self.prevlink
         if self.nextlink:
@@ -874,6 +878,8 @@ class roadmeet(object):
             if self.provisionalstart:
                 rep.set_provisional(True)
             rep.indexlink = u'index'
+            if self.eventcode:
+                rep.eventid = self.eventcode
             if self.prevlink:
                 rep.prevlink = u'_'.join((self.prevlink, u'startlist'))
             if self.nextlink:
@@ -929,6 +935,8 @@ class roadmeet(object):
 
         filename = ffile
         rep.indexlink = u'index'
+        if self.eventcode:
+            rep.eventid = self.eventcode
         if self.prevlink:
             rep.prevlink = u'_'.join((self.prevlink, u'result'))
         if self.nextlink:
@@ -978,6 +986,18 @@ class roadmeet(object):
         return u'event_{}.json'.format(unicode(evno))
 
     ## Timing menu callbacks
+    def menu_timing_status_cb(self, menuitem, data=None):
+        if self.timer_port:
+            if self.timer.connected():
+                LOG.info(u'Request timer status')
+                self.timer.status()
+            else:
+                LOG.info(u'Decoder disconnected')
+        else:
+            LOG.info(u'No decoder configured')
+        # always call into alt timer
+        self.alttimer.status()
+
     def menu_timing_subtract_activate_cb(self, menuitem, data=None):
         """Run the time of day subtraction dialog."""
         b = gtk.Builder()
@@ -1096,11 +1116,6 @@ class roadmeet(object):
             action = self.action_model.get_value(aiter, 0)
             self.curevent.ctrl_change(action, self.action_entry)
 
-    def menu_rfustat_clicked_cb(self, button, data=None):
-        LOG.info(u'Request timer status')
-        self.timer.status()
-        self.alttimer.status()
-
     def menu_clock_clicked_cb(self, button, data=None):
         """Handle click on menubar clock."""
         LOG.info(u'PC ToD: %s', tod.now().rawtime())
@@ -1109,9 +1124,6 @@ class roadmeet(object):
     def timeout(self):
         """Update status buttons and time of day clock button."""
         if self.running:
-            # update pc ToD label
-            self.clock_label.set_text(tod.now().meridiem())
-
             # call into race timeout handler
             if self.curevent is not None:
                 self.curevent.timeout()
@@ -1121,6 +1133,33 @@ class roadmeet(object):
                 if not self.mirror.is_alive():
                     self.mirror = None
                     LOG.debug(u'Removing completed export thread.')
+
+            # update the menu status button
+            nt = tod.now().meridiem()
+            if self.rfuact:
+                self.rfustat.buttonchg(uiutil.bg_armint, nt)
+            else:
+                if self.timer_port:
+                    if self.timer.connected():
+                        self.rfustat.buttonchg(uiutil.bg_armstart, nt)
+                    else:
+                        self.rfustat.buttonchg(uiutil.bg_armfin, nt)
+                else:
+                    self.rfustat.buttonchg(uiutil.bg_none, nt)
+            self.rfuact = False
+
+            # attempt to heal a broken lonk
+            if self.timer_port:
+                if self.timer.connected():
+                    self.rfufail = 0
+                else:
+                    self.rfufail += 1
+                    if self.rfufail > 10:
+                        self.rfufail = 0
+                        eport = self.timer_port.split(u':', 1)[-1]
+                        self.timer.setport(eport)
+            else:
+                self.rfufail = 0
         else:
             return False
         return True
@@ -1128,13 +1167,19 @@ class roadmeet(object):
     ## Window methods
     def set_title(self, extra=u''):
         """Update window title from meet properties."""
-        typepfx = u''
-        title = self.title_str.strip()
+        tv = []
         if self.etype in ROADRACE_TYPES:
-            typepfx = ROADRACE_TYPES[self.etype] + u': '
-        self.window.set_title(typepfx + title)
+            tv.append(ROADRACE_TYPES[self.etype] + u':')
+
+        title = self.title_str.strip()
+        if title:
+            tv.append(title)
+        subtitle = self.subtitle_str.strip()
+        if subtitle:
+            tv.append(subtitle)
+        self.window.set_title(u' '.join(tv))
         if self.curevent is not None:
-            self.curevent.set_titlestr(self.subtitle_str)
+            self.curevent.set_titlestr(subtitle)
 
     def meet_destroy_cb(self, window, msg=u''):
         """Handle destroy signal and exit application."""
@@ -1433,6 +1478,8 @@ class roadmeet(object):
             tvec = (evt.index, source, evt.chan, evt.refid, evt.rawtime(prec),
                     u'')
             self.announce.publish(u';'.join(tvec), self.timertopic)
+        self.rfustat.buttonchg(uiutil.bg_armint)
+        self.rfuact = True
         return False
 
     def mirror_start(self):
@@ -1576,9 +1623,10 @@ class roadmeet(object):
         b.add_from_file(uifile)
         self.window = b.get_object(u'meet')
         self.window.connect(u'key-press-event', self.key_event)
-        self.clock = b.get_object(u'menu_clock')
-        self.clock_label = b.get_object(u'menu_clock_label')
-        self.menu_rfustat_img = b.get_object(u'menu_rfustat_img')
+        self.rfustat = uiutil.statbut(b.get_object(u'menu_clock'))
+        self.rfustat.buttonchg(uiutil.bg_none, '--')
+        self.rfuact = False
+        self.rfufail = 0
         self.status = b.get_object(u'status')
         self.log_buffer = b.get_object(u'log_buffer')
         self.log_view = b.get_object(u'log_view')

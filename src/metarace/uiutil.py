@@ -45,13 +45,15 @@ def vscroller(child):
 
 class statbut(object):
 
-    def __init__(self, b):
+    def __init__(self, b, w=12):
         c = gtk.HBox(spacing=2)
         self._i = gtk.image_new_from_pixbuf(bg_none.get_pixbuf())
         #self._i = gtk.image_new_from_file(metarace.default_file(u'bg_idle.svg'))
         self._i.show()
         c.pack_start(self._i, False, True, 0)
         self._l = gtk.Label(u'Idle')
+        self._l.set_width_chars(w)
+        self._l.set_single_line_mode(True)
         self._l.show()
         c.pack_start(self._l, True, True, 0)
         c.show()

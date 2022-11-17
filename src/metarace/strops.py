@@ -51,8 +51,6 @@ for cp in xrange(0, 0x20):
     PRINT_UTRANS[cp] = u' '
 for cp in xrange(0x7f, 0xa1):
     PRINT_UTRANS[cp] = u' '
-for cp in xrange(0x2000, 0x200B):
-    PRINT_UTRANS[cp] = u' '
 PRINT_UTRANS[0x1680] = u' '
 PRINT_UTRANS[0x180e] = u' '
 PRINT_UTRANS[0x202f] = u' '

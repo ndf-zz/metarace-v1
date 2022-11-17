@@ -3558,13 +3558,15 @@ class section(object):
             row += 1
         if len(self.lines) > 0:
             rows = []
+            cols = 7
             if self.colheader:
-                rows.append(vecmapstr(self.colheader, 7))
+                cols = max(len(self.colheader), 7)
+                rows.append(vecmapstr(self.colheader, cols))
             for r in self.lines:
                 nv = r[0:6]
                 if len(nv) == 2:
                     nv = [nv[0], None, nv[1]]
-                rows.append(vecmapstr(nv, 7))
+                rows.append(vecmapstr(nv, cols))
                 if len(r) > 6 and type(r[6]) is list:
                     if r[6]:
                         nv = r[6]
@@ -4328,7 +4330,12 @@ class report(object):
         rep[u'resultlink'] = self.resultlink
         rep[u'startlink'] = self.startlink
         rep[u'canonical'] = self.canonical
+        rep[u'customlinks'] = self.customlinks
+        rep[u'navbar'] = self.navbar
+        rep[u'shortname'] = self.shortname
+        rep[u'pagemarks'] = self.pagemarks
         rep[u'strings'] = self.strings
+
         rep[u'sections'] = []
         secmap = ret[u'sections']
         for s in self.sections:

@@ -327,6 +327,8 @@ class rru(decoder):
         self.write(u'EPOCHREFGET')
         # Request current number of ticks
         self.write(u'TIMESTAMPGET')
+        # Request current memory status
+        self.write(u'PASSINGINFOGET')
 
     def _sync(self, data=None):
         LOG.debug(u'Performing blocking DTR sync')
@@ -365,7 +367,7 @@ class rru(decoder):
         self._write(u'RESET')
         while True:
             m = self._readline()
-            #LOG.debug(u'RECV: %r', m)
+            LOG.debug(u'RECV: %r', m)
             if m == u'AUTOBOOT':
                 break
         self._rrustamp = None
@@ -379,7 +381,7 @@ class rru(decoder):
         if self._io is not None:
             ob = (msg + RRU_EOL)
             self._io.write(ob.encode(RRU_ENCODING))
-            #LOG.debug(u'SEND: %r', ob)
+            LOG.debug(u'SEND: %r', ob)
 
     def _tstotod(self, ts):
         """Convert a race result timestamp to time of day."""
@@ -482,6 +484,11 @@ class rru(decoder):
                 pltime = self._tstotod(mv[4])
                 LOG.info(u'Info %r Passings, %r@%s - %r@%s', pcount, pfirst,
                          pftime.rawtime(2), plast, pltime.rawtime(2))
+                if plast + 1 < self._lastpassing:
+                    LOG.warning(
+                        'Decoder memory/ID mismatch last=%r, req=%r, clear/sync required.',
+                        plast, self._lastpassing)
+                    self._lastpassing = plast + 1
             else:
                 LOG.info(u'Info No Passings')
         else:
@@ -583,12 +590,18 @@ class rru(decoder):
     def _idupdate(self, reqid, minid):
         """Handle an empty PASSINGGET response."""
         resp = int(reqid, 16)
+        newid = int(minid, 16)
         if resp != self._lastrequest:
-            LOG.error(u'Protocol mismatch request: %r, response: %r',
-                      self._lastrequest, resp)
-            newid = int(minid, 16)
-            LOG.info(u'Reset index to min: %r', newid)
+            LOG.error(
+                u'ID mismatch: request=%r, response=%r:%r, reset to first passing',
+                self._lastrequest, resp, newid)
             self._lastpassing = newid
+        else:
+            if resp < newid:
+                LOG.warning(u'Data loss: %r passings not received',
+                            newid - resp)
+                self._lastpassing = newid
+            # otherwise no missed passings, ignore error
 
     def _surveymsg(self, chan, noise):
         """Receive a site survey update."""
@@ -671,6 +684,7 @@ class rru(decoder):
                 self._curreply = mv[0]
                 if mv[1] != u'00':
                     if self._curreply == u'PASSINGGET' and mv[1] == u'10':
+                        LOG.debug(u'ID error: %r', self._curreply)
                         self._curreply = u'PASSINGIDERROR'
                     else:
                         LOG.debug(u'%r error: %r', self._curreply, mv[1])
@@ -729,7 +743,7 @@ class rru(decoder):
                                 refetch = True
                                 break
                         else:
-                            #LOG.debug(u'RECV: %r', l)
+                            LOG.debug(u'RECV: %r', l)
                             self._procline(l)
                             if self._curreply == u'PREWARN':
                                 # Note: this does not work

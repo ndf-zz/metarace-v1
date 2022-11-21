@@ -1,6 +1,5 @@
-"""Transponder 'decoder' interface."""
-
-from __future__ import division
+# SPDX-License-Identifier: MIT
+"""Transponder decoder interface."""
 
 import threading
 import Queue
@@ -9,22 +8,22 @@ import logging
 from metarace import tod
 from metarace import sysconf
 
-LOG = logging.getLogger(u'metarace.decoder')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.decoder')
+_log.setLevel(logging.DEBUG)
 DECODER_LOG_LEVEL = 15
 logging.addLevelName(DECODER_LOG_LEVEL, u'DECODER')
-PHOTOTHRESH = tod.tod(u'0.03')
-DEFAULT_HANDLER = u'null'
+_PHOTOTHRESH = tod.tod(u'0.03')
+_DEFAULT_HANDLER = u'null'
 
 
 def mkdevice(portstr=u'', curdev=None):
     """Return a decoder handle for the provided port specification."""
     # Note: If possible, returns the current device
     ret = curdev
-    devtype = DEFAULT_HANDLER
+    devtype = _DEFAULT_HANDLER
     if sysconf.has_option(u'decoder', u'default'):
         devtype = sysconf.get(u'decoder', u'default')
-        LOG.debug(u'Default type set to %r from sysconf', devtype)
+        _log.debug(u'Default type set to %r from sysconf', devtype)
     (a, b, c) = portstr.partition(u':')
     if b:
         a = a.lower()
@@ -36,22 +35,22 @@ def mkdevice(portstr=u'', curdev=None):
         curdev = HANDLERS[devtype]()
         curdev.setport(devport)
     elif type(curdev) is HANDLERS[devtype]:
-        LOG.debug(u'Requested decoder is %s', curdev.__class__.__name__)
+        _log.debug(u'Requested decoder is %s', curdev.__class__.__name__)
         curdev.setport(devport)
     else:
-        LOG.debug(u'Changing decoder type from %s to %s',
-                  curdev.__class__.__name__, devtype)
+        _log.debug(u'Changing decoder type from %s to %s',
+                   curdev.__class__.__name__, devtype)
         curdev.setcb(None)
         wasalive = curdev.running()
         if wasalive:
             curdev.exit(u'Change decoder type')
-            LOG.debug(u'Waiting for %s decoder to exit',
-                      curdev.__class__.__name__)
+            _log.debug(u'Waiting for %s decoder to exit',
+                       curdev.__class__.__name__)
             curdev.join()
         curdev = None
         curdev = HANDLERS[devtype]()
         curdev.setport(devport)
-        LOG.debug(u'Starting %s decoder', curdev.__class__.__name__)
+        _log.debug(u'Starting %s decoder', curdev.__class__.__name__)
         if wasalive:
             curdev.start()
     return curdev
@@ -99,11 +98,11 @@ class decoder(threading.Thread):
         self._cqueue.put_nowait((u'_sync', data))
 
     def start_session(self, data=None):
-        """Request decoder to start current timing session."""
+        """Request decoder start timing session."""
         self._cqueue.put_nowait((u'_start_session', data))
 
     def stop_session(self, data=None):
-        """Request decoder to stop current timing session."""
+        """Request decoder stop timing session."""
         self._cqueue.put_nowait((u'_stop_session', data))
 
     def status(self, data=None):
@@ -131,8 +130,8 @@ class decoder(threading.Thread):
         self._cqueue.put_nowait((u'_write', msg))
 
     def photothresh(self):
-        """Return the relevant photo finish threshold."""
-        return PHOTOTHRESH
+        """Return the photo finish threshold."""
+        return _PHOTOTHRESH
 
     # Private Methods
     def __init__(self):
@@ -144,7 +143,7 @@ class decoder(threading.Thread):
 
     def _defcallback(self, evt=None):
         """Default callback is a debug log entry."""
-        LOG.debug(unicode(evt))
+        _log.debug(unicode(evt))
 
     def _close(self):
         """Close hardware connection to decoder."""
@@ -161,7 +160,7 @@ class decoder(threading.Thread):
 
     def _exit(self, msg):
         """Handle request to exit."""
-        LOG.debug(u'Request to exit: %r', msg)
+        _log.debug(u'Request to exit: %r', msg)
         self._close()
         self._flush()
         self._running = False
@@ -212,11 +211,11 @@ class decoder(threading.Thread):
         if method is not None:
             method(cmd[1])
         else:
-            LOG.debug(u'Unknown command: %r', cmd)
+            _log.debug(u'Unknown command: %r', cmd)
 
     def run(self):
         """Decoder main loop."""
-        LOG.debug(u'Starting')
+        _log.debug(u'Starting')
         self._running = True
         while self._running:
             try:
@@ -224,10 +223,10 @@ class decoder(threading.Thread):
                 self._cqueue.task_done()
                 self._proccmd(c)
             except Exception as e:
-                # errors in dummy decoder should not appear in UI
-                LOG.debug(u'%s: %s', e.__class__.__name__, e)
+                # errors from dummy decoder should not appear in UI
+                _log.debug(u'%s: %s', e.__class__.__name__, e)
         self.setcb()  # make sure callback is unrefed
-        LOG.debug(u'Exiting')
+        _log.debug(u'Exiting')
 
 
 from rrs import rrs

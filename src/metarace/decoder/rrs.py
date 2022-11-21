@@ -81,6 +81,7 @@ class rrs(decoder):
     def clear(self, data=None):
         self.stop_session(data)
         self.write(u'CLEARFILES')
+        self._cqueue.put_nowait((u'_sync', data))
         self.start_session(data)
 
     # Device-specific functions

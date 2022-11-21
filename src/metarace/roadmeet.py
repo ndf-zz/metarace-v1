@@ -1038,27 +1038,20 @@ class roadmeet(object):
             nte.set_text((ft - st).timestr())
 
     def menu_timing_clear_activate_cb(self, menuitem, data=None):
-        """Clear memory in attached timing devices."""
+        """Start a new timing session in attached timers"""
+        # Note: clear will perform reset, stop_session, clear,
+        # sync, and start_session in whatever order is appropriate
+        # for the decoder type
         self.timer.clear()
         self.alttimer.clrmem()
 
-    def menu_timing_sync_activate_cb(self, menuitem, data=None):
-        """Roughly synchronise decoder."""
-        self.timer.sync()
-        LOG.info(u'Request timer synchronisation')
-
     def menu_timing_reconnect_activate_cb(self, menuitem, data=None):
-        """Reconnect timer and re-start."""
+        """Drop current timer connection and re-connect"""
         self.set_timer(self.timer_port, force=True)
-        # forced reconnect on THBC requires stop, sane and start
-        if self.timer_port.startswith(u'thbc'):
-            self.timer.stop_session()
-            self.timer.sane()
-            self.timer.start_session()
         self.alttimer.setport(self.alttimer_port)
         self.alttimer.sane()
         if self.etype == u'irtt':
-            # IRTT impulses require no delay
+            # IRTT impulses require low delay
             self.alttimer.delaytime(u'0.01')
         else:
             # assume 1 second gaps at finish
@@ -1072,7 +1065,10 @@ class roadmeet(object):
 
     def menu_timing_configure_activate_cb(self, menuitem, data=None):
         """Attempt to re-configure the attached decoder from saved config."""
-        if self.timer_port.startswith(u'thbc'):
+        if self.timer.__class__.__name__ == u'thbc':
+            if not timer.connected():
+                LOG.info(u'Timer not connected, config not possible')
+                return False
             if not uiutil.questiondlg(
                     self.window, u'Re-configure THBC Decoder Settings?',
                     u'Note: Passings will not be captured while decoder is updating.'
@@ -1373,7 +1369,7 @@ class roadmeet(object):
         if nport != self.alttimer_port:
             self.alttimer_port = nport
             self.alttimer.setport(nport)
-            self.alttimer.sane()  # sane prod here is probably good idea
+            self.alttimer.sane()
 
         # set the default announce topic and subscribe to control topic
         self.anntopic = cr.get(u'roadmeet', u'anntopic')

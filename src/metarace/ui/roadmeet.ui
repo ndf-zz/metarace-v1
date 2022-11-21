@@ -427,24 +427,20 @@
                       <object class="GtkMenu" id="menu4">
                         <property name="visible">True</property>
                         <child>
-                          <object class="GtkImageMenuItem" id="menu_timing_subtract">
+                          <object class="GtkMenuItem" id="menu_timing_subtract">
                             <property name="label" translatable="yes">S_ubtract</property>
                             <property name="visible">True</property>
                             <property name="tooltip_text" translatable="yes">Compute a net time from start and finish ToD</property>
                             <property name="use_underline">True</property>
-                            <property name="image">image16</property>
-                            <property name="use_stock">False</property>
                             <signal name="activate" handler="menu_timing_subtract_activate_cb"/>
                           </object>
                         </child>
                         <child>
-                          <object class="GtkImageMenuItem" id="menu_timing_start">
+                          <object class="GtkMenuItem" id="menu_timing_start">
                             <property name="label" translatable="yes">Set _Elapsed</property>
                             <property name="visible">True</property>
                             <property name="tooltip_text" translatable="yes">Adjust event run time</property>
                             <property name="use_underline">True</property>
-                            <property name="image">image26</property>
-                            <property name="use_stock">False</property>
                             <signal name="activate" handler="menu_timing_start_activate_cb"/>
                           </object>
                         </child>
@@ -454,42 +450,13 @@
                           </object>
                         </child>
                         <child>
-                          <object class="GtkImageMenuItem" id="menu_timing_clear">
-                            <property name="label" translatable="yes">_Clear Memory</property>
+                          <object class="GtkMenuItem" id="menu_timing_clear">
+                            <property name="label" translatable="yes">_New Session</property>
                             <property name="visible">True</property>
                             <property name="sensitive">True</property>
-                            <property name="tooltip_text" translatable="yes">Clear memory in attached timing devices</property>
+                            <property name="tooltip_text" translatable="yes">Start a new timing session on the attached decoder</property>
                             <property name="use_underline">True</property>
-                            <property name="image">image11</property>
-                            <property name="use_stock">False</property>
                             <signal name="activate" handler="menu_timing_clear_activate_cb"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkImageMenuItem" id="menu_timing_sync">
-                            <property name="label" translatable="yes">S_ynchronise</property>
-                            <property name="visible">True</property>
-                            <property name="tooltip_text" translatable="yes">Roughly sync attached timer</property>
-                            <property name="use_underline">True</property>
-                            <property name="image">image20</property>
-                            <property name="use_stock">False</property>
-                            <signal name="activate" handler="menu_timing_sync_activate_cb"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkImageMenuItem" id="menu_timing_reconnect">
-                            <property name="label" translatable="yes">_Reconnect</property>
-                            <property name="visible">True</property>
-                            <property name="tooltip_text" translatable="yes">Reconnect timing devices</property>
-                            <property name="use_underline">True</property>
-                            <property name="image">image12</property>
-                            <property name="use_stock">False</property>
-                            <signal name="activate" handler="menu_timing_reconnect_activate_cb"/>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkSeparatorMenuItem" id="menuitem1">
-                            <property name="visible">True</property>
                           </object>
                         </child>
                         <child>
@@ -499,6 +466,20 @@
                             <property name="label" translatable="yes">_Status</property>
                             <property name="use_underline">True</property>
                             <signal name="activate" handler="menu_timing_status_cb"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkSeparatorMenuItem" id="menuitem1">
+                            <property name="visible">True</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkMenuItem" id="menu_timing_reconnect">
+                            <property name="label" translatable="yes">_Reconnect</property>
+                            <property name="visible">True</property>
+                            <property name="tooltip_text" translatable="yes">Reconnect timing devices</property>
+                            <property name="use_underline">True</property>
+                            <signal name="activate" handler="menu_timing_reconnect_activate_cb"/>
                           </object>
                         </child>
                         <child>
@@ -737,14 +718,6 @@
     <property name="visible">True</property>
     <property name="stock">gtk-media-play</property>
   </object>
-  <object class="GtkImage" id="image11">
-    <property name="visible">True</property>
-    <property name="stock">gtk-clear</property>
-  </object>
-  <object class="GtkImage" id="image12">
-    <property name="visible">True</property>
-    <property name="stock">gtk-refresh</property>
-  </object>
   <object class="GtkImage" id="image15">
     <property name="visible">True</property>
     <property name="stock">gtk-go-back</property>
@@ -752,10 +725,6 @@
   <object class="GtkImage" id="image6">
     <property name="visible">True</property>
     <property name="stock">gtk-close</property>
-  </object>
-  <object class="GtkImage" id="image16">
-    <property name="visible">True</property>
-    <property name="stock">gtk-remove</property>
   </object>
   <object class="GtkImage" id="image18">
     <property name="visible">True</property>
@@ -785,10 +754,6 @@
     <property name="visible">True</property>
     <property name="stock">gtk-preferences</property>
   </object>
-  <object class="GtkImage" id="image20">
-    <property name="visible">True</property>
-    <property name="stock">gtk-properties</property>
-  </object>
   <object class="GtkListStore" id="race_action_model">
     <columns>
       <!-- column-name code -->
@@ -806,10 +771,6 @@
   <object class="GtkImage" id="image24">
     <property name="visible">True</property>
     <property name="stock">gtk-refresh</property>
-  </object>
-  <object class="GtkImage" id="image26">
-    <property name="visible">True</property>
-    <property name="stock">gtk-edit</property>
   </object>
   <object class="GtkImage" id="image22">
     <property name="visible">True</property>

@@ -200,6 +200,9 @@ class thbc(decoder):
         self._boxname = None
         self._io = s
         self._write(QUECMD)
+        # queue sane through command loop
+        time.sleep(0.2)
+        self.sane()
 
     def _sync(self, data=None):
         LOG.debug(u'Performing blocking sync')
@@ -237,6 +240,8 @@ class thbc(decoder):
                             LOG.info(u'Key mismatch: %r', key)
                             self._decoderconfig[flag] = oconf[key]
                             doconf = True
+        else:
+            LOG.info(u'Decoder not connected')
 
         # re-write config if required
         if doconf:

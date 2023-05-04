@@ -25,7 +25,7 @@ _RRS_PASSLEN = 20
 _RRS_STATUSLEN = 25
 # Warn if battery voltage is below this many volts
 _RRS_LOWBATT = 2.0
-_RRS_SYNFMT = u'SETTIME;{:04d}-{:02d}-{:02d};{:02d}:{:02d}:{:02d}.{:03d}'
+_RRS_SYNFMT = u'SETTIME;{:04d}-{:02d}-{:02d};{}'
 _RRS_EOL = u'\r\n'
 _RRS_MARKER = u'99999'
 _RRS_ENCODING = u'iso8859-1'
@@ -131,8 +131,10 @@ class rrs(decoder):
 
     def _sync(self, data=None):
         a = datetime.datetime.now()
-        syncmd = _RRS_SYNFMT.format(a.year, a.month, a.day, a.hour, a.minute,
-                                    a.second, a.microsecond // 1000)
+        nt = tod.now() + tod.tod('0.640')
+        syncmd = _RRS_SYNFMT.format(
+            a.year, a.month, a.day,
+            nt.rawtime(places=3, zeros=True, hoursep=u':'))
         self._write(syncmd)
 
     def _replay(self, file):

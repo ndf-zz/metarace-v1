@@ -32,6 +32,8 @@ from metarace import loghandler
 from metarace import race
 from metarace import f200
 from metarace import classification
+#! temp
+from metarace import aggregate
 from metarace import ps
 from metarace import ittt
 from metarace import hour
@@ -70,6 +72,8 @@ def mkrace(meet, event, ui=True):
         ret = hour.hourrec(meet, event, ui)
     elif etype in [u'sprint round', u'sprint final']:
         ret = sprnd.sprnd(meet, event, ui)
+    elif etype in [u'aggregate']:
+        ret = aggregate.aggregate(meet, event, ui)
     else:
         ret = race.race(meet, event, ui)
     return ret
@@ -560,7 +564,7 @@ class trackmeet(object):
         _log.debug(u'Place set: ' + ret)
         return ret
 
-    def autostart_riders(self, race, autospec=u'', infocol=None):
+    def autostart_riders(self, race, autospec=u'', infocol=None, final=True):
         """Try to fetch the startlist from race result info."""
         # Dubious: infocol allows selection of seed info
         #          typical values:
@@ -1609,8 +1613,8 @@ class trackmeet(object):
             self.rdb.editrider(ref=dbr, first=value)
         elif col == riderdb.COL_LAST:
             self.rdb.editrider(ref=dbr, last=value)
-        elif col == riderdb.COL_CLUB:
-            self.rdb.editrider(ref=dbr, club=value)
+        elif col == riderdb.COL_ORG:
+            self.rdb.editrider(ref=dbr, org=value)
         else:
             _log.debug(u'Attempt to edit unsupported rider column: %r', col)
         self.reload_riders()

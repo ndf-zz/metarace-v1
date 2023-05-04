@@ -44,9 +44,6 @@ def mkdevice(portstr=u'', curdev=None):
         wasalive = curdev.running()
         if wasalive:
             curdev.exit(u'Change decoder type')
-            _log.debug(u'Waiting for %s decoder to exit',
-                       curdev.__class__.__name__)
-            curdev.join()
         curdev = None
         curdev = HANDLERS[devtype]()
         curdev.setport(devport)

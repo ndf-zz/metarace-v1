@@ -117,9 +117,10 @@ class f200(object):
                 last = r[COL_LASTNAME].decode('utf-8')
                 club = r[COL_CLUB].decode('utf-8')
                 bib = r[COL_BIB].decode('utf-8')
-                fmtplaces.append(
-                    [plstr, bib,
-                     strops.fitname(first, last, name_w), club])
+                fmtplaces.append([
+                    plstr, bib,
+                    strops.fitname(first, last, name_w), club[0:3]
+                ])
         FMT = [(3, u'l'), (3, u'r'), u' ', (name_w, u'l'), (4, u'r')]
 
         evtstatus = u'Standings'
@@ -740,7 +741,7 @@ class f200(object):
             sec.lines.append([rank, rno, rname, rcat, rtime, dtime, plink])
         sv = []
         if substr:
-            sv.append(sv)
+            sv.append(substr)
         if self.onestart:
             if rcount > 0 and pcount < rcount:
                 sv.append(u'STANDINGS')
@@ -1084,7 +1085,7 @@ class f200(object):
             return u' '.join([
                 strops.truncpad(r[COL_BIB].decode(u'utf-8'), 3, u'r'),
                 strops.truncpad(name, name_w),
-                strops.truncpad(club, 4, u'r')
+                strops.truncpad(club[0:3], 4, u'r')
             ])
         else:
             return u''

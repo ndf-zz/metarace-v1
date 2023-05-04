@@ -81,7 +81,7 @@ RUNNER_NOS = {
     u'grw': 13
 }
 
-DNFCODEMAP = {u'otl': 0, u'dsq': 1, u'dnf': 3, u'dns': 4, u'': 2}
+DNFCODEMAP = {u'otl': 1, u'dsq': 4, u'dnf': 3, u'dns': 5, u'': 2}
 
 
 def cmp_dnf(x, y):
@@ -328,9 +328,9 @@ def resname(first, last=None, club=None):
     return ret
 
 
-def listname(first, last=None, club=None):
+def listname(first, last=None, club=None, maxlen=32):
     """Return a rider name summary field for non-edit lists."""
-    ret = fitname(first, last, 32)
+    ret = fitname(first, last, maxlen)
     if club:
         if len(club) < 4:
             club = club.upper()
@@ -552,14 +552,15 @@ def confopt_dist(confstr, default=None):
 def chan2id(chanstr=u'0'):
     """Return a channel ID for the provided string, without fail."""
     ret = CHAN_UNKNOWN
-    if (isinstance(chanstr, basestring) and len(chanstr) > 1
-            and chanstr[0] == u'C' and chanstr[1].isdigit()):
-        ret = int(chanstr[1])
-    else:
-        try:
+    try:
+        if isinstance(chanstr, basestring):
+            chanstr = chanstr.upper().rstrip(u'M').lstrip(u'C')
+            if chanstr.isdigit():
+                ret = int(chanstr)
+        else:
             ret = int(chanstr)
-        except Exception:
-            pass
+    except Exception as e:
+        pass
     if ret < CHAN_UNKNOWN or ret > CHAN_INT:
         ret = CHAN_UNKNOWN
     return ret

@@ -340,7 +340,10 @@ class ps(object):
                     if r[RES_COL_INFO] in ['dns', 'dsq']:
                         rank = r[RES_COL_INFO]
                     else:
-                        rank = 'dnf'  # ps only handle did not finish
+                        if r[RES_COL_INFO].isdigit():
+                            rank = int(r[RES_COL_INFO])
+                        else:
+                            rank = 'dnf'  # ps only handle did not finish
 
             if self.scoring == 'madison':
                 laps = r[RES_COL_LAPS]
@@ -396,8 +399,10 @@ class ps(object):
                     plstr += '.'
                 elif r[RES_COL_INFO] in [u'dns', u'dsq']:
                     plstr = r[RES_COL_INFO]
+                elif r[RES_COL_INFO] and r[RES_COL_INFO].isdigit():
+                    plstr = r[RES_COL_INFO] + u'.'
                 ptstr = ''
-                if r[RES_COL_TOTAL] != 0:
+                if r[RES_COL_TOTAL] != 0 and r[RES_COL_INRACE]:
                     ptstr = str(r[RES_COL_TOTAL])
                 finplace = ''
                 if r[RES_COL_FINAL] >= 0:
@@ -693,12 +698,13 @@ class ps(object):
                         nfo = r[RES_COL_INFO].decode(u'utf-8')
                 else:
                     if len(nfo) > 3:
-                        # look it up?
-                        if self.series in self.meet.ridermap:
-                            rh = self.meet.ridermap[self.series][
-                                r[RES_COL_BIB]]
-                            if rh is not None:
-                                nfo = rh['note']
+                        nfo = nfo[0:3]
+                        ## look it up?
+                        #if self.series in self.meet.ridermap:
+                        #rh = self.meet.ridermap[self.series][
+                        #r[RES_COL_BIB]]
+                        #if rh is not None:
+                        #nfo = rh['note']
                 startlist.append([
                     r[RES_COL_BIB],
                     strops.fitname(r[RES_COL_FIRST].decode('utf-8'),
@@ -1662,11 +1668,12 @@ class ps(object):
                     lname = r[RES_COL_LAST].decode('utf-8')
                     club = r[RES_COL_CLUB].decode('utf-8')
                     if len(club) > 3:
-                        # look it up?
-                        if self.series in self.meet.ridermap:
-                            rh = self.meet.ridermap[self.series][bib]
-                            if rh is not None:
-                                club = rh[u'note']
+                        club = club[0:3]
+                        ## look it up?
+                        #if self.series in self.meet.ridermap:
+                        #rh = self.meet.ridermap[self.series][bib]
+                        #if rh is not None:
+                        #club = rh[u'note']
                     self.sprintresults[index].append([
                         plstr, r[RES_COL_BIB],
                         strops.fitname(fname, lname, name_w), ptsstr,
@@ -1707,20 +1714,23 @@ class ps(object):
             return self.sortpointsonly(x, y)
 
     def sortpointsonly(self, x, y):
-        if x[4] > y[4]:
-            return -1
-        elif x[4] < y[4]:
-            return 1
-        else:  # defer to last sprint
-            if x[5] == y[5]:
-                #_log.warning('Sort could not split riders.')
-                return 0  # places same - or both unplaced
-            else:
-                xp = x[5]
-                if xp < 0: xp = 9999
-                yp = y[5]
-                if yp < 0: yp = 9999
-                return cmp(xp, yp)
+        if x[6] == y[6]:
+            if x[4] > y[4]:
+                return -1
+            elif x[4] < y[4]:
+                return 1
+            else:  # defer to last sprint
+                if x[5] == y[5]:
+                    #_log.warning('Sort could not split riders.')
+                    return 0  # places same - or both unplaced
+                else:
+                    xp = x[5]
+                    if xp < 0: xp = 9999
+                    yp = y[5]
+                    if yp < 0: yp = 9999
+                    return cmp(xp, yp)
+        else:
+            return (cmp(x[6], y[6]))
 
     def sortmadison(self, x, y):
         """Lap-based points (old-style Madison)"""
@@ -1757,10 +1767,16 @@ class ps(object):
         auxtbl = []
         idx = 0
         for r in self.riders:
+            ptotal = r[RES_COL_TOTAL]
+            ranker = 0
+            if not r[RES_COL_INRACE]:
+                ptotal = 0
+                if r[RES_COL_INFO] and r[RES_COL_INFO].isdigit():
+                    ranker = int(r[RES_COL_INFO])
             self.retotal(r)
             auxtbl.append([
                 idx, r[RES_COL_BIB], r[RES_COL_INRACE], r[RES_COL_LAPS],
-                r[RES_COL_TOTAL], r[RES_COL_FINAL]
+                r[RES_COL_TOTAL], r[RES_COL_FINAL], ranker
             ])
             idx += 1
         if self.scoring == u'madison':
@@ -1823,7 +1839,7 @@ class ps(object):
 
     def spptsedit(self, cr, path, new_text, data=None):
         """Sprint points edit"""
-        new_text = strops.reformat_biblist(new_text)
+        new_text = strops.reformat_biblist(new_text.decode('utf-8'))
         op = None
         nextp = []
         for nv in new_text.split():

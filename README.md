@@ -25,6 +25,7 @@ Static gtk, cairo, pango and rsvg libraries:
    - pycairo
    - pango
    - pangocairo
+   - python-gi-cairo
    - rsvg
 
 Support libraries:

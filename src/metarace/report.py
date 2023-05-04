@@ -1624,6 +1624,8 @@ class rttstartlist(object):
                 nv = r[0:6]
                 if len(nv) == 2:
                     nv = [nv[0], None, nv[1]]
+                elif len(nv) > 4:
+                    nv[4] = u''
                 rows.append(nv)
             trows = []
             for l in rows:
@@ -2851,7 +2853,8 @@ class teampage(object):
                 #if tnh > localline:
                 #tco += 0.5 * (tnh - localline)
                 #report.text_right(left + tcw - mm2pt(1.0), tco, tcode, report.fonts[u'section'])
-                pageoft += self.scale * tnh
+                pageoft += tnh
+                #pageoft += self.scale * tnh
                 #pageoft += 0.9 * tnh
 
                 # optionally draw ds
@@ -4308,8 +4311,8 @@ class report(object):
     def set_pagemarks(self, flag=True):
         self.pagemarks = flag
 
-    def output_json(self, file=None):
-        """Output the JSON version."""
+    def serialise(self):
+        """Return a serialisable report object"""
         if u'pagestr' in self.strings:
             del self.strings[u'pagestr']  # remove spurious string data
         ret = {
@@ -4331,7 +4334,7 @@ class report(object):
         rep[u'startlink'] = self.startlink
         rep[u'canonical'] = self.canonical
         rep[u'customlinks'] = self.customlinks
-        rep[u'navbar'] = self.navbar
+        #rep[u'navbar'] = self.navbar # this should not be here
         rep[u'shortname'] = self.shortname
         rep[u'pagemarks'] = self.pagemarks
         rep[u'strings'] = self.strings
@@ -4342,6 +4345,11 @@ class report(object):
             secid = mksectionid(secmap, s.sectionid)
             secmap[secid] = s.serialize(self, secid)
             rep[u'sections'].append(secid)
+        return ret
+
+    def output_json(self, file=None):
+        """Output the JSON version."""
+        ret = self.serialise()
         # serialise to the provided file handle
         json.dump(ret, file, indent=1, sort_keys=True)
 
@@ -4676,7 +4684,7 @@ class report(object):
         # restore context
         self.c.restore()
 
-    def teamname_height(self, text, width=None):
+    def teamname_height(self, text, width=None, vscale=None):
         """Determine height of a team name wrapped at width."""
         ret = 0
         if width is None:
@@ -4687,6 +4695,8 @@ class report(object):
         l.set_width(int(pango.SCALE * width + 1))
         l.set_wrap(pango.WRAP_WORD_CHAR)
         l.set_alignment(pango.ALIGN_LEFT)
+        #if vscale is not None:
+        #l.set_line_spacing(vscale)
         l.set_text(text)
         (tw, th) = l.get_pixel_size()
         ret = th
@@ -5230,7 +5240,8 @@ class report(object):
     def rms_rider(self, rvec, w, h):
         baseline = self.get_baseline(h)
         if len(rvec) > 0 and rvec[0] is not None:
-            self.text_left(w, h, rvec[0], self.fonts[u'bodyoblique'])
+            self.text_left(w, h, rvec[0], self.fonts[u'body'])
+            ##self.text_left(w, h, rvec[0], self.fonts[u'bodyoblique'])
         else:
             self.drawline(w, baseline, w + mm2pt(4), baseline)
         doline = True
@@ -5250,6 +5261,12 @@ class report(object):
         if len(rvec) > 3 and rvec[3]:  # cat/hcap/draw/etc
             self.text_left(w + mm2pt(62.0), h, rvec[3],
                            self.fonts[u'bodyoblique'])
+        ## TODO
+        ## add result column for two col results
+        if len(rvec) > 4 and rvec[4]:  # elap
+            pass
+        if len(rvec) > 5 and rvec[5]:  # time/down
+            self.text_right(w + mm2pt(68.0), h, rvec[5], self.fonts[u'body'])
 
     def text_right(self,
                    w,
@@ -5345,7 +5362,8 @@ class report(object):
                   text,
                   font=None,
                   width=None,
-                  halign=pango.ALIGN_LEFT):
+                  halign=pango.ALIGN_LEFT,
+                  vscale=None):
         if width is None:
             width = self.body_width
         l = self.p.create_layout()
@@ -5354,6 +5372,8 @@ class report(object):
         l.set_width(int(pango.SCALE * width + 1))
         l.set_wrap(pango.WRAP_WORD_CHAR)
         l.set_alignment(halign)
+        #if vscale is not None:
+        #l.set_line_spacing(vscale)
         l.set_text(text)
         (tw, th) = l.get_pixel_size()
         self.c.move_to(w, h)

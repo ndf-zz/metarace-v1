@@ -1,4 +1,4 @@
-"""Classification/Medal meta-event handler for trackmeet."""
+"""DO NOT USE"""
 
 import os
 import logging
@@ -16,20 +16,19 @@ from metarace import riderdb
 from metarace import strops
 from metarace import report
 
-LOG = logging.getLogger(u'metarace.classification')
+LOG = logging.getLogger(u'metarace.aggregate')
 LOG.setLevel(logging.DEBUG)
 
 # config version string
-EVENT_ID = u'classification-2.0'
+EVENT_ID = u'agg-2.0'
 
-# Model columns
+# Model columns (for the view only)
 COL_BIB = 0
-COL_FIRST = 1
-COL_LAST = 2
-COL_CLUB = 3
-COL_COMMENT = 4
-COL_PLACE = 5
-COL_MEDAL = 6
+COL_NAME = 1
+COL_CLUB = 2
+COL_CAT = 3
+COL_SEX = 4
+COL_POINTS = 5
 
 # scb function key mappings
 key_reannounce = u'F4'  # (+CTRL)
@@ -38,7 +37,7 @@ key_startlist = u'F3'
 key_results = u'F4'
 
 
-class classification(object):
+class aggregate(object):
 
     def loadconfig(self):
         """Load race config from disk."""
@@ -46,10 +45,11 @@ class classification(object):
             u'event': {
                 u'id': EVENT_ID,
                 u'showinfo': True,
-                u'showevents': u'',
                 u'comments': [],
-                u'placesrc': u'',
-                u'medals': u''
+                u'pointspec': u'',
+                u'events': u'',
+                u'double': u'',
+                u'qualifying': u''
             }
         })
         cr.add_section('event')
@@ -66,10 +66,10 @@ class classification(object):
         self.info_expand.set_expanded(
             strops.confopt_bool(cr.get(u'event', u'showinfo')))
 
-        self.showevents = cr.get(u'event', u'showevents')
-        self.placesrc = cr.get(u'event', u'placesrc')
-        self.medals = cr.get(u'event', u'medals')
-        self.comments = cr.get(u'event', u'comments')
+        self.pointspec = cr.get(u'event', u'pointspec')
+        self.events = cr.get(u'event', u'events')
+        self.double = cr.get(u'event', u'double')
+        self.qualifying = cr.get(u'event', u'qualifying')
         self.recalculate()  # model is cleared and loaded in recalc
         eid = cr.get(u'event', u'id')
         if eid and eid != EVENT_ID:
@@ -78,30 +78,8 @@ class classification(object):
     def startlist_report(self, program=False):
         """Return a startlist report."""
         ret = []
-        sec = report.section()
-        headvec = [
-            u'Event', self.evno, u':', self.event[u'pref'], self.event[u'info']
-        ]
-        if not program:
-            headvec.append(u'- Start List')
-        sec.heading = u' '.join(headvec)
-        lapstring = strops.lapstring(self.event[u'laps'])
-        substr = u' '.join(
-            [lapstring, self.event[u'dist'], self.event[u'prog']]).strip()
-        if substr:
-            sec.subheading = substr
-        sec.lines = []
-        for r in self.riders:
-            rno = r[COL_BIB].decode(u'utf-8')
-            if u't' in self.series:  # Team no hack
-                rno = u' '  # force name
-            rh = self.meet.newgetrider(rno, self.series)
-            rname = u''
-            if rh is not None:
-                rname = rh[u'namestr']
-            sec.lines.append([None, rno, rname, None, None, None])
-        ret.append(sec)
         return ret
+        # Don't do a startlist for agg entries
 
     def get_startlist(self):
         """Return a list of bibs in the rider model."""
@@ -117,9 +95,10 @@ class classification(object):
             return
         cw = jsonconfig.config()
         cw.add_section(u'event')
-        cw.set(u'event', u'showevents', self.showevents)
-        cw.set(u'event', u'placesrc', self.placesrc)
-        cw.set(u'event', u'medals', self.medals)
+        cw.set(u'event', u'pointspec', self.pointspec)
+        cw.set(u'event', u'events', self.events)
+        cw.set(u'event', u'double', self.double)
+        cw.set(u'event', u'qualifying', self.qualifying)
         cw.set(u'event', u'comments', self.comments)
         cw.set(u'event', u'showinfo', self.info_expand.get_expanded())
         cw.set(u'event', u'id', EVENT_ID)
@@ -129,39 +108,48 @@ class classification(object):
 
     def result_gen(self):
         """Generator function to export a final result."""
-        for r in self.riders:
-            bib = r[COL_BIB].decode(u'utf-8')
-            rank = None
-            info = u''
-            rks = r[COL_PLACE].decode(u'utf-8')
-            if rks:
-                if rks.isdigit():
-                    rank = int(rks)
-                    info = r[COL_MEDAL].decode(u'utf-8')
-                else:
-                    # TODO: allow for 'dnf'/'dns' here, propagates into event
-                    rank = rks
-                    info = None  # no seeding info available
-            time = None
-
-            yield [bib, rank, time, info]
+        # don't allow result propagation for aggregate (yet?)
+        for r in []:
+            yield ['', '', None, None]
 
     def result_report(self, recurse=True):  # by default include inners
         """Return a list of report sections containing the race result."""
         ret = []
+        after = u''
+        if self.afterev is not None:
+            after = ' After Event {}'.format(self.afterev)
 
-        # start with the overall result
-        sec = report.section()
-        if recurse:
+        # Club Result (with averages) - mark avg winner with chevron
+        sec = report.section(u'teams')
+        if self.event[u'evov']:
             sec.heading = u' '.join([self.event[u'pref'],
                                      self.event[u'info']]).strip()
         else:
-            if self.event[u'evov']:
-                sec.heading = u' '.join(
-                    [self.event[u'pref'], self.event[u'info']]).strip()
-            else:
-                sec.heading = u'Event ' + self.evno + u': ' + u' '.join(
-                    [self.event[u'pref'], self.event[u'info']]).strip()
+            sec.heading = u'Event ' + self.evno + u': ' + u' '.join(
+                [self.event[u'pref'], self.event[u'info']]).strip()
+        sec.subheading = u'Team Tally' + after
+        sec.lines = self.teamres
+        sec.colheader = [None, None, None, None, u'Avg', u'Total']
+        sec.units = u'pt'
+        ret.append(sec)
+
+        # Individual Tally - mark sex and cat
+        sec = report.section(u'individual')
+        sec.subheading = u'Individual Tally' + after
+        sec.lines = self.riderres
+        sec.units = u'pt'
+        ret.append(sec)
+
+        return ret
+
+        # start with the overall result
+        sec = report.section()
+        if self.event[u'evov']:
+            sec.heading = u' '.join([self.event[u'pref'],
+                                     self.event[u'info']]).strip()
+        else:
+            sec.heading = u'Event ' + self.evno + u': ' + u' '.join(
+                [self.event[u'pref'], self.event[u'info']]).strip()
         sec.lines = []
         lapstring = strops.lapstring(self.event[u'laps'])
         substr = u' '.join(
@@ -169,197 +157,153 @@ class classification(object):
         if substr:
             sec.subheading = substr
         prevmedal = u''
-        sec.lines = []
-        for r in self.riders:
-            rno = r[COL_BIB].decode(u'utf-8')
-            rh = self.meet.newgetrider(rno, self.series)
-            rname = u''
-            plink = u''
-            rcat = u''
-            if u't' in self.series:  # Team no hack
-                rno = u' '  # force name
-                if rh is not None:
-                    rname = rh[u'first']
-            else:
-                if rh is not None:
-                    rname = rh[u'namestr']
-                    if rh[u'uciid']:
-                        rcat = rh[u'uciid']  # overwrite by force
-
-                    # consider partners here
-                    if rh[u'cat'] and u'tandem' in rh[u'cat'].lower():
-                        ph = self.meet.newgetrider(rh[u'note'], self.series)
-                        if ph is not None:
-                            plink = [
-                                u'', u'', ph[u'namestr'] + u' - Pilot',
-                                ph[u'uciid'], u'', u'', u''
-                            ]
-
-            rank = u''
-            rks = r[COL_PLACE].decode(u'utf-8')
-            if rks:
-                rank = rks
-                if rank.isdigit():
-                    rank += u'.'
-
-            medal = u''
-            mds = r[COL_MEDAL].decode(u'utf-8')
-            if mds:
-                medal = mds
-            if medal == u'' and prevmedal != u'':
-                # add empty line
-                sec.lines.append([None, None, None])
-            prevmedal = medal
-
-            nrow = [rank, rno, rname, rcat, None, medal, plink]
-            sec.lines.append(nrow)
-            if u't' in self.series:
-                #for trno in strops.reformat_riderlist(rh[u'note']).split():
-                for trno in strops.riderlist_split(rh[u'note']):
-                    trh = self.meet.newgetrider(trno)  #!! SERIES?
-                    if trh is not None:
-                        trname = trh[u'namestr']
-                        trinf = trh[u'uciid']
-                        sec.lines.append(
-                            [None, trno, trname, trinf, None, None, None])
-        ret.append(sec)
-
-        if recurse:
-            # then append each of the specified events
-            for evno in self.showevents.split():
-                if evno:
-                    LOG.debug(u'Including results from event %r', evno)
-                    r = self.meet.get_event(evno, False)
-                    if r is None:
-                        LOG.error(u'Invalid event %r in showplaces', evno)
-                        continue
-                    r.loadconfig()  # now have queryable event handle
-                    if r.onestart:  # go for result
-                        ret.extend(r.result_report())
-                    else:  # go for startlist
-                        ret.extend(r.startlist_report())
-                    r.destroy()
-        return ret
 
     def addrider(self, bib=u'', place=u''):
         """Add specified rider to race model."""
-        nr = [bib, u'', u'', u'', u'', u'', u'']
-        er = self.getrider(bib)
-        if not bib or er is None:
-            dbr = self.meet.rdb.getrider(bib, self.series)
-            if dbr is not None:
-                for i in range(1, 5):
-                    nr[i] = self.meet.rdb.getvalue(dbr, i)  # unicode
-            nr[COL_PLACE] = place
-            return self.riders.append(nr)
-        else:
-            LOG.warning(u'Rider %r already in model', bib)
-            return None
+        # note this is not relevant for aggregate
+        return None
 
     def getrider(self, bib):
         """Return temporary reference to model row."""
-        ret = None
-        for r in self.riders:
-            if r[COL_BIB].decode(u'utf-8') == bib:
-                ret = r
-                break
-        return ret
+        # note this is not relevant for aggregate
+        return None
 
     def delrider(self, bib):
         """Remove the specified rider from the model."""
-        i = self.getiter(bib)
-        if i is not None:
-            self.riders.remove(i)
+        # note this is not relevant for aggregate
+        return None
 
     def getiter(self, bib):
         """Return temporary iterator to model row."""
-        i = self.riders.get_iter_first()
-        while i is not None:
-            if self.riders.get_value(i, COL_BIB).decode(u'utf-8') == bib:
-                break
-            i = self.riders.iter_next(i)
-        return i
+        # note this is not relevant for aggregate
+        return None
 
     def recalculate(self):
         """Update internal model."""
 
-        # TODO: update to allow for keirin and sprint inter rounds
+        # clear out view and data structures
         self.riders.clear()
+        self.ridermap = {}
+        self.riderres = []
+        self.teammap = {}
+        self.teamres = []
+        self.afterev = None
 
-        # Pass one: Create ordered place lookup
-        currank = 0
-        lookup = {}
-        for p in self.placesrc.split(u';'):
-            placegroup = p.strip()
-            if placegroup:
-                LOG.debug(u'Adding place group %r at rank %r', placegroup,
-                          currank)
-                if placegroup == u'X':
-                    LOG.debug(u'Added placeholder at rank %r', currank)
-                    currank += 1
-                else:
-                    specvec = placegroup.split(u':')
-                    if len(specvec) == 2:
-                        evno = specvec[0].strip()
-                        if evno not in lookup:
-                            lookup[evno] = {}
-                        if evno != self.evno:
-                            placeset = strops.placeset(specvec[1])
-                            for i in placeset:
-                                lookup[evno][i] = currank
-                                currank += 1
-                        else:
-                            LOG.warning(u'Ignored ref to self %r at rank %r',
-                                        placegroup, currank)
-                    else:
-                        LOG.warning(u'Invalid placegroup %r at rank %r',
-                                    placegroup, currank)
-            else:
-                LOG.debug(u'Empty placegroup at rank %r', currank)
+        # check config (?)
+        events = self.events.split()
+        doubles = self.double.split()
+        points = [int(i) for i in self.pointspec.split()]
 
-        # Pass 2: create an ordered list of rider numbers using lookup
-        placemap = {}
-        maxcrank = 0
-        for evno in lookup:
+        # collect points and allocate to riders and teams
+        for evno in events:
             r = self.meet.get_event(evno, False)
             if r is None:
-                LOG.warning(u'Event %r not found for lookup %r', evno,
-                            lookup[evno])
+                LOG.warning(u'Event %r not found', evno)
                 return
             r.loadconfig()  # now have queryable event handle
+            double = False
+            if evno in doubles:
+                double = True
             for res in r.result_gen():
                 if isinstance(res[1], int):
-                    if res[1] in lookup[evno]:
-                        crank = lookup[evno][res[1]] + 1
-                        maxcrank = max(maxcrank, crank)
-                        LOG.debug(u'Assigned place %r to rider %r at rank %r',
-                                  crank, res[0], res[1])
-                        if crank not in placemap:
-                            placemap[crank] = []
-                        placemap[crank].append(res[0])
+                    self.afterev = evno
+                    oft = res[1] - 1
+                    pts = 0
+                    if oft < len(points):
+                        pts = points[oft]
+                    else:
+                        LOG.debug(u'More places than points: %r > %r', oft,
+                                  points)
+                    if double:
+                        pts += pts
 
-        # Pass 3: add riders to model in rank order
-        i = 1
-        while i <= maxcrank:
-            if i in placemap:
-                for r in placemap[i]:
-                    self.addrider(r, unicode(i))
-            i += 1
+                    riderno = res[0]
+                    if riderno not in self.ridermap:
+                        name = u''
+                        club = u''
+                        namestr = u''
+                        cat = u''
+                        sex = u''
+                        rh = self.meet.newgetrider(riderno)
+                        if rh is not None:
+                            name = rh[u'name']
+                            club = rh[u'club']
+                            namestr = rh[u'namestr']
+                            cat = rh[u'cat']
+                            sex = rh[u'ucicode']
+                        self.ridermap[riderno] = {
+                            u'name': name,
+                            u'club': club,
+                            u'namestr': namestr,
+                            u'cat': cat,
+                            u'sex': sex,
+                            u'points': 0
+                        }
+                    self.ridermap[riderno][u'points'] += pts
+                    club = self.ridermap[riderno][u'club']
+                    if club not in self.teammap:
+                        self.teammap[club] = {
+                            u'name': club,
+                            u'riders': set(),
+                            u'points': 0,
+                        }
+                    self.teammap[club][u'riders'].add(riderno)
+                    self.teammap[club][u'points'] += pts
 
-        if len(self.riders) > 0:  # got at least one result to report
-            self.onestart = True
-        # Pass 4: Mark medals if required
-        medalmap = {}
-        mcount = 1
-        for m in self.medals.split():
-            medalmap[mcount] = m
-            mcount += 1
-        for r in self.riders:
-            rks = r[COL_PLACE].decode(u'utf-8')
-            if rks.isdigit():
-                rank = int(rks)
-                if rank in medalmap:
-                    r[COL_MEDAL] = medalmap[rank]
+        # create an aux sorting for overall points
+        rideraux = []
+        for rider in self.ridermap:
+            pts = self.ridermap[rider][u'points']
+            riderval = strops.bibstr_key(rider)
+            rideraux.append((-pts, riderval, rider))
+        rideraux.sort()
+        for r in rideraux:
+            rno = r[2]
+            rider = self.ridermap[rno]
+            self.riders.append([
+                rno, rider[u'name'], rider[u'club'], rider[u'cat'],
+                rider[u'sex'],
+                unicode(rider[u'points'])
+            ])
+            # also write to result thingo
+            self.riderres.append([
+                u'', rno, rider[u'namestr'], rider[u'sex'] + rider[u'cat'],
+                u'',
+                unicode(rider[u'points'])
+            ])
+
+        # creat aux sorting for team points
+        bestteam = None
+        bestavg = 0
+        teamaux = []
+        for team in self.teammap:
+            pts = self.teammap[team][u'points']
+            count = len(self.teammap[team][u'riders'])
+            avg = float(pts) / count
+            self.teammap[team][u'average'] = avg
+            if avg > bestavg:
+                bestteam = team
+                bestavg = avg
+            teamaux.append((-pts, -avg, team))
+        teamaux.sort()
+        for t in teamaux:
+            name = t[2]
+            team = self.teammap[name]
+            pstr = unicode(team[u'points'])
+            star = u''
+            if name == bestteam:
+                star = u'\u2605 '
+            astr = '{0}{1:0.1f}'.format(star, team[u'average'])
+            self.teamres.append([u'', u'', name, u'', astr, pstr])
+
+        # update timerstat
+        # if all results:
+        #  self.timerstat = u'result'
+        # if any results...
+        #  self.timerstat = u'standing'
+        # else:
+        #  self.timerstat = u'idle'
+
         return
 
     def key_event(self, widget, event):
@@ -386,6 +330,7 @@ class classification(object):
     def delayed_announce(self):
         """Initialise the announcer's screen after a delay."""
         ## TODO because # riders often exceeds 24 - requires paging
+        return False
         if self.winopen:
             # clear page
             self.meet.txt_clear()
@@ -433,11 +378,14 @@ class classification(object):
 
     def do_startlist(self):
         """Show result on scoreboard."""
-        return self.do_places()
+        # Don't show for agg
+        return False
 
     def do_places(self):
         """Show race result on scoreboard."""
-        # Draw a 'medal ceremony' on the screen
+        # Don't show for agg
+        return False
+        ## todo: DISPLAY CLUB STANDINGS
         resvec = []
         count = 0
         teamnames = False
@@ -495,34 +443,27 @@ class classification(object):
 
     def do_properties(self):
         """Run race properties dialog."""
-        prfile = os.path.join(metarace.UI_PATH,
-                              u'classification_properties.ui')
+        prfile = os.path.join(metarace.UI_PATH, u'aggregate_properties.ui')
         LOG.debug(u'Building event properties from %r', prfile)
         b = gtk.Builder()
         b.add_from_file(prfile)
         dlg = b.get_object(u'properties')
         dlg.set_transient_for(self.meet.window)
-        se = b.get_object(u'race_series_entry')
-        se.set_text(self.series)
-        ee = b.get_object(u'race_showevents_entry')
-        ee.set_text(self.showevents)
-        pe = b.get_object(u'race_placesrc_entry')
-        pe.set_text(self.placesrc)
-        me = b.get_object(u'race_medals_entry')
-        me.set_text(self.medals)
+        se = b.get_object(u'race_qualifying_entry')
+        se.set_text(self.qualifying)
+        ee = b.get_object(u'race_events_entry')
+        ee.set_text(self.events)
+        pe = b.get_object(u'race_points_entry')
+        pe.set_text(self.pointspec)
+        me = b.get_object(u'race_double_entry')
+        me.set_text(self.double)
         response = dlg.run()
         if response == 1:  # id 1 set in glade for "Apply"
             LOG.debug(u'Updating event properties')
-            self.placesrc = pe.get_text().decode(u'utf-8')
-            self.medals = me.get_text().decode(u'utf-8')
-            self.showevents = ee.get_text().decode(u'utf-8')
-
-            # update series
-            ns = se.get_text().decode(u'utf-8')
-            if ns != self.series:
-                self.series = ns
-                self.event[u'seri'] = ns
-
+            self.pointspec = pe.get_text().decode(u'utf-8')
+            self.double = me.get_text().decode(u'utf-8')
+            self.events = ee.get_text().decode(u'utf-8')
+            self.qualifying = se.get_text().decode(u'utf-8')
             self.recalculate()
             glib.idle_add(self.delayed_announce)
         else:
@@ -581,18 +522,25 @@ class classification(object):
         self.onestart = True  # always true for autospec classification
         self.readonly = not ui
         self.winopen = ui
-        self.placesrc = u''
-        self.medals = u''
         self.comments = []
+        self.events = u''
+        self.qualifying = u''
+        self.pointspec = u''
+        self.double = u''
+        self.timerstat = u'idle'  # fake a timerstat and use for result stat
+        self.ridermap = {}
+        self.teammap = {}
+        self.teamres = []
+        self.teamavgres = []
+        self.afterev = None
 
         self.riders = gtk.ListStore(
             gobject.TYPE_STRING,  # 0 bib
-            gobject.TYPE_STRING,  # 1 first name
-            gobject.TYPE_STRING,  # 2 last name
-            gobject.TYPE_STRING,  # 3 club
-            gobject.TYPE_STRING,  # 4 comment
-            gobject.TYPE_STRING,  # 5 place
-            gobject.TYPE_STRING)  # 6 medal
+            gobject.TYPE_STRING,  # 1 name
+            gobject.TYPE_STRING,  # 2 club
+            gobject.TYPE_STRING,  # 3 cat
+            gobject.TYPE_STRING,  # 4 sex
+            gobject.TYPE_STRING)  # 5 points
 
         uifile = os.path.join(metarace.UI_PATH, u'classification.ui')
         LOG.debug(u'Building event interface from %r', uifile)
@@ -622,19 +570,11 @@ class classification(object):
 
             # riders columns
             uiutil.mkviewcoltxt(t, u'No.', COL_BIB, calign=1.0)
-            uiutil.mkviewcoltxt(t,
-                                u'First Name',
-                                COL_FIRST,
-                                self.editcol_db,
-                                expand=True)
-            uiutil.mkviewcoltxt(t,
-                                u'Last Name',
-                                COL_LAST,
-                                self.editcol_db,
-                                expand=True)
-            uiutil.mkviewcoltxt(t, u'Club', COL_CLUB, self.editcol_db)
-            uiutil.mkviewcoltxt(t, u'Rank', COL_PLACE, halign=0.5, calign=0.5)
-            uiutil.mkviewcoltxt(t, u'Medal', COL_MEDAL)
+            uiutil.mkviewcoltxt(t, u'Name', COL_NAME, expand=True)
+            uiutil.mkviewcoltxt(t, u'Club', COL_CLUB)
+            uiutil.mkviewcoltxt(t, u'Cat', COL_CAT)
+            uiutil.mkviewcoltxt(t, u'Sex', COL_SEX)
+            uiutil.mkviewcoltxt(t, u'Points', COL_POINTS, calign=1.0)
             t.show()
             b.get_object(u'classification_result_win').add(t)
             b.connect_signals(self)

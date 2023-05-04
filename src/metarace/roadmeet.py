@@ -81,7 +81,7 @@ class registerdlg(object):
         if r is not None:
             first = self.rdb.getvalue(r, riderdb.COL_FIRST)
             last = self.rdb.getvalue(r, riderdb.COL_LAST)
-            club = self.rdb.getvalue(r, riderdb.COL_CLUB)
+            club = self.rdb.getvalue(r, riderdb.COL_ORG)
             cat = self.rdb.getvalue(r, riderdb.COL_CAT)
             refid = self.rdb.getvalue(r, riderdb.COL_REFID)
             self.riderval.set_text(u'{0} {1} ({2}) / {3}'.format(
@@ -195,6 +195,7 @@ class fakemeet(object):
 
         self.announce = telegraph.telegraph()
         self.title_str = ''
+        self.host_str = ''
         self.subtitle_str = ''
         self.date_str = ''
         self.organiser_str = ''
@@ -226,6 +227,7 @@ class fakemeet(object):
         ## this is a copy of meet.print_report()
         rep.strings[u'title'] = self.title_str
         rep.strings[u'subtitle'] = self.subtitle_str
+        rep.strings[u'host'] = self.host_str
         rep.strings[u'docstr'] = self.document_str
         rep.strings[u'datestr'] = strops.promptstr(u'Date:', self.date_str)
         rep.strings[u'commstr'] = strops.promptstr(u'Chief Commissaire:',
@@ -257,6 +259,7 @@ class fakemeet(object):
                 u'title': u'',
                 u'shortname': u'',
                 u'subtitle': u'',
+                u'host': u'',
                 u'document': u'',
                 u'date': u'',
                 u'organiser': u'',
@@ -289,6 +292,7 @@ class fakemeet(object):
         # set meet meta, and then copy into text entries
         self.shortname = cr.get(u'roadmeet', u'shortname')
         self.title_str = cr.get(u'roadmeet', u'title')
+        self.host_str = cr.get(u'roadmeet', u'host')
         self.subtitle_str = cr.get(u'roadmeet', u'subtitle')
         self.document_str = cr.get(u'roadmeet', u'document')
         self.date_str = cr.get(u'roadmeet', u'date')
@@ -490,6 +494,7 @@ class roadmeet(object):
         rep = report.report()
         rep.provisional = provisional
         rep.strings[u'title'] = self.title_str
+        rep.strings[u'host'] = self.host_str
         rep.strings[u'subtitle'] = self.subtitle_str
         rep.strings[u'docstr'] = self.document_str
         rep.strings[u'datestr'] = strops.promptstr(u'Date:', self.date_str)
@@ -762,7 +767,9 @@ class roadmeet(object):
             with open(sfile, 'rb') as f:
                 cr = ucsv.UnicodeReader(f)
                 for r in cr:
-                    if len(r) > 1 and r[1].isalnum() and r[1] != u'No.':
+                    if len(r) > 1 and r[1].isalnum() and r[1].lower() not in [
+                            'no', 'no.'
+                    ]:
                         bib = r[1].strip().lower()
                         series = u''
                         if len(r) > 2:
@@ -831,11 +838,16 @@ class roadmeet(object):
             with metarace.savefile(rfilename) as f:
                 cw = ucsv.UnicodeWriter(f)
                 cw.writerow([u'Start', u'No.', u'Series', u'Name', u'Cat'])
-                clist = self.curevent.get_catlist()
-                clist.append(u'')
-                for c in clist:
-                    for r in self.curevent.startlist_gen(c):
+                if self.etype == u'irtt':
+                    for r in self.curevent.startlist_gen():
                         cw.writerow(r)
+                else:
+                    clist = self.curevent.get_catlist()
+                    clist.append(u'')
+                    for c in clist:
+                        for r in self.curevent.startlist_gen(c):
+                            cw.writerow(r)
+
             LOG.info(u'Export startlist to %r', rfilename)
 
     def export_result_maker(self):
@@ -862,6 +874,7 @@ class roadmeet(object):
             filename = sfile
             rep = report.report()
             rep.strings[u'title'] = self.title_str
+            rep.strings[u'host'] = self.host_str
             rep.strings[u'subtitle'] = self.subtitle_str
             rep.strings[u'docstr'] = self.document_str
             rep.strings[u'datestr'] = strops.promptstr(u'Date:', self.date_str)
@@ -911,6 +924,7 @@ class roadmeet(object):
         # Then export a result
         rep = report.report()
         rep.strings[u'title'] = self.title_str
+        rep.strings[u'host'] = self.host_str
         rep.strings[u'subtitle'] = self.subtitle_str
         rep.strings[u'docstr'] = self.document_str
         rep.strings[u'datestr'] = strops.promptstr(u'Date:', self.date_str)
@@ -1051,8 +1065,8 @@ class roadmeet(object):
         self.alttimer.setport(self.alttimer_port)
         self.alttimer.sane()
         if self.etype == u'irtt':
-            # IRTT impulses require low delay
-            self.alttimer.delaytime(u'0.01')
+            self.alttimer.write(u'DTS05.00')
+            self.alttimer.write(u'DTF00.01')
         else:
             # assume 1 second gaps at finish
             self.alttimer.write(u'DTF01.00')
@@ -1066,7 +1080,7 @@ class roadmeet(object):
     def menu_timing_configure_activate_cb(self, menuitem, data=None):
         """Attempt to re-configure the attached decoder from saved config."""
         if self.timer.__class__.__name__ == u'thbc':
-            if not timer.connected():
+            if not self.timer.connected():
                 LOG.info(u'Timer not connected, config not possible')
                 return False
             if not uiutil.questiondlg(
@@ -1261,6 +1275,7 @@ class roadmeet(object):
         cw.set(u'roadmeet', u'nextlink', self.nextlink)
         cw.set(u'roadmeet', u'prevlink', self.prevlink)
         cw.set(u'roadmeet', u'title', self.title_str)
+        cw.set(u'roadmeet', u'host', self.host_str)
         cw.set(u'roadmeet', u'subtitle', self.subtitle_str)
         cw.set(u'roadmeet', u'document', self.document_str)
         cw.set(u'roadmeet', u'date', self.date_str)
@@ -1304,6 +1319,7 @@ class roadmeet(object):
             u'roadmeet': {
                 u'shortname': None,
                 u'title': u'',
+                u'host': u'',
                 u'subtitle': u'',
                 u'document': u'',
                 u'date': u'',
@@ -1385,6 +1401,7 @@ class roadmeet(object):
         # set meet meta, and then copy into text entries
         self.shortname = cr.get(u'roadmeet', u'shortname')
         self.title_str = cr.get(u'roadmeet', u'title')
+        self.host_str = cr.get(u'roadmeet', u'host')
         self.subtitle_str = cr.get(u'roadmeet', u'subtitle')
         self.document_str = cr.get(u'roadmeet', u'document')
         self.date_str = cr.get(u'roadmeet', u'date')
@@ -1427,8 +1444,8 @@ class roadmeet(object):
 
         # alt timer config post event load
         if self.etype == u'irtt':
-            # IRTT impulses require no delay
-            self.alttimer.delaytime(u'0.01')
+            self.alttimer.write(u'DTS05.00')
+            self.alttimer.write(u'DTF00.01')
         else:
             # assume 1 second gaps at finish
             self.alttimer.write(u'DTF01.00')
@@ -1559,6 +1576,7 @@ class roadmeet(object):
         self.etype = etype
         self.shortname = None
         self.title_str = u''
+        self.host_str = u''
         self.subtitle_str = u''
         self.document_str = u''
         self.date_str = u''

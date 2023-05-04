@@ -1,42 +1,23 @@
 """Rider 'database' and utilities
 
-Manage a rider db with the columns described below. Input columns
-may be arranged in any order if the column header is present. Riders
-are uniquely identified by their series and number, which may be specified
-explicitly as a tuple: (no,series) or as a combined string 'no.series'. 
+Manage a legacy rider db with the columns described below.
+Riders are uniquely identified by their series and number.
+Columns must all appear in the order listed.
 
-Numbers and series keys are matched case-insensitively, and must only 
-contain alphanumeric characters 0-9, A-Z, a-z. All other values associated
-with a rider are unicode strings.
+Legacy columns:
 
-	no	"No"
-		Rider number
-	seri	"Series"
-		Rider's number series (optional)
-	firs	"First Name"
-		Rider full first name
-	last	"Last Name"
-		Rider full last name
-	org	"Org"
-		Organisation - Club/team/state/nation field
-	cate	"Category"
-		A space separated list of rider category keys for this rider
-		also used for nationality key in uncategorised events
-	uci	"UCI ID"
-		Rider's UCI ID
-	lice	"License No."
-		Rider's License no or namebank key
-	rfid	"RFID No"
-		Rider's RFID, or Transponder no (if relevant)
-	dob	"Nation/DoB"
-		Rider's DoB (old UCI Code)
-
-Reserved number series:
-
-	team	Extended team information (for road tours)
-	cat	Extended category information
-	spare	Spare bike entry
-
+	No	Rider number / team code
+	First	First name / team name
+	Last	Last name / team short name
+	Org	Club name or Team Code
+	Cat	Result categories
+	Series	Number series
+	Refid	Transponder ID
+	UCIID	UCI ID / Team dataride ID
+	DoB	Date of Birth
+	Nation	Sporting Nationality
+	Sex	Rider sex / team category
+	Note	Spare data slot
 
 """
 
@@ -60,12 +41,15 @@ LOG.setLevel(logging.DEBUG)
 COL_BIB = 0
 COL_FIRST = 1
 COL_LAST = 2
-COL_CLUB = 3
+COL_ORG = 3
 COL_CAT = 4
 COL_SERIES = 5
 COL_REFID = 6
 COL_UCICODE = 7
-COL_NOTE = 8
+COL_DOB = 8
+COL_NATION = 9
+COL_SEX = 10
+COL_NOTE = 11
 
 # Reserved rider numbers.
 RESERVED_NOS = [u'bib', u'no.', u'no', u'all', u'number', u'num']
@@ -73,24 +57,6 @@ RESERVED_NOS = [u'bib', u'no.', u'no', u'all', u'number', u'num']
 # Default rider values if not empty string
 RIDER_DEFAULTS = {
     u'no': None,
-}
-
-# rider db column heading and key mappings
-RIDER_COLUMNS = {
-    u'no': u"No",
-    u'seri': u"Series",
-    u'firs': u"First Name",
-    u'last': u"Last Name",
-    u'org': u"Org",
-    u'cat': u"Category",
-    u'uci': u"UCI ID",
-    u'rfid': u"RFID No",
-    u'dob': u"Nation/DoB"
-}
-
-RIDER_COLUMN_CONVERTERS = {
-    u'no': strops.confopt_riderno,
-    u'seri': strops.confopt_riderno
 }
 
 
@@ -117,8 +83,10 @@ class riderdb(object):
 
     def addempty(self, bib=u'', series=u''):
         """Add a new empty row in the rider model."""
-        i = self.model.append(
-            [bib.lower(), u'', u'', u'', u'', series, u'', u'', u''])
+        i = self.model.append([
+            bib.lower(), u'', u'', u'', u'', series, u'', u'', u'', u'', u'',
+            u''
+        ])
         ref = gtk.TreeRowReference(self.model, self.model.get_path(i))
         if self.view is not None:
             self.postedit = None
@@ -170,27 +138,13 @@ class riderdb(object):
                     if len(ir) > 0 and ir[0] != u'Bib' and ir[0] != u'No.':
                         bib = ir[COL_BIB].strip().lower()
                         if bib.isalnum() and bib not in RESERVED_NOS:
-                            nr = [bib, u'', u'', u'', u'', u'', u'', u'', u'']
-                            for i in range(1, 9):
+                            nr = [
+                                bib, u'', u'', u'', u'', u'', u'', u'', u'',
+                                u'', u'', u''
+                            ]
+                            for i in range(1, 12):
                                 if len(ir) > i:
                                     nr[i] = ir[i].strip()
-
-                            # overwrite name fields if license no provided
-                            if namedb and len(ir) > 1 and ir[1].isdigit():
-                                nkey = ir[1].encode('ascii', 'ignore')
-                                if nkey in namedb:
-                                    # overwrite name fields with stored vals
-                                    sr = namedb[nkey]
-                                    for i in [1, 2]:  # first, last
-                                        nr[i] = sr[i]
-                                    if nr[COL_CLUB] == u'':  # club
-                                        nr[COL_CLUB] = sr[namebank.COL_CLUB]
-                                    if nr[COL_CAT] == u'':  # NRS/Origin
-                                        nr[COL_CAT] = sr[namebank.COL_STATE]
-                                    if nr[COL_REFID] == u'':  # refid
-                                        nr[COL_REFID] = sr[namebank.COL_REFID]
-                                    LOG.info(u'Load rider %r from namebank %r',
-                                             bib, nkey)
 
                             # overwrite refid in load data if chipfile loaded
                             bibser = strops.bibser2bibstr(bib, nr[COL_SERIES])
@@ -281,7 +235,8 @@ class riderdb(object):
             cr = ucsv.UnicodeWriter(f)
             cr.writerow([
                 u'No.', u'First Name', u'Last Name', u'Org', u'Category',
-                u'Series', u'Refid', u'UCI ID', u'DoB'
+                u'Series', u'Refid', u'UCI ID', u'DoB', u'Nationality', u'Sex',
+                u'Note'
             ])
             cr.writerows(self)  # check the unicode out-in-out-in
 
@@ -324,21 +279,27 @@ class riderdb(object):
                 key = r[COL_BIB].decode('utf-8')
                 first = r[COL_FIRST].decode('utf-8')
                 last = r[COL_LAST].decode('utf-8')
-                club = r[COL_CLUB].decode('utf-8')
+                org = r[COL_ORG].decode('utf-8')
                 cat = r[COL_CAT].decode('utf-8')
                 refid = r[COL_REFID].decode('utf-8')
-                ucicode = r[COL_UCICODE].decode('utf-8')
+                uciid = r[COL_UCICODE].decode('utf-8')
+                dob = r[COL_DOB].decode('utf-8')
+                nation = r[COL_NATION].decode('utf-8')
+                sex = r[COL_SEX].decode('utf-8')
                 note = r[COL_NOTE].decode('utf-8')
                 rmap = {}
                 rmap[u'bib'] = key
                 rmap[u'first'] = first
                 rmap[u'last'] = last
-                rmap[u'club'] = club
+                rmap[u'org'] = org
                 rmap[u'cat'] = cat
                 rmap[u'refid'] = refid
-                rmap[u'ucicode'] = ucicode
+                rmap[u'uciid'] = uciid
+                rmap[u'dob'] = dob
+                rmap[u'nation'] = nation
+                rmap[u'sex'] = sex
                 rmap[u'note'] = note
-                rmap[u'namestr'] = strops.resname(first, last, club)
+                rmap[u'namestr'] = strops.resname(first, last, org)
                 rmap[u'name'] = strops.resname(first, last)
                 rmap[u'shortname'] = strops.fitname(first,
                                                     last,
@@ -399,10 +360,10 @@ class riderdb(object):
         if club:
             uiutil.mkviewcoltxt(v,
                                 'Org',
-                                COL_CLUB,
+                                COL_ORG,
                                 self.__editcol_cb,
                                 editcb=self.__editstart_cb)
-            self.colmap[COL_CLUB] = colcnt
+            self.colmap[COL_ORG] = colcnt
             colcnt += 1
         if cat:
             uiutil.mkviewcoltxt(v,
@@ -438,7 +399,7 @@ class riderdb(object):
             colcnt += 1
         if note:
             uiutil.mkviewcoltxt(v,
-                                'DoB',
+                                'Note',
                                 COL_NOTE,
                                 self.__editcol_cb,
                                 editcb=self.__editstart_cb)
@@ -592,10 +553,13 @@ class riderdb(object):
                   ref=None,
                   first=None,
                   last=None,
-                  club=None,
+                  org=None,
                   cat=None,
                   refid=None,
                   ucicode=None,
+                  dob=None,
+                  nation=None,
+                  sex=None,
                   note=None,
                   bib=None):
         """Create or update the rider with supplied parameters."""
@@ -613,14 +577,20 @@ class riderdb(object):
                 self.model.set_value(i, COL_FIRST, first)
             if last is not None:
                 self.model.set_value(i, COL_LAST, last)
-            if club is not None:
-                self.model.set_value(i, COL_CLUB, club)
+            if org is not None:
+                self.model.set_value(i, COL_ORG, org)
             if cat is not None:
                 self.model.set_value(i, COL_CAT, cat)
             if refid is not None:
                 self.model.set_value(i, COL_REFID, refid)
             if ucicode is not None:
                 self.model.set_value(i, COL_UCICODE, ucicode)
+            if dob is not None:
+                self.model.set_value(i, COL_DIB, dob)
+            if nation is not None:
+                self.model.set_value(i, COL_NATION, nation)
+            if sex is not None:
+                self.model.set_value(i, COL_SEX, sex)
             if note is not None:
                 self.model.set_value(i, COL_NOTE, note)
         return ref
@@ -775,7 +745,7 @@ class riderdb(object):
         if type(editable) is gtk.Entry:
             self.editwasempty = len(editable.get_text()) == 0
             editable.connect('key-press-event', self.__edit_entry_key_cb)
-        else:  # this is crap - but don't know the type
+        else:
             self.editwasempty = False
 
     def __filtercol(self, model, iter, data=None):
@@ -799,12 +769,15 @@ class riderdb(object):
             gobject.TYPE_STRING,  # 0 bib
             gobject.TYPE_STRING,  # 1 first name
             gobject.TYPE_STRING,  # 2 last name
-            gobject.TYPE_STRING,  # 3 club
+            gobject.TYPE_STRING,  # 3 org
             gobject.TYPE_STRING,  # 4 category
             gobject.TYPE_STRING,  # 5 series
             gobject.TYPE_STRING,  # 6 refid
             gobject.TYPE_STRING,  # 7 ucicode
-            gobject.TYPE_STRING)  # 8 note
+            gobject.TYPE_STRING,  # 8 dob
+            gobject.TYPE_STRING,  # 9 nation
+            gobject.TYPE_STRING,  # 10 sex
+            gobject.TYPE_STRING)  # 11 note
         self.tagmap = {}
         self.maptag = {}
         self.view = None

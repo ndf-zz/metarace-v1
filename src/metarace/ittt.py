@@ -572,8 +572,7 @@ class ittt(object):
                         if teams:
                             info = []
                             col = u'black'
-                            for trno in strops.reformat_riderlist(
-                                    rh[u'note']).split():
+                            for trno in strops.riderlist_split(rh[u'note']):
                                 trh = self.meet.newgetrider(trno)  #!! SERIES?
                                 if trh is not None:
                                     if self.series == u'tmsl':
@@ -586,7 +585,7 @@ class ittt(object):
                         if ph is not None:
                             info = [[
                                 u' ', ph[u'namestr'] + u' - Pilot',
-                                ph[u'ucicode']
+                                ph[u'uciid']
                             ]]
                 if teams:  # Team no hack
                     rno = u' '  # force name
@@ -611,8 +610,7 @@ class ittt(object):
                         rname = rh[u'first']
                         if teams:
                             info = []
-                            for trno in strops.reformat_riderlist(
-                                    rh[u'note']).split():
+                            for trno in strops.riderlist_split(rh[u'note']):
                                 trh = self.meet.newgetrider(trno)  #!! SERIES?
                                 if trh is not None:
                                     info.append([trno, trh[u'namestr'], None])
@@ -622,7 +620,7 @@ class ittt(object):
                         if ph is not None:
                             info = [[
                                 u' ', ph[u'namestr'] + u' - Pilot',
-                                ph[u'ucicode']
+                                ph[u'uciid']
                             ]]
                 if u't' in self.series:  # Team no hack
                     rno = u' '  # force name
@@ -904,26 +902,27 @@ class ittt(object):
 
     def result_gen(self):
         """Generator function to export a final result."""
-        for r in self.riders:
-            bib = r[COL_BIB].decode(u'utf-8')
-            rank = None
-            time = None
-            info = None
-            cmts = r[COL_COMMENT].decode(u'utf-8')
-            if cmts in [u'caught', u'rel', u'w/o']:
-                info = cmts
-            if self.onestart:
-                pls = r[COL_PLACE].decode(u'utf-8')
-                if pls:
-                    if pls.isdigit():
-                        rank = int(pls)
-                    else:
-                        rank = pls
-                if r[COL_FINISH] is not None:
-                    time = (r[COL_FINISH] - r[COL_START]).truncate(
-                        self.precision)
+        if self.final:
+            for r in self.riders:
+                bib = r[COL_BIB].decode(u'utf-8')
+                rank = None
+                time = None
+                info = None
+                cmts = r[COL_COMMENT].decode(u'utf-8')
+                if cmts in [u'caught', u'rel', u'w/o']:
+                    info = cmts
+                if self.onestart:
+                    pls = r[COL_PLACE].decode(u'utf-8')
+                    if pls:
+                        if pls.isdigit():
+                            rank = int(pls)
+                        else:
+                            rank = pls
+                    if r[COL_FINISH] is not None:
+                        time = (r[COL_FINISH] - r[COL_START]).truncate(
+                            self.precision)
 
-            yield [bib, rank, time, info]
+                yield [bib, rank, time, info]
 
     def result_report(self, recurse=False):
         """Return a list of report sections containing the race result."""
@@ -963,14 +962,14 @@ class ittt(object):
                 ph = self.meet.newgetrider(rh[u'note'], self.series)
                 if ph is not None:
                     plink = [
-                        u'', u'', ph[u'namestr'] + u' - Pilot', ph[u'ucicode'],
+                        u'', u'', ph[u'namestr'] + u' - Pilot', ph[u'uciid'],
                         u'', u'', u''
                     ]
             if self.event[u'cate']:
                 if rh[u'cat']:
                     rcat = rh[u'cat']
-            if rh[u'ucicode']:
-                rcat = rh[u'ucicode']  # overwrite by force
+            if rh[u'uciid']:
+                rcat = rh[u'uciid']  # overwrite by force
             info = None
             dtime = None
             if self.onestart:
@@ -998,16 +997,16 @@ class ittt(object):
             sec.lines.append([rank, rno, rname, rcat, rtime, dtime, plink])
             # then add team members if relevant
             if u't' in self.series:
-                for trno in strops.reformat_riderlist(rh[u'note']).split():
+                for trno in strops.riderlist_split(rh[u'note']):
                     trh = self.meet.newgetrider(trno)  #!! SERIES?
                     if trh is not None:
                         trname = trh[u'namestr']
-                        trinf = trh[u'ucicode']
+                        trinf = trh[u'uciid']
                         sec.lines.append(
                             [None, trno, trname, trinf, None, None, None])
         sv = []
         if substr:
-            sv.append(sv)
+            sv.append(substr)
         if self.onestart:
             if rcount > 0 and pcount < rcount:
                 sv.append(u'STANDINGS')
@@ -1022,7 +1021,7 @@ class ittt(object):
             sec = report.bullet_text()
             sec.heading = u'Decisions of the commissaires panel'
             for c in self.comments:
-                sec.lines.append([None, self.comment])
+                sec.lines.append([None, c])
             ret.append(sec)
 
         return ret
@@ -1231,9 +1230,10 @@ class ittt(object):
             self.timerstat = u'running'
         self.onestart = True
         if self.timetype == u'single':
-            if self.timerwin and type(self.meet.scbwin) is scbwin.scbtt:
-                glib.timeout_add_seconds(3, self.show_200_ttb,
-                                         self.meet.scbwin)
+            pass
+            #if self.timerwin and type(self.meet.scbwin) is scbwin.scbtt:
+            #glib.timeout_add_seconds(3, self.show_200_ttb,
+            #self.meet.scbwin)
 
     def clearplaces(self):
         """Clear rider places."""
@@ -1283,10 +1283,12 @@ class ittt(object):
             if t[0] > tod.FAKETIMES[u'max']:
                 if t[0] == tod.FAKETIMES[u'dsq']:
                     place = u'dsq'
+                elif t[0] == tod.FAKETIMES[u'caught']:
+                    place = self.results.rank(bib) + 1
                 elif t[0] == tod.FAKETIMES[u'ntr']:
                     place = u'ntr'
                 elif t[0] == tod.FAKETIMES[u'rel']:
-                    place = u'rel'
+                    place = place + 1
                 elif t[0] == tod.FAKETIMES[u'dns']:
                     place = u'dns'
                 elif t[0] == tod.FAKETIMES[u'dnf']:
@@ -1302,6 +1304,12 @@ class ittt(object):
                 count += 1
             else:
                 LOG.warning(u'Rider %r not found in model, check places', bib)
+        if count < len(self.riders):
+            LOG.debug('Event status is virtual')
+            self.final = False
+        else:
+            LOG.debug('Event status is final')
+            self.final = True
 
     def getiter(self, bib):
         """Return temporary iterator to model row."""
@@ -1733,6 +1741,9 @@ class ittt(object):
             if bib in self.traces:
                 # TODO: replace timy reprint with report
                 LOG.info(u'CREATE AND PRINT TRACE REPORT')
+                sec = report.preformat_text()
+                sec.lines = self.traces[bib]
+                self.meet.print_report([sec], 'Timing Trace')
 
     def now_button_clicked_cb(self, button, entry=None):
         """Set specified entry to the current time."""
@@ -1851,6 +1862,7 @@ class ittt(object):
         LOG.debug(u'Init %sevent %s', rstr, self.evno)
 
         # properties
+        self.final = False
         self.timetype = u'dual'
         self.distance = None
         self.units = u'laps'

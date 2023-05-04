@@ -159,7 +159,7 @@ class race(object):
                 #rh = self.meet.ridermap[self.series][bib]
                 #if rh is not None:
                 #club = rh[u'note']
-                club = u''
+                club = club[0:3]
             outriders.insert(0, [
                 unicode(rank) + u'.', bib,
                 strops.fitname(r[COL_FIRSTNAME].decode(u'utf-8'),
@@ -195,7 +195,7 @@ class race(object):
                         #rh = self.meet.ridermap[self.series][bib]
                         #if rh is not None:
                         #club = rh[u'note']
-                        club = u''
+                        club = club[0:3]
                     self.results.append([
                         unicode(rank) + u'.', bib,
                         strops.fitname(r[COL_FIRSTNAME].decode(u'utf-8'),
@@ -863,7 +863,7 @@ class race(object):
                         #rh = self.meet.ridermap[self.series][r[0]]
                         #if rh is not None:
                         #nfo = rh[u'note']
-                        nfo = u''
+                        nfo = nfo[0:3]
                 startlist.append([
                     r[COL_BIB].decode(u'utf-8'),
                     strops.fitname(r[COL_FIRSTNAME].decode(u'utf-8'),

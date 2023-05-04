@@ -1464,7 +1464,7 @@ class trtt(object):
                         dbr, riderdb.COL_FIRST).capitalize()
                     lastxtra = self.meet.rdb.getvalue(
                         dbr, riderdb.COL_LAST).upper()
-                    clubxtra = self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB)
+                    clubxtra = self.meet.rdb.getvalue(dbr, riderdb.COL_ORG)
                 yield [
                     start, bib, series, name, cat, firstxtra, lastxtra,
                     clubxtra
@@ -1600,13 +1600,13 @@ class trtt(object):
                 nr[COL_NAMESTR] = strops.listname(
                     self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
                     self.meet.rdb.getvalue(dbr, riderdb.COL_LAST),
-                    self.meet.rdb.getvalue(dbr, riderdb.COL_CLUB))
+                    self.meet.rdb.getvalue(dbr, riderdb.COL_ORG))
                 nr[COL_SHORTNAME] = strops.listname(
                     self.meet.rdb.getvalue(dbr, riderdb.COL_FIRST),
                     self.meet.rdb.getvalue(dbr, riderdb.COL_LAST))
                 nr[COL_CAT] = self.meet.rdb.getvalue(dbr, riderdb.COL_CAT)
-                nr[COL_TEAM] = self.meet.rdb.getvalue(
-                    dbr, riderdb.COL_CLUB).upper()
+                nr[COL_TEAM] = self.meet.rdb.getvalue(dbr,
+                                                      riderdb.COL_ORG).upper()
             return self.riders.append(nr)
         else:
             return None

@@ -116,17 +116,6 @@ key_clearplace = u'F8'  # clear rider from place list
 EVENT_ID = u'roadrace-3.1'
 
 
-def key_callup(x):
-    seed = 9999
-    if x[2] > 0:
-        seed = x[2]
-    return (seed, strops.riderno_key(x[1]))
-
-
-def key_startlist(x):
-    return strops.riderno_key(x[1])
-
-
 class rms(object):
     """Road race handler."""
 
@@ -757,15 +746,22 @@ class rms(object):
         self.calcset = False
         aux = []
         cnt = 0
-        for r in self.riders:
-            aux.append((cnt, r[COL_BIB], r[COL_SEED]))
-            cnt += 1
+        if callup:
+            for r in self.riders:
+                rseed = 9999
+                if r[COL_SEED] > 0:
+                    rseed = r[COL_SEED]
+                riderno = strops.riderno_key(r[COL_BIB])
+                aux.append((rseed, riderno, cnt))
+                cnt += 1
+        else:
+            for r in self.riders:
+                riderno = strops.riderno_key(r[COL_BIB])
+                aux.append((riderno, 0, cnt))
+                cnt += 1
         if len(aux) > 1:
-            if callup:
-                aux.sort(key=key_callup)
-            else:
-                aux.sort(key=key_startlist)
-            self.riders.reorder([a[0] for a in aux])
+            aux.sort()
+            self.riders.reorder([a[2] for a in aux])
         return cnt
 
     def signon_report(self):

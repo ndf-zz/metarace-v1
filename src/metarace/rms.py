@@ -1060,8 +1060,9 @@ class rms(object):
                 rbib = r[COL_BIB].decode(u'utf-8')
                 rcat = r[COL_CAT].decode(u'utf-8')
                 ecat = self.ridercat(riderdb.primary_cat(rcat))
-                catstart = tod.ZERO
-                if ecat in self.catstarts:
+                catstart = None
+                #catstart = tod.ZERO
+                if ecat in self.catstarts and self.event[u'type'] != u'cross':
                     catstart = self.catstarts[ecat]
                 laplist = []
                 if r[COL_RFTIME] is not None:

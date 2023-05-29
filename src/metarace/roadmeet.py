@@ -401,7 +401,8 @@ class roadmeet(object):
         if self.distance is not None:
             di_ent.set_text(str(self.distance))
         dis_ent = b.get_object(u'diststr_entry')
-        dis_ent.set_text(self.diststr)
+        if self.diststr is not None:
+            dis_ent.set_text(self.diststr)
         ate = b.get_object(u'announce_topic_entry')
         if self.anntopic is not None:
             ate.set_text(self.anntopic)

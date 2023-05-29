@@ -127,16 +127,6 @@ def key_startlist(x):
     return strops.riderno_key(x[1])
 
 
-def sort_tally(x, y):
-    """Points tally sort using countback struct."""
-    if x[0] == y[0]:
-        return cmp(y[3], x[3])
-    elif y[0] < x[0]:
-        return -1
-    else:
-        return 1
-
-
 class rms(object):
     """Road race handler."""
 
@@ -729,20 +719,17 @@ class rms(object):
             for bib in self.points[tally]:
                 r = self.getrider(bib)
                 tallytot += self.points[tally][bib]
-                aux.append([
-                    self.points[tally][bib],
-                    strops.riderno_key(bib),
-                    [
-                        None, r[COL_BIB], r[COL_NAMESTR],
-                        strops.truncpad(str(self.pointscb[tally][bib]),
-                                        10,
-                                        ellipsis=False), None,
-                        str(self.points[tally][bib])
-                    ], self.pointscb[tally][bib]
-                ])
-            aux.sort(sort_tally)
+                aux.append((self.points[tally][bib], self.pointscb[tally][bib],
+                            -strops.riderno_key(bib), [
+                                None, r[COL_BIB], r[COL_NAMESTR],
+                                strops.truncpad(str(self.pointscb[tally][bib]),
+                                                10,
+                                                ellipsis=False), None,
+                                str(self.points[tally][bib])
+                            ]))
+            aux.sort(reverse=True)
             for r in aux:
-                sec.lines.append(r[2])
+                sec.lines.append(r[3])
             _log.debug(u'Total points for %r: %r', tally, tallytot)
             ret.append(sec)
 
@@ -753,15 +740,11 @@ class rms(object):
             aux = []
             for bib in self.bonuses:
                 r = self.getrider(bib)
-                aux.append([
-                    self.bonuses[bib],
-                    strops.riderno_key(bib),
-                    [
-                        None, r[COL_BIB], r[COL_NAMESTR], None, None,
-                        str(int(self.bonuses[bib].truncate(0).timeval))
-                    ], 0, 0, 0
-                ])
-            aux.sort(sort_tally)
+                aux.append((self.bonuses[bib], -strops.riderno_key(bib), [
+                    None, r[COL_BIB], r[COL_NAMESTR], None, None,
+                    str(int(self.bonuses[bib].truncate(0).timeval))
+                ]))
+            aux.sort(reverse=True)
             for r in aux:
                 sec.lines.append(r[2])
             ret.append(sec)
@@ -775,7 +758,7 @@ class rms(object):
         aux = []
         cnt = 0
         for r in self.riders:
-            aux.append([cnt, r[COL_BIB], r[COL_SEED]])
+            aux.append((cnt, r[COL_BIB], r[COL_SEED]))
             cnt += 1
         if len(aux) > 1:
             if callup:
@@ -3267,92 +3250,6 @@ class rms(object):
             self.points[c] = {}
             self.pointscb[c] = {}
 
-    def sortrough(self, x, y):
-        """Pre-sort riders based on class, place, laps then time."""
-        # Note: this considers rftime fractions of a second to pre-order
-        #       unclassified riders on the same lap by rough arrival at finish
-        if x[2] != y[2]:  # in the race?
-            if x[2]:
-                return -1
-            else:
-                return 1
-        else:
-            if x[3] != y[3]:  # place
-                if y[3] == u'':
-                    return -1
-                elif x[3] == u'':
-                    return 1
-                elif int(x[3]) < int(y[3]):
-                    return -1
-                else:
-                    return 1
-            else:
-                if x[5] == y[5]:  # lap count
-                    if x[4] == y[4]:  # finish time
-                        return cmp(x[6], y[6])  # last passing
-                    else:
-                        if y[4] is None:
-                            return -1
-                        elif x[4] is None:
-                            return 1
-                        elif x[4] < y[4]:
-                            return -1
-                        else:
-                            return 1
-                else:
-                    if x[5] > y[5]:
-                        return -1
-                    else:
-                        return 1
-        return 0
-
-    def sortvbunch(self, x, y):
-        """Re-sort result after application of bunch times and comments."""
-        # Note: unlike sortrough above, this considers unclassified riders
-        #       with the same laps and time as equal
-        if x[2] != y[2]:
-            if x[2]:
-                return -1
-            else:
-                return 1
-        else:
-            if x[2]:
-                # both in the event
-                if x[3] != y[3]:  # places not same?
-                    if y[3] == u'':
-                        return -1
-                    elif x[3] == u'':
-                        return 1
-                    if int(x[3]) < int(y[3]):
-                        return -1
-                    else:
-                        return 1
-                else:
-                    if x[6] == y[6]:  # same laps?
-                        if x[4] == y[4]:  # same time?
-                            return 0
-                        else:
-                            if y[4] is None:
-                                return -1
-                            elif x[4] is None:
-                                return 1
-                            elif x[4] < y[4]:
-                                return -1
-                            else:
-                                return 1
-                    else:
-                        return cmp(y[6], x[6])
-            else:
-                # both not in event
-                if x[5] != y[5]:
-                    # sort by dnf code
-                    return strops.cmp_dnf(x[5], y[5])
-                else:
-                    # fall back to a sort by rider no
-                    return cmp(strops.riderno_key(x[1]),
-                               strops.riderno_key(y[1]))
-        return 0
-
     def vbunch(self, cbunch=None, mbunch=None):
         """Switch to return best choice bunch time."""
         ret = None
@@ -3721,45 +3618,51 @@ class rms(object):
         return ret
 
     def _recalc(self):
-        """Internal 'protected' recalculate function."""
+        """Internal recalculate function."""
         # if readonly and calc set - skip recalc
         if self.readonly and self.calcset:
             _log.debug(u'Cached Recalculate')
             return False
 
         _log.debug(u'Recalculate model')
-        # pass one: clear off old places and bonuses
+        # clear off old places and bonuses
         self.resetplaces()
 
-        # pass two: assign places
+        # assign places
         self.assign_finish()
         for c in self.contests:
             self.assign_places(c)
 
-        # pass three: do rough sort on in, place, rftime -> existing
+        # do rough sort on in, place, laps, rftime, lastpass
         auxtbl = []
         idx = 0
         for r in self.riders:
             rbib = r[COL_BIB].decode(u'utf-8')
             rplace = r[COL_PLACE].decode(u'utf-8')
             rftime = r[COL_RFTIME]
-            lastpass = tod.ZERO  # earliest?
+            rlaps = r[COL_LAPS]
+            lastpass = tod.ZERO
             if len(r[COL_RFSEEN]) > 0:
                 lastpass = r[COL_RFSEEN][-1]
                 # in cross scoring, rftime is same as last passing
                 if self.event[u'type'] == u'cross':
                     rftime = lastpass
-            # aux cols: ind, bib, in, place, rftime, laps, last passing
-            auxtbl.append([
-                idx, rbib, r[COL_INRACE], rplace, rftime, r[COL_LAPS], lastpass
-            ])
+            if not rplace or not r[COL_INRACE]:
+                rplace = r[COL_COMMENT].decode(u'utf-8')
+            if not r[COL_INRACE]:
+                rlaps = 0
+                rftime = tod.MAX
+                lastpass = tod.MAX
+            auxtbl.append(
+                (not r[COL_INRACE], strops.dnfcode_key(rplace), -rlaps, rftime,
+                 lastpass, strops.riderno_key(rbib), idx))
             idx += 1
         if len(auxtbl) > 1:
-            auxtbl.sort(self.sortrough)
-            self.riders.reorder([a[0] for a in auxtbl])
+            auxtbl.sort()
+            self.riders.reorder([a[6] for a in auxtbl])
 
-        # pass four: compute cbunch values on auto time gaps and manual inputs
-        #            At this point all riders are assumed to be in finish order
+        # compute cbunch values on auto time gaps and manual inputs
+        # At this point all riders are assumed to be in finish order
         self.maxfinish = tod.ZERO
         racefinish = None
         ft = None  # the finish or first bunch time
@@ -3822,26 +3725,30 @@ class rms(object):
         if racefinish:
             self.set_finish(racefinish)
 
-        # pass five: resort on in,vbunch (not valid for cross scoring)
-        #            at this point all riders will have valid bunch time
+        # re-sort on in,vbunch (not valid for cross scoring)
+        # at this point all riders will have valid bunch time
         if self.event[u'type'] != u'cross':
             auxtbl = []
             idx = 0
             for r in self.riders:
                 # aux cols: ind, bib, in, place, vbunch
                 rbib = r[COL_BIB].decode(u'utf-8')
-                rcomment = r[COL_COMMENT].decode(u'utf-8')
-                auxtbl.append([
-                    idx, rbib, r[COL_INRACE], r[COL_PLACE],
-                    self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH]), rcomment,
-                    r[COL_LAPS]
-                ])
+                rplace = r[COL_PLACE].decode(u'utf-8')
+                rlaps = r[COL_LAPS]
+                rbunch = self.vbunch(r[COL_CBUNCH], r[COL_MBUNCH])
+                if not rplace or not r[COL_INRACE]:
+                    rplace = r[COL_COMMENT].decode(u'utf-8')
+                if not r[COL_INRACE]:
+                    rlaps = 0
+                    rbunch = tod.MAX
+                auxtbl.append((not r[COL_INRACE], strops.dnfcode_key(rplace),
+                               -rlaps, rbunch, idx))
                 idx += 1
             if len(auxtbl) > 1:
-                auxtbl.sort(self.sortvbunch)
-                self.riders.reorder([a[0] for a in auxtbl])
+                auxtbl.sort()
+                self.riders.reorder([a[4] for a in auxtbl])
 
-        # Pass six - Scan model to determine racestat and time limits
+        # Scan model to determine racestat and time limits
         if self.timerstat != u'idle':
             limit = None
             if ft is not None and self.timelimit is not None:

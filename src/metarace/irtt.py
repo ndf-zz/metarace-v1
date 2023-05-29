@@ -118,27 +118,6 @@ def unjsob(inmap):
     return ret
 
 
-def sort_tally(x, y):
-    """Points tally sort using countback struct."""
-    if x[0] == y[0]:
-        return cmp(y[3], x[3])
-    elif y[0] < x[0]:
-        return -1
-    else:
-        return 1
-
-
-def sort_dnfs(x, y):
-    """Sort dnf riders by code and riderno."""
-    if x[2] == y[2]:  # same code
-        if x[2]:
-            return cmp(strops.bibstr_key(x[1]), strops.bibstr_key(y[1]))
-        else:
-            return 0  # don't alter order on unplaced riders
-    else:
-        return strops.cmp_dnf(x[2], y[2])
-
-
 class irtt(object):
     """Data handling for road time trial."""
 
@@ -1008,40 +987,33 @@ class irtt(object):
             self.saveconfig()
         self.winopen = False
 
-    def key_riderno(self, r):
-        if r[1] is not None:
-            return strops.riderno_key(r[1])
-        else:
-            return 86400  # maxval
-
-    def key_starttime(self, r):
-        if r[1] is not None:
-            return int(r[1].truncate(0).timeval)
-        else:
-            return 86400  # maxval
-
     def reorder_signon(self):
         """Reorder riders for a sign on."""
         aux = []
         cnt = 0
         for r in self.riders:
-            aux.append([cnt, r[COL_BIB]])
+            riderno = strops.riderno_key(r[COL_BIB])
+            aux.append((riderno, cnt))
             cnt += 1
         if len(aux) > 1:
-            aux.sort(key=self.key_riderno)
-            self.riders.reorder([a[0] for a in aux])
+            aux.sort()
+            self.riders.reorder([a[1] for a in aux])
         return cnt
 
-    def reorder_startlist(self):
+    def reorder_startlist(self, callup=False):
         """Reorder riders for a startlist."""
         aux = []
         cnt = 0
         for r in self.riders:
-            aux.append([cnt, r[COL_WALLSTART]])
+            st = tod.MAX
+            if r[COL_WALLSTART] is not None:
+                st = int(r[COL_WALLSTART].truncate(0).timeval)
+            riderno = strops.riderno_key(r[COL_BIB])
+            aux.append((st, riderno, cnt))
             cnt += 1
         if len(aux) > 1:
-            aux.sort(key=self.key_starttime)
-            self.riders.reorder([a[0] for a in aux])
+            aux.sort()
+            self.riders.reorder([a[2] for a in aux])
         return cnt
 
     def signon_report(self):
@@ -1162,68 +1134,15 @@ class irtt(object):
             ret.append(sec)
         return ret
 
-    def sort_arrival(self, model, i1, i2, data=None):
-        """Sort model by all arrivals."""
-        v1 = model.get_value(i1, COL_ETA)
-        v2 = model.get_value(i2, COL_ETA)
-        if v1 is not None and v2 is not None:
-            return cmp(v1, v2)
-        else:
-            if v1 is None and v2 is None:
-                return 0  # same
-            else:  # nones are filtered in list traversal
-                if v1 is None:
-                    return 1
-                else:
-                    return -1
-
-    def sort_finishtod(self, model, i1, i2, data=None):
-        """Sort model on finish tod, then start time."""
-        t1 = model.get_value(i1, COL_TODFINISH)
-        t2 = model.get_value(i2, COL_TODFINISH)
-        if t1 is not None and t2 is not None:
-            return cmp(t1, t2)
-        else:
-            if t1 is None and t2 is None:
-                # go by wall start
-                s1 = model.get_value(i1, COL_WALLSTART)
-                s2 = model.get_value(i2, COL_WALLSTART)
-                if s1 is not None and s2 is not None:
-                    return cmp(s1, s2)
-                else:
-                    if s1 is None and s2 is None:
-                        return 0
-                    elif s1 is None:
-                        return 1
-                    else:
-                        return -1
-            else:
-                if t1 is None:
-                    return 1
-                else:
-                    return -1
-
     def arrival_report(self, limit=0):
         """Return an arrival report."""
-        ret = []
-        cmod = gtk.TreeModelSort(self.riders)
-        cmod.set_sort_func(COL_TODFINISH, self.sort_arrival)
-        cmod.set_sort_column_id(COL_TODFINISH, gtk.SORT_ASCENDING)
-        sec = report.section(u'arrivals')
-        intlbl = None
-        if self.showinter is not None:
-            intlbl = u'Inter'
-        if len(self.inters) > 0:
-            sec.heading = u'Riders On Course'
-            sec.footer = u'* denotes projected finish time.'
-        else:
-            sec.heading = u'Recent Arrivals'
-        # this is probably not required until intermeds available
-
-        sec.colheader = [None, None, None, intlbl, u'Finish', u'Avg']
-        sec.lines = []
+        # build aux table
+        aux = []
         nowtime = tod.now()
-        for r in cmod:
+        count = 0
+        for r in self.riders:
+            reta = tod.MAX
+            rarr = tod.MAX
             plstr = r[COL_PLACE]
             bstr = r[COL_BIB].decode('utf-8')
             nstr = r[COL_NAMESTR].decode('utf-8')
@@ -1239,7 +1158,9 @@ class irtt(object):
                 ## only show for a short while
                 until = r[COL_TODFINISH] + ARRIVALTIMEOUT
                 if nowtime < until:
+                    rarr = r[COL_TODFINISH]
                     et = self.getelapsed(i)
+                    reta = et
                     ets = et.rawtime(self.precision)
                     rankstr = u'(' + plstr + u'.)'
                     speedstr = u''
@@ -1255,6 +1176,7 @@ class irtt(object):
                     nstr += (u' @ km' + unicode(r[COL_PASS]))
                 # projected finish time
                 ets = u'*' + r[COL_ETA].rawtime(self.precision)
+                reta = r[COL_ETA]
 
             if self.showinter is not None and self.showinter in self.ischem and self.ischem[
                     self.showinter] is not None:
@@ -1277,12 +1199,29 @@ class irtt(object):
 
             if not noshow:
                 if ets or speedstr:  # only add riders with an estimate
-                    sec.lines.append(
-                        [rankstr, bstr, nstr, turnstr, ets, speedstr])
+                    aux.append((rarr, reta, count,
+                                [rankstr, bstr, nstr, turnstr, ets, speedstr]))
+                    count += 1
 
+        # reorder by arrival times
+        aux.sort()
+
+        # transfer rows into report section and return
+        sec = report.section(u'arrivals')
+        intlbl = None
+        if self.showinter is not None:
+            intlbl = u'Inter'
+        if len(self.interloops) > 0:
+            sec.heading = u'Riders On Course'
+            sec.footer = u'* denotes projected finish time.'
+        else:
+            sec.heading = u'Recent Arrivals'
+        sec.colheader = [None, None, None, intlbl, u'Finish', u'Avg']
+        for r in aux:
+            hr = r[3]
+            sec.lines.append(hr)
+        ret = []
         if len(sec.lines) > 0:
-            #if limit > 0 and len(sec.lines) > limit:
-            #sec.lines = sec.lines[0:limit]
             ret.append(sec)
         return ret
 
@@ -1292,52 +1231,66 @@ class irtt(object):
 
     def camera_report(self):
         """Return a judges report."""
-        ret = []
-        cmod = gtk.TreeModelSort(self.riders)
-        cmod.set_sort_func(COL_TODFINISH, self.sort_finishtod)
-        cmod.set_sort_column_id(COL_TODFINISH, gtk.SORT_ASCENDING)
-        lcount = 0
-        count = 1
-        sec = report.section()
+
+        # build aux table
+        aux = []
+        count = 0
+        for r in self.riders:
+            if r[COL_COMMENT] or r[COL_TODFINISH] is not None:
+                # include on camera report
+                bstr = strops.bibser2bibstr(r[COL_BIB].decode('utf-8'),
+                                            r[COL_SERIES].decode('utf-8'))
+                riderno = strops.riderno_key(bstr)
+                rorder = strops.dnfcode_key(r[COL_COMMENT].decode('utf-8'))
+                nstr = r[COL_NAMESTR].decode('utf-8')
+                plstr = r[COL_PLACE].decode('utf-8')
+                rkstr = u''
+                if plstr and plstr.isdigit():
+                    rk = int(plstr)
+                    if rk < 6:  # annotate top 5 places
+                        rkstr = u' (' + plstr + u'.)'
+                sts = u'-'
+                if r[COL_TODSTART] is not None:
+                    sts = r[COL_TODSTART].rawtime(2)
+                elif r[COL_WALLSTART] is not None:
+                    sts = r[COL_WALLSTART].rawtime(0) + u'   '
+                fts = u'-'
+                ft = tod.MAX
+                if r[COL_TODFINISH] is not None:
+                    ft = r[COL_TODFINISH]
+                    fts = r[COL_TODFINISH].rawtime(2)
+
+                i = self.getiter(r[COL_BIB], r[COL_SERIES])
+                et = self.getelapsed(i)
+                ets = u'-'
+                unplaced = False
+                if et is not None:
+                    ets = et.rawtime(self.precision)
+                elif r[COL_COMMENT] != u'':
+                    rkstr = r[COL_COMMENT].decode('utf-8')
+                    unplaced = True
+                aux.append((rorder, ft, riderno, count, unplaced,
+                            [rkstr, bstr, nstr, sts, fts, ets]))
+
+        # reorder by arrival at finish
+        aux.sort()
+
+        # transfer to report section
+        count = 0
+        sec = report.section('analysis')
         sec.heading = u'Judges Report'
         sec.colheader = [u'Hit', None, None, u'Start', u'Fin', u'Net']
-
-        for r in cmod:
-            bstr = strops.bibser2bibstr(r[COL_BIB].decode('utf-8'),
-                                        r[COL_SERIES].decode('utf-8'))
-            nstr = r[COL_NAMESTR].decode('utf-8')
-            plstr = r[COL_PLACE].decode('utf-8')
-            rkstr = u''
-            if plstr and plstr.isdigit():
-                rk = int(plstr)
-                if rk < 6:  # annotate top 5 places
-                    rkstr = u'(' + plstr + u'.)'
-            sts = u'-'
-            if r[COL_TODSTART] is not None:
-                sts = r[COL_TODSTART].rawtime(2)
-            elif r[COL_WALLSTART] is not None:
-                sts = r[COL_WALLSTART].rawtime(0) + u'   '
-            fts = u'-'
-            if r[COL_TODFINISH] is not None:
-                fts = r[COL_TODFINISH].rawtime(2)
-            i = self.getiter(r[COL_BIB], r[COL_SERIES])
-            et = self.getelapsed(i)
-            ets = u'-'
-            hits = u''
-            if et is not None:
-                ets = et.rawtime(self.precision)
-                hits = unicode(count)
-                if rkstr:
-                    hits += u' ' + rkstr
-                count += 1
-            elif r[COL_COMMENT] != u'':
-                hits = r[COL_COMMENT].decode('utf-8')
-            sec.lines.append([hits, bstr, nstr, sts, fts, ets, rkstr])
-            lcount += 1
-            if lcount % 10 == 0:
+        for r in aux:
+            hr = r[5]
+            if not r[4]:
+                hr[0] = unicode(count + 1) + hr[0]
+            sec.lines.append(hr)
+            count += 1
+            if count % 10 == 0:
                 sec.lines.append([None, None, None])
-
-        ret.append(sec)
+        ret = []
+        if len(sec.lines) > 0:
+            ret.append(sec)
         return ret
 
     def points_report(self):
@@ -1346,51 +1299,45 @@ class irtt(object):
         aux = []
         cnt = 0
         for tally in self.tallys:
-            sec = report.section()
-            sec.heading = self.tallymap[tally][u'descr']
+            sec = report.section(u'points-' + tally)
+            sec.heading = tally.upper() + u' ' + self.tallymap[tally][u'descr']
             sec.units = u'pt'
             tallytot = 0
             aux = []
             for bib in self.points[tally]:
                 r = self.getrider(bib)
                 tallytot += self.points[tally][bib]
-                aux.append([
-                    self.points[tally][bib],
-                    strops.riderno_key(bib),
-                    [
-                        None, r[COL_BIB], r[COL_NAMESTR],
-                        strops.truncpad(str(self.pointscb[tally][bib]),
-                                        10,
-                                        elipsis=False), None,
-                        str(self.points[tally][bib])
-                    ], self.pointscb[tally][bib]
-                ])
-            aux.sort(sort_tally)
+                aux.append((self.points[tally][bib], self.pointscb[tally][bib],
+                            -strops.riderno_key(bib), [
+                                None, r[COL_BIB], r[COL_NAMESTR],
+                                strops.truncpad(str(self.pointscb[tally][bib]),
+                                                10,
+                                                ellipsis=False), None,
+                                str(self.points[tally][bib])
+                            ]))
+            aux.sort(reverse=True)
             for r in aux:
-                sec.lines.append(r[2])
-            sec.lines.append([None, None, None])
-            sec.lines.append([None, None, u'Total Points: ' + str(tallytot)])
+                sec.lines.append(r[3])
+            _log.debug(u'Total points for %r: %r', tally, tallytot)
             ret.append(sec)
 
         if len(self.bonuses) > 0:
-            sec = report.section()
+            sec = report.section(u'bonus')
             sec.heading = u'Stage Bonuses'
             sec.units = u'sec'
             aux = []
             for bib in self.bonuses:
                 r = self.getrider(bib)
-                aux.append([
-                    self.bonuses[bib],
-                    strops.riderno_key(bib),
-                    [
-                        None, r[COL_BIB], r[COL_NAMESTR], None, None,
-                        str(int(self.bonuses[bib].truncate(0).timeval))
-                    ], 0, 0, 0
-                ])
-            aux.sort(sort_tally)
+                aux.append((self.bonuses[bib], -strops.riderno_key(bib), [
+                    None, r[COL_BIB], r[COL_NAMESTR], None, None,
+                    str(int(self.bonuses[bib].truncate(0).timeval))
+                ]))
+            aux.sort(reverse=True)
             for r in aux:
                 sec.lines.append(r[2])
             ret.append(sec)
+        if len(ret) == 0:
+            _log.warning(u'No data available for points report')
         return ret
 
     def catresult_report(self):
@@ -2097,16 +2044,18 @@ class irtt(object):
         return False
 
     def clearplaces(self):
-        """Clear rider places."""
+        """Clear rider place makers and re-order out riders"""
         aux = []
         count = 0
         for r in self.riders:
             r[COL_PLACE] = r[COL_COMMENT]
-            aux.append([count, r[COL_BIB], r[COL_COMMENT]])
+            riderno = strops.riderno_key(r[COL_BIB])
+            rplace = strops.dnfcode_key(r[COL_COMMENT].decode(u'utf-8'))
+            aux.append((rplace, riderno, count))
             count += 1
         if len(aux) > 1:
-            aux.sort(sort_dnfs)
-            self.riders.reorder([a[0] for a in aux])
+            aux.sort()
+            self.riders.reorder([a[2] for a in aux])
 
     def getrider(self, bib, series=''):
         """Return temporary reference to model row."""
@@ -2215,9 +2164,10 @@ class irtt(object):
 
     def placexfer(self):
         """Transfer places into model."""
-        #note: clearplaces also transfers comments into rank col (dns,dnf)
         self.places = u''
         placelist = []
+        #note: clearplaces also transfers comments into rank col (dns,dnf)
+        #      and orders the unfinished riders
         self.clearplaces()
         count = 0
         for cat in self.cats:
@@ -2268,15 +2218,10 @@ class irtt(object):
             else:
                 i = self.getiter(r[COL_BIB], r[COL_SERIES])
                 r[COL_ETA] = self.geteta(i)
-                #_log.debug(u'Set ETA: ' + repr(r[COL_ETA]))
-                # if start set:
-                # transfer out finish time to ETA
-                # or use inters to establish ETA
             if r[COL_PLACE]:
                 placed += 1
         _log.debug(u'placed = ' + unicode(placed) + ', total = ' +
                    unicode(fullcnt))
-        _log.debug(u'place list = ' + repr(placelist))
         if placed > 0:
             if placed < fullcnt:
                 self.racestat = u'virtual'

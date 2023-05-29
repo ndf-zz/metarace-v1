@@ -23,8 +23,8 @@ from metarace import timerpane
 from metarace import report
 from metarace import jsonconfig
 
-LOG = logging.getLogger(u'metarace.ittt')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.ittt')
+_log.setLevel(logging.DEBUG)
 
 # config version string
 EVENT_ID = u'ittt-2.0'
@@ -193,9 +193,9 @@ class ittt(object):
             elif self.units == u'laps':
                 event_d = track_n * float(self.distance) / track_d
         except Exception as e:
-            LOG.warning(u'Unable to setup split points: %s', e)
+            _log.warning(u'Unable to setup split points: %s', e)
         if event_d is not None and track_l is not None:
-            LOG.debug(u'Track lap=%0.1f, Event dist=%0.1f', track_l, event_d)
+            _log.debug(u'Track lap=%0.1f, Event dist=%0.1f', track_l, event_d)
             # add a dummy entry for the finish passing
             splitid = u'{0:0.0f}m'.format(event_d)
             self.splitlist.insert(0, splitid)
@@ -213,12 +213,12 @@ class ittt(object):
                 else:
                     break
                 count += 1
-            LOG.debug(u'Configured %r splits: %r', len(self.splitlist),
-                      self.splitlist)
+            _log.debug(u'Configured %r splits: %r', len(self.splitlist),
+                       self.splitlist)
             self.fs.splitlbls = self.splitlist
             self.bs.splitlbls = self.splitlist
         else:
-            LOG.debug(u'Split points not available')
+            _log.debug(u'Split points not available')
 
     def loadconfig(self):
         """Load race config from disk."""
@@ -280,9 +280,9 @@ class ittt(object):
                 with open(self.configfile, 'rb') as f:
                     cr.read(f)
             except Exception as e:
-                LOG.error(u'Unable to read config: %s', e)
+                _log.error(u'Unable to read config: %s', e)
         else:
-            LOG.info(u'%r not found, loading defaults', self.configfile)
+            _log.info(u'%r not found, loading defaults', self.configfile)
 
         self.chan_S = strops.confopt_chan(cr.get(u'event', u'chan_S'),
                                           defchans)
@@ -299,8 +299,8 @@ class ittt(object):
             self.units = u'laps'
             self.distance = strops.confopt_posint(self.event[u'laps'],
                                                   self.distance)
-            LOG.debug(u'Event distance set by program entry: %r laps',
-                      self.distance)
+            _log.debug(u'Event distance set by program entry: %r laps',
+                       self.distance)
         # re-initialise split data for the event
         if not self.readonly:
             self.setup_splits()
@@ -357,7 +357,7 @@ class ittt(object):
         if self.series and u't' in self.series:
             self.teamnames = True
             if u'pursuit' in self.evtype:
-                LOG.debug(u'Forced precision 2 for team pursuit')
+                _log.debug(u'Forced precision 2 for team pursuit')
                 self.precision = 2
         self.placexfer()
 
@@ -394,12 +394,12 @@ class ittt(object):
         # After load complete - check config and report.
         eid = cr.get(u'event', u'id')
         if eid and eid != EVENT_ID:
-            LOG.info(u'Event config mismatch: %r != %r', eid, EVENT_ID)
+            _log.info(u'Event config mismatch: %r != %r', eid, EVENT_ID)
 
     def saveconfig(self):
         """Save race to disk."""
         if self.readonly:
-            LOG.error(u'Attempt to save readonly event')
+            _log.error(u'Attempt to save readonly event')
             return
         cw = jsonconfig.config()
         cw.add_section(u'event')
@@ -464,7 +464,7 @@ class ittt(object):
                 cw.set(u'splits', rno, rs)
 
         cw.set(u'event', u'id', EVENT_ID)
-        LOG.debug(u'Saving event config %r', self.configfile)
+        _log.debug(u'Saving event config %r', self.configfile)
         with metarace.savefile(self.configfile) as f:
             cw.write(f)
 
@@ -786,7 +786,7 @@ class ittt(object):
         rstr = u''
         if self.readonly:
             rstr = u'readonly '
-        LOG.debug(u'Shutdown %sevent %s: %s', rstr, self.evno, msg)
+        _log.debug(u'Shutdown %sevent %s: %s', rstr, self.evno, msg)
         if not self.readonly:
             self.saveconfig()
         self.winopen = False
@@ -794,7 +794,7 @@ class ittt(object):
     def do_properties(self):
         """Run race properties dialog."""
         prfile = os.path.join(metarace.UI_PATH, u'ittt_properties.ui')
-        LOG.debug(u'Building event properties from %r', prfile)
+        _log.debug(u'Building event properties from %r', prfile)
         b = gtk.Builder()
         b.add_from_file(prfile)
         dlg = b.get_object(u'properties')
@@ -848,15 +848,15 @@ class ittt(object):
             # if distance has changed, re-initialise split data
             newdistance = self.meet.get_distance(self.distance, self.units)
             if newdistance != olddistance:
-                LOG.debug(u'Event distance changed from %r to %r', olddistance,
-                          newdistance)
+                _log.debug(u'Event distance changed from %r to %r',
+                           olddistance, newdistance)
                 self.setup_splits()
 
             # disable autotime if splits are not known
             self.autotime = aa.get_active()
             if not self.splitlist:
                 self.autotime = False
-                LOG.info(u'No splits configured, autotime disabled.')
+                _log.info(u'No splits configured, autotime disabled.')
 
             self.chan_S = chs.get_active()
             self.chan_A = cha.get_active()
@@ -893,7 +893,7 @@ class ittt(object):
                     self.addrider(s)
             glib.idle_add(self.delayed_announce)
         else:
-            LOG.debug(u'Edit event properties cancelled')
+            _log.debug(u'Edit event properties cancelled')
 
         # if prefix is empty, grab input focus
         if not self.prefix_ent.get_text():
@@ -944,7 +944,7 @@ class ittt(object):
             rno = r[COL_BIB].decode(u'utf-8')
             rh = self.meet.newgetrider(rno, self.series)
             if rh is None:
-                LOG.warning(u'Rider info not found %r', rno)
+                _log.warning(u'Rider info not found %r', rno)
                 continue
 
             rank = None
@@ -1113,17 +1113,17 @@ class ittt(object):
             if self.splitlist and sp.split == len(self.splitlist) - 1:
                 prev = sp.getsplit(sp.split - 2)
             else:
-                LOG.warning(u'Rider %r manual finish with incorrect splits',
-                            sp.getrider())
+                _log.warning(u'Rider %r manual finish with incorrect splits',
+                             sp.getrider())
         if prev is None:
-            LOG.warning(u'Last lap data not available for %r', sp.getrider())
+            _log.warning(u'Last lap data not available for %r', sp.getrider())
 
         # update model with result
         ri = self.getiter(sp.getrider())
         if ri is not None:
             self.settimes(ri, self.curstart, t, prev, sp.splits)
         else:
-            LOG.warning(u'Rider not in model, finish time not stored')
+            _log.warning(u'Rider not in model, finish time not stored')
         self.log_elapsed(sp.getrider(), self.curstart, t, sp.get_sid(), prev)
 
         # then report to scb, announce and result
@@ -1162,7 +1162,7 @@ class ittt(object):
             if chan == self.chan_S:
                 self.torunning(e)
         elif self.timerstat == u'autotime':
-            LOG.warning(u'AUTOTIMER CALLBACK')
+            _log.warning(u'AUTOTIMER CALLBACK')
         elif self.timerstat == u'running':
             if chan == self.chan_A or (self.timetype == u'single'
                                        and self.chan_B):
@@ -1303,12 +1303,12 @@ class ittt(object):
                 self.riders.swap(self.riders.get_iter(count), i)
                 count += 1
             else:
-                LOG.warning(u'Rider %r not found in model, check places', bib)
+                _log.warning(u'Rider %r not found in model, check places', bib)
         if count < len(self.riders):
-            LOG.debug('Event status is virtual')
+            _log.debug('Event status is virtual')
             self.final = False
         else:
-            LOG.debug('Event status is final')
+            _log.debug('Event status is final')
             self.final = True
 
     def getiter(self, bib):
@@ -1360,7 +1360,7 @@ class ittt(object):
                                                            bib,
                                                            prec=self.precision)
                 else:
-                    LOG.info(u'Unknown split %r for rider %r', sid, bib)
+                    _log.info(u'Unknown split %r for rider %r', sid, bib)
 
         # copy annotation into model if provided, or clear
         if comment:
@@ -1378,7 +1378,8 @@ class ittt(object):
             self.splitmap[sid][u'data'].insert(st, None, bib)
             ret = self.splitmap[sid][u'data'].rank(bib)
         else:
-            LOG.debug(u'No ranking for rider %r at unknown split %r', bib, sid)
+            _log.debug(u'No ranking for rider %r at unknown split %r', bib,
+                       sid)
         return ret
 
     def armstart(self):
@@ -1391,13 +1392,13 @@ class ittt(object):
     def disable_autotime(self):
         """Cancel a running autotime for manual intervention."""
         if self.timerstat == u'autotime':
-            LOG.error(u'DISABLE AUTOTIMER')
+            _log.error(u'DISABLE AUTOTIMER')
             self.timerstat = u'running'
 
     def armlap(self, sp, cid):
         """Arm timer for a manual lap split."""
         if self.timerstat == u'autotime':
-            LOG.info(u'Autotime disabled by manual intervention.')
+            _log.info(u'Autotime disabled by manual intervention.')
             self.disable_autotime()
         if self.timerstat == u'running':
             if sp.getstatus() in [u'caught', u'running']:
@@ -1406,8 +1407,8 @@ class ittt(object):
                 if sp.split < len(self.splitlist) - 1:
                     sp.toarmint()
                 else:
-                    LOG.info(u'Rider %r approaching last lap, armfinish',
-                             sp.getrider())
+                    _log.info(u'Rider %r approaching last lap, armfinish',
+                              sp.getrider())
                     sp.toarmfin()
                 self.meet.main_timer.arm(cid)
             elif sp.getstatus() == u'armint':
@@ -1439,7 +1440,7 @@ class ittt(object):
         """Selected lane has caught other rider."""
         if not self.difftime:
             # heat is not terminated by catch of rider, just log details
-            LOG.info(u'Rider %r catch ignored', sp.getrider())
+            _log.info(u'Rider %r catch ignored', sp.getrider())
         elif self.timetype != u'single':
             op = self.t_other(sp)
             if op.getstatus() not in [u'idle', u'finish']:
@@ -1472,7 +1473,7 @@ class ittt(object):
                 # but continue by default - manual abort to override.
             glib.idle_add(self.delayed_announce)
         else:
-            LOG.warning(u'Unable to catch with single rider')
+            _log.warning(u'Unable to catch with single rider')
 
     def falsestart(self):
         """Register false start."""
@@ -1502,7 +1503,7 @@ class ittt(object):
     def armfinish(self, sp, cid):
         """Arm timer for finish trigger."""
         if self.timerstat == u'autotime':
-            LOG.info(u'Autotime disabled by manual intervention.')
+            _log.info(u'Autotime disabled by manual intervention.')
             self.disable_autotime()
         if self.timerstat == u'running':
             if sp.getstatus() in [u'running', u'caught', u'finish']:
@@ -1649,7 +1650,7 @@ class ittt(object):
         r = self.getrider(bib)
         if r is None:
             if self.meet.get_clubmode():
-                LOG.info(u'Adding non-starter: %r', bib)
+                _log.info(u'Adding non-starter: %r', bib)
                 self.addrider(bib)
                 r = self.getrider(bib)
             else:  # 'champs' mode
@@ -1671,14 +1672,14 @@ class ittt(object):
                 if tp.status == u'idle':
                     tp.toload()
                 if self.timerstat == u'autotime':
-                    LOG.info(u'HANDLE JOIN OF TIMER AFTER AUTOTIME START')
+                    _log.info(u'HANDLE JOIN OF TIMER AFTER AUTOTIME START')
                     tp.start(self.curstart)
                 if self.timerstat == u'running':
                     tp.start(self.curstart)
                 if self.timetype != u'single':
                     self.t_other(tp).grab_focus()
             else:
-                LOG.warning(u'Ignoring non-starter: %r', bib)
+                _log.warning(u'Ignoring non-starter: %r', bib)
                 tp.toidle()
         else:
             tp.toidle()
@@ -1740,7 +1741,7 @@ class ittt(object):
             bib = self.riders.get_value(sel[1], COL_BIB).decode(u'utf-8')
             if bib in self.traces:
                 # TODO: replace timy reprint with report
-                LOG.info(u'CREATE AND PRINT TRACE REPORT')
+                _log.info(u'CREATE AND PRINT TRACE REPORT')
                 sec = report.preformat_text()
                 sec.lines = self.traces[bib]
                 self.meet.print_report([sec], 'Timing Trace')
@@ -1776,9 +1777,9 @@ class ittt(object):
                 else:
                     self.settimes(i)  # clear times
                     self.log_clear(bib)
-                LOG.info(u'Race times manually adjusted for rider %r', bib)
+                _log.info(u'Race times manually adjusted for rider %r', bib)
             else:
-                LOG.debug(u'Edit race times cancelled')
+                _log.debug(u'Edit race times cancelled')
             glib.idle_add(self.delayed_announce)
 
     def tod_context_del_activate_cb(self, menuitem, data=None):
@@ -1859,7 +1860,7 @@ class ittt(object):
         rstr = u''
         if self.readonly:
             rstr = u'readonly '
-        LOG.debug(u'Init %sevent %s', rstr, self.evno)
+        _log.debug(u'Init %sevent %s', rstr, self.evno)
 
         # properties
         self.final = False
@@ -1912,7 +1913,7 @@ class ittt(object):
             gobject.TYPE_PYOBJECT)  # 10 Splits
 
         uifile = os.path.join(metarace.UI_PATH, u'ittt.ui')
-        LOG.debug(u'Building event interface from %r', uifile)
+        _log.debug(u'Building event interface from %r', uifile)
         b = gtk.Builder()
         b.add_from_file(uifile)
 

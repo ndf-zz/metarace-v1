@@ -34,8 +34,8 @@ from metarace import strops
 from metarace import ucsv
 from metarace import namebank
 
-LOG = logging.getLogger(u'metarace.riderdb')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.riderdb')
+_log.setLevel(logging.DEBUG)
 
 # Model column constants (unkeyed csv)
 COL_BIB = 0
@@ -95,14 +95,14 @@ class riderdb(object):
 
     def clear(self):
         """Clear rider model."""
-        LOG.debug('Rider model cleared')
+        _log.debug('Rider model cleared')
         self.model.clear()
 
     def load_chipfile(self, csvfile=None):
         """Load refids from the named chipfile into to the riderdb."""
         count = 0
         if os.path.isfile(csvfile):
-            LOG.debug(u'Loading refids from %r', csvfile)
+            _log.debug(u'Loading refids from %r', csvfile)
             with open(csvfile, 'rb') as f:
                 cr = ucsv.UnicodeReader(f)
                 for row in cr:
@@ -123,14 +123,14 @@ class riderdb(object):
                                 self.editrider(ref=dbr, refid=nrefid)
                             count += 1
                         else:
-                            LOG.warning(u'Invalid rider %r', bib)
-            LOG.debug(u'Loaded %r refids from %r', count, csvfile)
+                            _log.warning(u'Invalid rider %r', bib)
+            _log.debug(u'Loaded %r refids from %r', count, csvfile)
 
     def load(self, csvfile=None, namedb=None, overwrite=False):
         """Load riders from supplied CSV file."""
         count = 0
         if os.path.isfile(csvfile):
-            LOG.debug(u'Loading riders from %r', csvfile)
+            _log.debug(u'Loading riders from %r', csvfile)
             with open(csvfile, 'rb') as f:
                 cr = ucsv.UnicodeReader(f)
                 for row in cr:
@@ -155,18 +155,18 @@ class riderdb(object):
                             if oldr is not None:
                                 # entry already exists, ignore or remove
                                 if overwrite:
-                                    LOG.info(u'Replaced %r', bibser)
+                                    _log.info(u'Replaced %r', bibser)
                                     self.model.remove(
                                         self.model.get_iter(oldr.get_path()))
                                 else:
-                                    LOG.warning(u'Duplicate ignored %r',
-                                                bibser)
+                                    _log.warning(u'Duplicate ignored %r',
+                                                 bibser)
                                     continue
                             self.model.append(nr)
                             count += 1
                         else:
-                            LOG.warning(u'Invalid rider %r', bib)
-            LOG.debug('Loaded %r riders from %r', count, csvfile)
+                            _log.warning(u'Invalid rider %r', bib)
+            _log.debug('Loaded %r riders from %r', count, csvfile)
 
     def save_chipfile(self, csvfile=None):
         """Save refids from current model to supplied CSV file."""
@@ -193,8 +193,8 @@ class riderdb(object):
                                 chiplist.append(bibstr)
                                 count += 1
                         else:
-                            LOG.warning(u'Invalid rider %r', bib)
-                LOG.debug(u'Loaded %r refids from %r', count, csvfile)
+                            _log.warning(u'Invalid rider %r', bib)
+                _log.debug(u'Loaded %r refids from %r', count, csvfile)
 
         # overwrite any existing refids
         ocount = 0
@@ -212,8 +212,8 @@ class riderdb(object):
                     if urefid != chipmap[bibstr]:
                         ocount += 1
                 chipmap[bibstr] = urefid
-        LOG.debug(u'Replacing %r refids in model', ocount)
-        LOG.debug(u'Adding %r new refids to model', ncount)
+        _log.debug(u'Replacing %r refids in model', ocount)
+        _log.debug(u'Adding %r new refids to model', ncount)
 
         chiplist.sort(key=strops.bibstr_key)
         count = 0
@@ -226,11 +226,11 @@ class riderdb(object):
                 if refid:
                     count += 1
                     cr.writerow([refid, bib, ser])
-        LOG.debug(u'Wrote %r refids to %r', count, csvfile)
+        _log.debug(u'Wrote %r refids to %r', count, csvfile)
 
     def save(self, csvfile=None):
         """Save current model to supplied CSV file."""
-        LOG.debug(u'Saving riders to %r', csvfile)
+        _log.debug(u'Saving riders to %r', csvfile)
         with metarace.savefile(csvfile) as f:
             cr = ucsv.UnicodeWriter(f)
             cr.writerow([
@@ -615,11 +615,11 @@ class riderdb(object):
                             self.model[path][COL_BIB] = new_text.lower()
                             ret = True
                         else:
-                            LOG.warning(u'Rider %r already exists', new_text)
+                            _log.warning(u'Rider %r already exists', new_text)
                             self.postedit = u'same'
                             ret = True  # re-focus on the entry
                     else:
-                        LOG.warning(u'Invalid number %r ignored', new_text)
+                        _log.warning(u'Invalid number %r ignored', new_text)
                 elif col == COL_SERIES:
                     if not self.getrider(
                             self.model[path][COL_BIB].decode(u'utf-8'),
@@ -627,7 +627,7 @@ class riderdb(object):
                         self.model[path][COL_SERIES] = new_text
                         ret = True
                     else:  # This path is almost never a real problem
-                        LOG.debug(u'Did not update series to duplicate rider')
+                        _log.debug(u'Did not update series to duplicate rider')
                         ret = True
                 elif col == COL_CAT:
                     nt = u' '.join(new_text.replace(',', ' ').split())

@@ -8,8 +8,8 @@ from metarace import tod
 from metarace import unt4
 from metarace import uiutil
 
-LOG = logging.getLogger(u'metarace.timerpane')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.timerpane')
+_log.setLevel(logging.DEBUG)
 
 FIELDWIDTH = u'00h00:00.0000'
 ARMTEXT = u'       0.0   '
@@ -75,14 +75,14 @@ class timerpane(object):
             if split >= 0 and split < len(self.splitlbls):
                 self.split = split
             else:
-                LOG.warning(u'Requested split %r not in range %r', split,
-                            self.splitlbls)
+                _log.warning(u'Requested split %r not in range %r', split,
+                             self.splitlbls)
         elif isinstance(split, basestring):
             if split in self.splitlbls:
                 self.split = self.splitlbls.index(split)
             else:
-                LOG.warning(u'Requested split %r not found %r', split,
-                            self.splitlbls)
+                _log.warning(u'Requested split %r not found %r', split,
+                             self.splitlbls)
         else:
             self.split = -1  # disable label
 
@@ -117,7 +117,7 @@ class timerpane(object):
 
     def missedlap(self):
         """Flag a missed lap to allow 'catchup'."""
-        LOG.info(u'No time recorded for split %r', self.split)
+        _log.info(u'No time recorded for split %r', self.split)
         self.lap_up()
 
     def get_sid(self, inter=None):

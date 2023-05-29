@@ -21,8 +21,8 @@ from metarace import eventdb
 from metarace import trackmeet
 from metarace import roadmeet
 
-LOG = logging.getLogger(u'metarace.apploader')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.apploader')
+_log.setLevel(logging.DEBUG)
 
 
 def meet_identify(configpath=None):
@@ -35,11 +35,11 @@ def meet_identify(configpath=None):
     if os.path.exists(cfile):
         cr = jsonconfig.config()
         try:
-            LOG.debug(u'Reading meet config %r', cfile)
+            _log.debug(u'Reading meet config %r', cfile)
             with open(cfile, 'rb') as f:
                 cr.read(f)
             edb = eventdb.eventdb()
-            LOG.debug(u'Reading meet events %r', efile)
+            _log.debug(u'Reading meet events %r', efile)
             edb.load(efile)
             if cr.has_section(u'trackmeet'):  # this is TRACK
                 descr = u''
@@ -54,7 +54,7 @@ def meet_identify(configpath=None):
                 infostr = u''
                 if cr.has_option(u'trackmeet', u'date'):
                     infostr = cr.get(u'trackmeet', u'date')
-                LOG.debug(u'Track meet: %s/%s/%s', descr, ecstr, infostr)
+                _log.debug(u'Track meet: %s/%s/%s', descr, ecstr, infostr)
                 ret = [u'track', configpath, descr.strip(), ecstr, infostr]
             elif cr.has_section(u'roadmeet'):  # this is Road
                 etype = u'road'
@@ -69,12 +69,12 @@ def meet_identify(configpath=None):
                 infostr = u''
                 if cr.has_option(u'roadmeet', u'date'):
                     infostr = cr.get(u'roadmeet', u'date')
-                LOG.debug(u'Road meet: %s/%s/%s', descr, etype, infostr)
+                _log.debug(u'Road meet: %s/%s/%s', descr, etype, infostr)
                 ret = [u'road', configpath, descr.strip(), etype, infostr]
             else:
-                LOG.warning(u'Meet type could not be identified')
+                _log.warning(u'Meet type could not be identified')
         except Exception as e:
-            LOG.error(u'Error reading meet folder %r: %s', configpath, e)
+            _log.error(u'Error reading meet folder %r: %s', configpath, e)
     return ret
 
 
@@ -107,11 +107,11 @@ class apploader(object):
         if response == 1:
             np = pent.get_text().decode(u'utf8')
             nt = etmodel[etsel.get_active()][0]
-            LOG.debug(u'Create: %r / %r', nt, np)
+            _log.debug(u'Create: %r / %r', nt, np)
 
             # if ok, create path - if necessary
             if not os.path.exists(np):
-                LOG.debug(u'Creating new meet path: %r', np)
+                _log.debug(u'Creating new meet path: %r', np)
                 os.makedirs(np)
             oktogo = True
             # refuse to continue if path contains a config.json
@@ -130,7 +130,7 @@ class apploader(object):
             etype = None
             subtype = None
             if len(tv) < 1 or len(tv) > 2:
-                LOG.debug(u'Invalid type')
+                _log.debug(u'Invalid type')
                 oktogo = False
             else:
                 etype = tv[0]
@@ -138,7 +138,7 @@ class apploader(object):
                     subtype = tv[1]
 
             if oktogo:
-                LOG.info(u'Create %r:%r at: %r', etype, subtype, np)
+                _log.info(u'Create %r:%r at: %r', etype, subtype, np)
                 cw = jsonconfig.config()
                 if etype == u'track':
                     cw.add_section(u'trackmeet')
@@ -153,7 +153,7 @@ class apploader(object):
                     cw.write(f)
             glib.idle_add(self.loadpath)
         else:
-            LOG.debug(u'CREATE: cancelled.')
+            _log.debug(u'CREATE: cancelled.')
 
         dlg.destroy()
         return False  # if called from idle_add
@@ -197,7 +197,7 @@ class apploader(object):
     def run_meet(self, etype, epath, data=None):
         """Load and run the selected existing meet."""
         cfpath = os.path.abspath(epath)
-        LOG.debug(u'Running %r meet: %r', etype, cfpath)
+        _log.debug(u'Running %r meet: %r', etype, cfpath)
         if etype == u'track':
             self.subapp = trackmeet.runapp(cfpath)
         else:
@@ -218,14 +218,14 @@ class apploader(object):
             (model, iters) = sel.get_selected_rows()
             elist = [(model[i][6], model[i][0]) for i in iters]
             if len(elist) == 1:
-                LOG.debug(u'Opening meet: %r', elist)
+                _log.debug(u'Opening meet: %r', elist)
                 self.run_meet(elist[0][0], elist[0][1])
                 return True
             else:
-                LOG.error('Unable to open meet: %r', elist)
+                _log.error('Unable to open meet: %r', elist)
                 return False
         else:
-            LOG.debug(u'No selection, continue to file open dialog')
+            _log.debug(u'No selection, continue to file open dialog')
         path = None
         dlg = gtk.FileChooserDialog(u'Open Metarace Meet', self.window,
                                     gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
@@ -256,7 +256,7 @@ class apploader(object):
         for root, dirs, files in os.walk(self.path):
             if root == self.path:
                 for d in dirs:
-                    if d != metarace.DEFAULTS_NAME: # ignore sysdefaults
+                    if d != metarace.DEFAULTS_NAME:  # ignore sysdefaults
                         meet = meet_identify(os.path.join(root, d))
                         if meet is not None:
                             tinfo = self.infostring(meet[0], meet[3])
@@ -307,7 +307,7 @@ class apploader(object):
 def appmain():
     configpath = metarace.config_path(metarace.DATA_PATH)
     if configpath is None:
-        LOG.error(u'Unable to open directory %r', sys.argv[1])
+        _log.error(u'Unable to open directory %r', sys.argv[1])
         sys.exit(1)
     os.chdir(configpath)
     app = apploader()
@@ -324,12 +324,12 @@ def appmain():
 def meetmain(cfpath):
     configpath = metarace.config_path(cfpath)
     if configpath is None:
-        LOG.error(u'Unable to open meet config %r', sys.argv[1])
+        _log.error(u'Unable to open meet config %r', sys.argv[1])
         sys.exit(1)
     app = None
     meet = meet_identify(configpath)
     if meet is not None:
-        LOG.info(u'Loading %s', meet[2])
+        _log.info(u'Loading %s', meet[2])
         if meet[0] == u'track':
             app = trackmeet.runapp(configpath)
         else:

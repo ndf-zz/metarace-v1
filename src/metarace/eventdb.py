@@ -11,8 +11,8 @@ from metarace import uiutil
 from metarace import strops
 from metarace import ucsv  # replace with csv in >= 3
 
-LOG = logging.getLogger(u'metarace.eventdb')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.eventdb')
+_log.setLevel(logging.DEBUG)
 
 # Note: These are for the trackmeet module, roadmeet re-defines race types
 defracetypes = [
@@ -202,16 +202,16 @@ class eventdb(object):
         self.__index = []
         self.__store = {}
         self.__notify(None)
-        LOG.debug(u'Event model cleared')
+        _log.debug(u'Event model cleared')
 
     def change_evno(self, oldevent, newevent):
         """Attempt to change the event id."""
         if oldevent not in self:
-            LOG.error(u'Unknown old event %r', oldevent)
+            _log.error(u'Unknown old event %r', oldevent)
             return False
 
         if newevent in self:
-            LOG.error(u'New event %r already exists', newevent)
+            _log.error(u'New event %r already exists', newevent)
             return False
 
         oktochg = True
@@ -229,7 +229,7 @@ class eventdb(object):
                 self.__index[cnt] = newevent
             del (self.__store[oldevent])
             self.__store[newevent] = ref
-            LOG.warning(u'Updated event %r to %r', oldevent, newevent)
+            _log.warning(u'Updated event %r to %r', oldevent, newevent)
             return True
         return False
 
@@ -241,7 +241,7 @@ class eventdb(object):
             self.__store[evno] = newevent
             self.__index.append(evno)
         else:
-            LOG.warning(u'Duplicate event id %r ignored', evno)
+            _log.warning(u'Duplicate event id %r ignored', evno)
 
     def __loadrow(self, r, colspec):
         nev = event()
@@ -254,16 +254,16 @@ class eventdb(object):
                 nev[key] = val
         if u'evid' not in colspec:  # assigned None in init
             evno = self.nextevno()
-            LOG.info(u'Event without id assigned %r', evno)
+            _log.info(u'Event without id assigned %r', evno)
             nev[u'evid'] = evno
         self.add_event(nev)
 
     def load(self, csvfile=None):
         """Load events from supplied CSV file."""
         if not os.path.isfile(csvfile):
-            LOG.debug(u'Creating new event database')
+            _log.debug(u'Creating new event database')
             return
-        LOG.debug(u'Loading events from %r', csvfile)
+        _log.debug(u'Loading events from %r', csvfile)
         with open(csvfile, 'rb') as f:
             cr = ucsv.UnicodeReader(f)
             incols = None  # no header
@@ -291,13 +291,13 @@ class eventdb(object):
                     newindex.append(r[COL_EVNO])
                 self.__index = newindex  # but leave reordering in model!
             else:
-                LOG.info(u'View out of sync, dumping whole index')
+                _log.info(u'View out of sync, dumping whole index')
 
         if len(self.__index) != len(self.__store):
-            LOG.error(u'Index out of sync with model, dumping whole model')
+            _log.error(u'Index out of sync with model, dumping whole model')
             self.__index = [a for a in self.__store]
 
-        LOG.debug(u'Saving events to %r', csvfile)
+        _log.debug(u'Saving events to %r', csvfile)
         with metarace.savefile(csvfile) as f:
             cr = ucsv.UnicodeWriter(f)
             cr.writerow(get_header(self.include_cols))
@@ -326,7 +326,7 @@ class eventdb(object):
         cnt = sel.count_selected_rows()
         # check for one selected
         if cnt == 0:
-            LOG.debug(u'No rows selected for delete')
+            _log.debug(u'No rows selected for delete')
             return False
 
         # convert model iters into a list of event numbers
@@ -350,7 +350,7 @@ class eventdb(object):
         dlg.destroy()
         if ret == gtk.RESPONSE_YES:
             for evt in elist:
-                LOG.debug(u'Deleting event %r', evt)
+                _log.debug(u'Deleting event %r', evt)
                 del (self[evt])
             self.__notify(None)
 
@@ -377,7 +377,7 @@ class eventdb(object):
             cnt = sel.count_selected_rows()
             # check for one selected
             if cnt == 0:
-                LOG.debug(u'No rows selected for result')
+                _log.debug(u'No rows selected for result')
                 return False
 
             # convert model iters into a list of event numbers
@@ -396,7 +396,7 @@ class eventdb(object):
             cnt = sel.count_selected_rows()
             # check for one selected
             if cnt == 0:
-                LOG.debug(u'No rows selected for startlist')
+                _log.debug(u'No rows selected for startlist')
                 return False
 
             # convert model iters into a list of event numbers
@@ -415,7 +415,7 @@ class eventdb(object):
             cnt = sel.count_selected_rows()
             # check for one selected
             if cnt == 0:
-                LOG.debug(u'No rows selected for program')
+                _log.debug(u'No rows selected for program')
                 return False
 
             # convert model iters into a list of event numbers
@@ -445,9 +445,9 @@ class eventdb(object):
             if evno in self:
                 ref = self[evno]
             else:
-                LOG.error(u'Event %r in view not found in model', evno)
+                _log.error(u'Event %r in view not found in model', evno)
         if ref is None:
-            LOG.error(u'No event selected for edit')
+            _log.error(u'No event selected for edit')
             return False
 
         b = gtk.Builder()
@@ -469,7 +469,7 @@ class eventdb(object):
             rof += 1
         response = dlg.run()
         if response == 1:  # id 1 set in glade for "Apply"
-            LOG.info(u'Updating event')
+            _log.info(u'Updating event')
             do_notify = False
 
             # check for event id change
@@ -491,7 +491,7 @@ class eventdb(object):
             if do_notify:
                 ref.notify()  # notify here if required
         else:
-            LOG.info(u'Edit event cancelled')
+            _log.info(u'Edit event cancelled')
         dlg.destroy()
 
     def __view_button_cb(self, treeview, event):
@@ -555,7 +555,7 @@ class eventdb(object):
                 if evno in self:
                     ref = self[evno]
                 else:
-                    LOG.error(u'Event %r in view not found in model', evno)
+                    _log.error(u'Event %r in view not found in model', evno)
         return ref
 
     def getfirst(self):
@@ -628,7 +628,7 @@ class eventdb(object):
                     self.__viewmodel[path][COL_INFO] = self[data].event_info()
                     self.__viewmodel[path][COL_TYPE] = self[data].event_type()
                 except Exception as e:
-                    LOG.error(u'Index error %r: %s', data, e)
+                    _log.error(u'Index error %r: %s', data, e)
 
     def __repopulate_viewmodel(self):
         """Re-populate the view model."""

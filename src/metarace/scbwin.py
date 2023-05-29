@@ -29,13 +29,13 @@ from metarace import strops
 from metarace import unt4
 from metarace import tod
 
-LOG = logging.getLogger(u'metarace.scbwin')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.scbwin')
+_log.setLevel(logging.DEBUG)
 
 PAGE_INIT = 10  # delay before table data starts displaying
 PAGE_DELAY = 60  # def tenths of sec to hold each page of table
 PAGE_ROWOFT = 2  # first DHI row for table data
-DATE_FMT = ('%a %d/%m/%y')
+DATE_FMT = u'%a %d/%m/%y'
 
 
 def get_dateline(width=32):

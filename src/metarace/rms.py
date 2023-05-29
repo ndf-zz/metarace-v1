@@ -19,8 +19,8 @@ from metarace import uiutil
 from metarace import report
 from metarace import jsonconfig
 
-LOG = logging.getLogger(u'metarace.rms')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.rms')
+_log.setLevel(logging.DEBUG)
 
 # Model columns
 
@@ -158,13 +158,13 @@ class rms(object):
                     if cat not in [u'CAT', u'SPARE', u'TEAM']:
                         self.cats.append(cat)
                     else:
-                        LOG.warning(u'Invalid result category: %r', cat)
+                        _log.warning(u'Invalid result category: %r', cat)
         self.cats.append(u'')  # always include one empty cat
-        LOG.debug(u'Result category list updated: %r', self.cats)
+        _log.debug(u'Result category list updated: %r', self.cats)
 
     def downtimes(self, show):
         """Set the downtimes flag"""
-        LOG.debug(u'Set showdowntimes to: %r', show)
+        _log.debug(u'Set showdowntimes to: %r', show)
         self.showdowntimes = show
 
     def loadconfig(self):
@@ -222,9 +222,9 @@ class rms(object):
                 with open(self.configfile, 'rb') as f:
                     cr.read(f)
             except Exception as e:
-                LOG.error(u'Unable to read config: %s', e)
+                _log.error(u'Unable to read config: %s', e)
         else:
-            LOG.info(u'%r not found, loading defaults', self.configfile)
+            _log.info(u'%r not found, loading defaults', self.configfile)
 
         # load result categories
         self.loadcats(cr.get(u'rms', u'categories'))
@@ -248,13 +248,13 @@ class rms(object):
         if ngt is not None:
             self.gapthresh = ngt
             if self.gapthresh != GAPTHRESH:
-                LOG.warning(u'Set time gap threshold %s',
-                            self.gapthresh.rawtime(2))
+                _log.warning(u'Set time gap threshold %s',
+                             self.gapthresh.rawtime(2))
 
         # restore intermediates
         for i in cr.get(u'rms', u'intermeds'):
             if i in RESERVED_SOURCES:
-                LOG.info(u'Ignoring reserved inter: %r', i)
+                _log.info(u'Ignoring reserved inter: %r', i)
             else:
                 crkey = u'intermed_' + i
                 descr = u''
@@ -274,7 +274,7 @@ class rms(object):
                     places = strops.reformat_placelist(cr.get(
                         crkey, u'places'))
                 if i not in self.intermeds:
-                    LOG.debug(u'Adding inter %r: %r %r', i, descr, places)
+                    _log.debug(u'Adding inter %r: %r %r', i, descr, places)
                     self.intermeds.append(i)
                     self.intermap[i] = {
                         u'descr': descr,
@@ -284,7 +284,7 @@ class rms(object):
                         u'show': doshow
                     }
                 else:
-                    LOG.info(u'Ignoring duplicate inter: %r', i)
+                    _log.info(u'Ignoring duplicate inter: %r', i)
 
         # load contest meta data
         tallyset = set()
@@ -320,8 +320,8 @@ class rms(object):
                     for bstr in cr.get(crkey, u'bonuses').split():
                         bt = tod.mktod(bstr)
                         if bt is None:
-                            LOG.info(u'Invalid bonus %r in contest %r', bstr,
-                                     i)
+                            _log.info(u'Invalid bonus %r in contest %r', bstr,
+                                      i)
                             bt = tod.ZERO
                         bonuses.append(bt)
                 self.contestmap[i][u'bonuses'] = bonuses
@@ -329,15 +329,15 @@ class rms(object):
                 if cr.has_option(crkey, u'points'):
                     pliststr = cr.get(crkey, u'points').strip()
                     if pliststr and tally == u'':
-                        LOG.error(u'No tally for points in contest %r', i)
+                        _log.error(u'No tally for points in contest %r', i)
                         tallyset.add(u'')  # add empty placeholder
                     for pstr in pliststr.split():
                         pt = 0
                         try:
                             pt = int(pstr)
                         except Exception:
-                            LOG.info(u'Invalid points %r in contest %r', pstr,
-                                     i)
+                            _log.info(u'Invalid points %r in contest %r', pstr,
+                                      i)
                         points.append(pt)
                 self.contestmap[i][u'points'] = points
                 allsrc = False  # all riders in source get same pts
@@ -349,20 +349,20 @@ class rms(object):
                     self.contestmap[i][u'category'] = cr.get_posint(
                         crkey, u'category')
             else:
-                LOG.info(u'Ignoring duplicate contest %r', i)
+                _log.info(u'Ignoring duplicate contest %r', i)
 
             # check for invalid allsrc
             if self.contestmap[i][u'all_source']:
                 if (len(self.contestmap[i][u'points']) > 1
                         or len(self.contestmap[i][u'bonuses']) > 1):
-                    LOG.info(u'Ignoring extra points/bonus for allsrc %r', i)
+                    _log.info(u'Ignoring extra points/bonus for allsrc %r', i)
 
         # load points tally meta data
         tallylist = cr.get(u'rms', u'tallys')
         # append any 'missing' tallys from points data errors
         for i in tallyset:
             if i not in tallylist:
-                LOG.debug(u'Adding missing tally to config %r', i)
+                _log.debug(u'Adding missing tally to config %r', i)
                 tallylist.append(i)
         # then scan for meta data
         for i in tallylist:
@@ -381,7 +381,7 @@ class rms(object):
                     keepdnf = cr.get_bool(crkey, u'keepdnf')
                 self.tallymap[i][u'keepdnf'] = keepdnf
             else:
-                LOG.info(u'Ignoring duplicate points tally %r', i)
+                _log.info(u'Ignoring duplicate points tally %r', i)
 
         starters = cr.get(u'rms', u'startlist').split()
         if len(starters) == 1 and starters[0] == u'all':
@@ -410,8 +410,9 @@ class rms(object):
                             seedno = strops.confopt_posint(self.ucicache[r], 0)
                             if seedno > 0 and seedno < 9999:
                                 nr[COL_SEED] = seedno
-                                LOG.info('Set rider %r seed from UCICODE = %r',
-                                         r, seedno)
+                                _log.info(
+                                    'Set rider %r seed from UCICODE = %r', r,
+                                    seedno)
                     if nr[COL_SEED] != 0:
                         oneseed = True
                 if lr > 4:
@@ -447,7 +448,7 @@ class rms(object):
         self.minlap = tod.mktod(cr.get(u'rms', u'minlap'))
         if self.minlap is None:
             self.minlap = MINPASSTIME
-        LOG.debug(u'Minimum lap time: %s', self.minlap.rawtime())
+        _log.debug(u'Minimum lap time: %s', self.minlap.rawtime())
         self.curlap = cr.get(u'rms', u'curlap')
         self.totlaps = cr.get(u'rms', u'totlaps')
         self.timelimit = cr.get(u'rms', u'timelimit')
@@ -505,7 +506,7 @@ class rms(object):
         # After load complete - check config and report.
         eid = cr.get(u'rms', u'id')
         if eid and eid != EVENT_ID:
-            LOG.info(u'Event config mismatch: %r != %r', eid, EVENT_ID)
+            _log.info(u'Event config mismatch: %r != %r', eid, EVENT_ID)
             self.readonly = True
 
     def get_ridercmdorder(self):
@@ -561,7 +562,7 @@ class rms(object):
     def saveconfig(self):
         """Save event config to disk."""
         if self.readonly:
-            LOG.error(u'Attempt to save readonly event')
+            _log.error(u'Attempt to save readonly event')
             return
         cw = jsonconfig.config()
         cw.add_section(u'rms')
@@ -682,7 +683,7 @@ class rms(object):
             if r[COL_PENALTY] is not None:
                 cw.set(u'stagepenalty', bib, r[COL_PENALTY].rawtime())
         cw.set(u'rms', u'id', EVENT_ID)
-        LOG.debug(u'Saving event config %r', self.configfile)
+        _log.debug(u'Saving event config %r', self.configfile)
         with metarace.savefile(self.configfile) as f:
             cw.write(f)
 
@@ -742,7 +743,7 @@ class rms(object):
             aux.sort(sort_tally)
             for r in aux:
                 sec.lines.append(r[2])
-            LOG.debug(u'Total points for %r: %r', tally, tallytot)
+            _log.debug(u'Total points for %r: %r', tally, tallytot)
             ret.append(sec)
 
         if len(self.bonuses) > 0:
@@ -765,7 +766,7 @@ class rms(object):
                 sec.lines.append(r[2])
             ret.append(sec)
         if len(ret) == 0:
-            LOG.warning(u'No data available for points report')
+            _log.warning(u'No data available for points report')
         return ret
 
     def reorder_startlist(self, callup=False):
@@ -789,10 +790,10 @@ class rms(object):
         ret = []
         self.reorder_startlist()
         if len(self.cats) > 1:
-            LOG.debug(u'Preparing categorised signon for %r', self.cats)
+            _log.debug(u'Preparing categorised signon for %r', self.cats)
             for c in self.cats:
                 c = self.ridercat(c)
-                LOG.debug(u'Preparing signon cat %r', c)
+                _log.debug(u'Preparing signon cat %r', c)
                 if True:
                     sec = report.signon_list(u'signon')
                     sec.heading = c
@@ -818,15 +819,15 @@ class rms(object):
                             ])
                     if len(sec.lines) > 0:
                         if c == u'':
-                            LOG.warning(u'%r uncategorised riders',
-                                        len(sec.lines))
+                            _log.warning(u'%r uncategorised riders',
+                                         len(sec.lines))
                         ret.append(sec)
                         ret.append(report.pagebreak(threshold=0.1))
                     else:
                         if c:
-                            LOG.warning(u'No starters for category %r', c)
+                            _log.warning(u'No starters for category %r', c)
         else:
-            LOG.debug(u'Preparing flat signon')
+            _log.debug(u'Preparing flat signon')
             sec = report.signon_list(u'signon')
             for r in self.riders:
                 cmt = None
@@ -845,12 +846,12 @@ class rms(object):
         ret = []
         self.reorder_startlist(callup=True)
         if len(self.cats) > 1:
-            LOG.debug(u'Preparing categorised callup for %r', self.cats)
+            _log.debug(u'Preparing categorised callup for %r', self.cats)
             for c in self.cats:
-                LOG.debug(u'Callup cat %r', c)
+                _log.debug(u'Callup cat %r', c)
                 ret.extend(self.startlist_report_gen(c, callup=True))
         else:
-            LOG.debug(u'Preparing flat callup')
+            _log.debug(u'Preparing flat callup')
             ret = self.startlist_report_gen(callup=True)
         return ret
 
@@ -859,12 +860,12 @@ class rms(object):
         ret = []
         self.reorder_startlist()
         if len(self.cats) > 1:
-            LOG.debug(u'Preparing categorised startlist for %r', self.cats)
+            _log.debug(u'Preparing categorised startlist for %r', self.cats)
             for c in self.cats:
-                LOG.debug(u'Startlist cat %r', c)
+                _log.debug(u'Startlist cat %r', c)
                 ret.extend(self.startlist_report_gen(c))
         else:
-            LOG.debug(u'Preparing flat startlist')
+            _log.debug(u'Preparing flat startlist')
             ret = self.startlist_report_gen()
         return ret
 
@@ -903,10 +904,10 @@ class rms(object):
                     if self.catlaps[c] is None:
                         missing.append(repr(c))
                 if missing:
-                    LOG.warning(u'Categories missing target lap count: %s',
-                                u', '.join(missing))
-        LOG.debug(u'Loaded cat data: laps=%r, starts=%r', self.catlaps,
-                  self.catstarts)
+                    _log.warning(u'Categories missing target lap count: %s',
+                                 u', '.join(missing))
+        _log.debug(u'Loaded cat data: laps=%r, starts=%r', self.catlaps,
+                   self.catstarts)
 
     def startlist_report_gen(self, cat=None, callup=False):
         catname = u''
@@ -1000,10 +1001,10 @@ class rms(object):
         if len(sec.lines) > 0:
             ret.append(sec)
             if uncat:
-                LOG.warning(u'%r uncategorised riders', len(sec.lines))
+                _log.warning(u'%r uncategorised riders', len(sec.lines))
         else:
             if cat:
-                LOG.warning(u'No starters for category %r', cat)
+                _log.warning(u'No starters for category %r', cat)
 
         return ret
 
@@ -1185,12 +1186,12 @@ class rms(object):
             if len(sec.lines) > 0:
                 ret.append(sec)
         else:
-            LOG.warning(u'Event is idle, report not available')
+            _log.warning(u'Event is idle, report not available')
         return ret
 
     def catresult_report(self):
         """Return a categorised race result report."""
-        LOG.debug(u'Categorised result report')
+        _log.debug(u'Categorised result report')
         self.recalculate()
         ret = []
         for cat in self.cats:
@@ -1211,7 +1212,7 @@ class rms(object):
         return ret
 
     def single_catresult(self, cat):
-        LOG.debug(u'Cat result for cat=%r', cat)
+        _log.debug(u'Cat result for cat=%r', cat)
         ret = []
         allin = False
         catname = cat
@@ -1243,7 +1244,7 @@ class rms(object):
                 try:
                     distance = float(dist)
                 except Exception:
-                    LOG.warning(u'Invalid distance %r for cat %r', dist, cat)
+                    _log.warning(u'Invalid distance %r for cat %r', dist, cat)
         sec = report.section(u'result-' + cat)
 
         wt = None
@@ -1370,7 +1371,7 @@ class rms(object):
                                 if len(leadsplits) >= dtlap:
                                     llpass = leadsplits[dtlap - 1]
                                 else:
-                                    LOG.debug(u'Lap down time not available')
+                                    _log.debug(u'Lap down time not available')
                                 if llpass is not None and rlpass is not None:
                                     rdown = rlpass - llpass
                                     if rdown < MAXELAP:
@@ -1542,7 +1543,7 @@ class rms(object):
                 ])
             residual = totcount - (fincount + dnfcount + dnscount + hdcount)
             if residual > 0:
-                LOG.info(u'%r unaccounted for: %r', cat, residual)
+                _log.info(u'%r unaccounted for: %r', cat, residual)
             ret.append(sec)
 
             # finish report title manipulation
@@ -1564,7 +1565,7 @@ class rms(object):
             (self.event[u'type'] != u'handicap' and len(self.cats) > 1)):
             return self.catresult_report()
 
-        LOG.debug(u'Result report in uncat/handicap path')
+        _log.debug(u'Result report in uncat/handicap path')
         self.recalculate()
         ret = []
         wt = None
@@ -1728,7 +1729,7 @@ class rms(object):
                     ])
             if dofastest:
                 if vfastest and vfastest < fastest:
-                    LOG.info(u'Fastest time not yet available')
+                    _log.info(u'Fastest time not yet available')
                 else:
                     ftr = self.getrider(fastestbib)
                     fts = u''
@@ -1756,14 +1757,14 @@ class rms(object):
                 ])
             residual = totcount - (fincount + dnfcount + dnscount + hdcount)
             if residual > 0:
-                LOG.info(u'%r unaccounted for', residual)
+                _log.info(u'%r unaccounted for', residual)
             ret.append(sec)
 
             # Intermediates
             # show all intermediates here
             for imed in self.intermeds:
                 im = self.intermap[imed]
-                LOG.info(u'intermed : %r', imed)
+                _log.info(u'intermed : %r', imed)
                 if im[u'places'] and im[u'show']:
                     ret.extend(self.int_report(imed))
 
@@ -1775,12 +1776,12 @@ class rms(object):
                     sec.lines.append([None, cl.strip()])
                 ret.append(sec)
         else:
-            LOG.warning(u'No data available for result report')
+            _log.warning(u'No data available for result report')
         return ret
 
     def stat_but_clicked(self, button=None):
         """Deal with a status button click in the main container."""
-        LOG.debug(u'Stat button clicked')
+        _log.debug(u'Stat button clicked')
 
     def ctrl_change(self, acode=u'', entry=None):
         """Notify change in action combo."""
@@ -1806,9 +1807,9 @@ class rms(object):
                     self.intermap[acode][u'places'] = rlist
                     self.recalculate()
                     self.intsprint(acode, rlist)
-                    LOG.info(u'Intermediate %r == %r', acode, rlist)
+                    _log.info(u'Intermediate %r == %r', acode, rlist)
                 else:
-                    LOG.error('Intermediate %r not updated', acode)
+                    _log.error('Intermediate %r not updated', acode)
             return False
         elif acode == u'fin':
             rlist = strops.reformat_placelist(rlist)
@@ -1818,7 +1819,7 @@ class rms(object):
                 self.finsprint(rlist)
                 return False
             else:
-                LOG.error(u'Places not updated')
+                _log.error(u'Places not updated')
                 return False
         elif acode == u'dnf':
             self.dnfriders(strops.reformat_biblist(rlist))
@@ -1862,17 +1863,17 @@ class rms(object):
             self.add_comment(rlist)
             return True
         else:
-            LOG.error(u'Ignoring invalid action %r', acode)
+            _log.error(u'Ignoring invalid action %r', acode)
         return False
 
     def add_comment(self, comment=u''):
         """Append a commissaires comment."""
         self.comment.append(comment.strip())
-        LOG.info(u'Added comment: %r', comment)
+        _log.info(u'Added comment: %r', comment)
 
     def query_rider(self, bib=None):
         """List info on selected rider in the scratchpad."""
-        LOG.info(u'Query rider: %r', bib)
+        _log.info(u'Query rider: %r', bib)
         r = self.getrider(bib)
         if r is not None:
             ns = strops.truncpad(
@@ -1885,7 +1886,7 @@ class rms(object):
             ps = r[COL_COMMENT].decode(u'utf-8')
             if r[COL_PLACE] != '':
                 ps = strops.rank2ord(r[COL_PLACE])
-            LOG.info(u'%s %s %s %s', bib, ns, bs, ps)
+            _log.info(u'%s %s %s %s', bib, ns, bs, ps)
             lt = None
             if len(r[COL_RFSEEN]) > 0:
                 for rft in r[COL_RFSEEN]:
@@ -1894,12 +1895,12 @@ class rms(object):
                     ls = u''
                     if lt is not None:
                         ls = (nt - lt).timestr(0)
-                    LOG.info(u'\t%s %s', ns, ls)
+                    _log.info(u'\t%s %s', ns, ls)
                     lt = nt
             if r[COL_RFTIME] is not None:
-                LOG.info(u'Finish: %s', r[COL_RFTIME].timestr(1))
+                _log.info(u'Finish: %s', r[COL_RFTIME].timestr(1))
         else:
-            LOG.info(u'%r not in startlist', bib)
+            _log.info(u'%r not in startlist', bib)
 
     def startlist_gen(self, cat=u''):
         """Generator function to export a startlist."""
@@ -2049,7 +2050,7 @@ class rms(object):
         """Clear all data from event model."""
         self.resetplaces()
         self.places = u''
-        LOG.debug(u'Clear event result')
+        _log.debug(u'Clear event result')
         # scan riders to clear any race info
         for r in self.riders:
             r[COL_COMMENT] = u''
@@ -2060,7 +2061,7 @@ class rms(object):
             r[COL_RFTIME] = None
             r[COL_CBUNCH] = None
             r[COL_MBUNCH] = None
-        LOG.debug(u'Clear rider data')
+        _log.debug(u'Clear rider data')
 
     def getrider(self, bib):
         """Return reference to selected rider no."""
@@ -2097,8 +2098,8 @@ class rms(object):
     def addrider(self, bib=u'', series=None):
         """Add specified rider to event model."""
         if series is not None and series != self.series:
-            LOG.debug(u'Ignoring non-series rider: %r',
-                      strops.bibser2bibstr(bib, series))
+            _log.debug(u'Ignoring non-series rider: %r',
+                       strops.bibser2bibstr(bib, series))
             return None
         if bib == u'' or self.getrider(bib) is None:
             nr = [
@@ -2123,7 +2124,7 @@ class rms(object):
 
     def resettimer(self):
         """Reset event timer."""
-        LOG.info(u'Reset event to idle')
+        _log.info(u'Reset event to idle')
         self.meet.alttimer.dearm(1)
         self.set_finish()
         self.set_start()
@@ -2191,7 +2192,7 @@ class rms(object):
         return ret
 
     def armlap(self, data=None):
-        LOG.debug(u'Arm lap')
+        _log.debug(u'Arm lap')
         if self.curlap is None or self.curlap < 0:
             self.curlap = 0  # manual override lap counts
         self.scratch_map = {}
@@ -2209,22 +2210,22 @@ class rms(object):
             self.curlap += 1  # increment
 
             if self.totlaps and self.curlap > self.totlaps:
-                LOG.info(u'Too many laps')
+                _log.info(u'Too many laps')
                 self.curlap = self.totlaps
 
             # sanity check onlap
             # once arm lap is done, curlap and onlap _should_ be same
             if self.onlap != self.curlap:
-                LOG.debug(u'Cur/On lap mismatch %r/%r', self.curlap,
-                          self.onlap)
+                _log.debug(u'Cur/On lap mismatch %r/%r', self.curlap,
+                           self.onlap)
                 if self.curlap == 1:
                     # assume this is an in-race correction
                     self.curlap = self.onlap
-                    LOG.debug(u'Curlap set to %r from onlap', self.curlap)
+                    _log.debug(u'Curlap set to %r from onlap', self.curlap)
                 else:
                     # assume the curlap is set to the desired count
                     self.onlap = self.curlap
-                    LOG.debug(u'Onlap set to %r from curlap', self.curlap)
+                    _log.debug(u'Onlap set to %r from curlap', self.curlap)
                 self.meet.cmd_announce(u'onlap', unicode(self.onlap))
 
         # update curlap entry whatever happened
@@ -2311,7 +2312,7 @@ class rms(object):
             i = sv[1]
             selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
             selpath = self.riders.get_path(i)
-            LOG.info(u'Confirmed next place: %r/%r', selbib, selpath)
+            _log.info(u'Confirmed next place: %r/%r', selbib, selpath)
             nplaces = []
             # remove selected rider from places
             for placegroup in self.places.split():
@@ -2335,7 +2336,7 @@ class rms(object):
     def fill_places_to_selected(self):
         """Update places to match ordering up to selected rider."""
         if u'-' in self.places:
-            LOG.warning(u'Dead heat in result, places not updated')
+            _log.warning(u'Dead heat in result, places not updated')
             return False
         sel = self.view.get_selection()
         sv = sel.get_selected()
@@ -2344,7 +2345,7 @@ class rms(object):
             i = sv[1]
             selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
             selpath = self.riders.get_path(i)
-            LOG.info(u'Confirm places to: %r/%r', selbib, selpath)
+            _log.info(u'Confirm places to: %r/%r', selbib, selpath)
             oplaces = self.places.split()
             nplaces = []
             for r in self.riders:
@@ -2371,7 +2372,7 @@ class rms(object):
             i = sel[1]
             selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
             selpath = self.riders.get_path(i)
-            LOG.info(u'Clear places from: %r/%r', selbib, selpath)
+            _log.info(u'Clear places from: %r/%r', selbib, selpath)
             nplaces = []
             found = False
             for placegroup in self.places.split():
@@ -2407,7 +2408,7 @@ class rms(object):
             i = sel[1]
             selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
             selpath = self.riders.get_path(i)
-            LOG.info(u'Clear rider from places: %r/%r', selbib, selpath)
+            _log.info(u'Clear rider from places: %r/%r', selbib, selpath)
             self.clear_place(selbib)
             self.recalculate()
 
@@ -2421,9 +2422,9 @@ class rms(object):
                     r[COL_INRACE] = False
                 r[COL_COMMENT] = code
                 recalc = True
-                LOG.info('Rider %r did not finish with code: %r', bib, code)
+                _log.info('Rider %r did not finish with code: %r', bib, code)
             else:
-                LOG.warning('Unregistered Rider %r unchanged', bib)
+                _log.warning('Unregistered Rider %r unchanged', bib)
         if recalc:
             self.recalculate()
         return False
@@ -2439,7 +2440,7 @@ class rms(object):
             t.chan = u'MAN'
             t.refid = u'riderno:' + bibstr
             self.meet._timercb(t)
-            LOG.debug(u'Manual passing: %r', bibstr)
+            _log.debug(u'Manual passing: %r', bibstr)
 
     def retriders(self, biblist=u''):
         """Return all listed riders to the event."""
@@ -2451,16 +2452,16 @@ class rms(object):
                 r[COL_COMMENT] = u''
                 r[COL_LAPS] = len(r[COL_RFSEEN])
                 recalc = True
-                LOG.info(u'Rider %r returned to event', bib)
+                _log.info(u'Rider %r returned to event', bib)
             else:
-                LOG.warning(u'Unregistered rider %r unchanged', bib)
+                _log.warning(u'Unregistered rider %r unchanged', bib)
         if recalc:
             self.recalculate()
         return False
 
     def shutdown(self, win=None, msg=u'Race Sutdown'):
         """Close event."""
-        LOG.debug(u'Event shutdown: %r', msg)
+        _log.debug(u'Event shutdown: %r', msg)
         if not self.readonly:
             self.saveconfig()
         self.winopen = False
@@ -2470,13 +2471,14 @@ class rms(object):
         # Note: in rms all triggers other than C1 from alttimer
         #       are assumed to be for the start
         if self.timerstat == u'armstart':
-            LOG.info(u'Start trigger: %s@%s/%s', e.chan, e.rawtime(), e.source)
+            _log.info(u'Start trigger: %s@%s/%s', e.chan, e.rawtime(),
+                      e.source)
             self.set_start(e)
             self.resetcatonlaps()
             if self.event[u'type'] in [u'criterium', u'circuit', u'cross']:
                 glib.idle_add(self.armlap)
         else:
-            LOG.info(u'Trigger: %s@%s/%s', e.chan, e.rawtime(), e.source)
+            _log.info(u'Trigger: %s@%s/%s', e.chan, e.rawtime(), e.source)
         return False
 
     def set_lap_finish(self, e):
@@ -2496,16 +2498,17 @@ class rms(object):
         """Record timer message from alttimer."""
         # note: these impulses are sourced from alttimer device and keyboard
         #       transponder triggers are collected separately in timertrig()
-        LOG.debug(u'Alt timer: %s@%s/%s', e.chan, e.rawtime(), e.source)
+        _log.debug(u'Alt timer: %s@%s/%s', e.chan, e.rawtime(), e.source)
         channo = strops.chan2id(e.chan)
         if channo == 1:
             # this is a finish impulse, treat as bunch time
             if self.timerstat == u'armfinish':
                 if self.altfinish is not None:
                     dt = e - self.altfinish
-                    LOG.info(u'New bunch time: +%s', dt.rawtime(0))
+                    _log.info(u'New bunch time: +%s', dt.rawtime(0))
                 else:
-                    LOG.debug(u'Recording first bunch finish: %s', e.rawtime())
+                    _log.debug(u'Recording first bunch finish: %s',
+                               e.rawtime())
                     self.altfinish = e
         else:
             # send through to catch-all trigger handler
@@ -2521,11 +2524,11 @@ class rms(object):
             st = self.start + stof
             nt = tod.now()
             if st < nt:
-                LOG.debug(u'Cat %r has started', cat)
+                _log.debug(u'Cat %r has started', cat)
                 ret = True
             else:
-                LOG.debug(u'Cat %r has not yet started: %s < %s', cat,
-                          nt.rawtime(1), st.rawtime(1))
+                _log.debug(u'Cat %r has not yet started: %s < %s', cat,
+                           nt.rawtime(1), st.rawtime(1))
         return ret
 
     def announcecatlap(self, acat=None):
@@ -2554,10 +2557,10 @@ class rms(object):
                                 unicode(target),
                                 unicode(target - onlap)
                             ]))
-                        LOG.debug(u'Cat %r %r: %r/%r, %r to go', cat, prompt,
-                                  onlap, target, target - onlap)
+                        _log.debug(u'Cat %r %r: %r/%r, %r to go', cat, prompt,
+                                   onlap, target, target - onlap)
                     else:
-                        LOG.debug(u'No data for %r cat lap', cat)
+                        _log.debug(u'No data for %r cat lap', cat)
 
     def timertrig(self, e):
         """Process transponder passing event."""
@@ -2569,22 +2572,22 @@ class rms(object):
         # fetch rider data from riderdb using refid lookup
         r = self.meet.rdb.getrefid(e.refid)
         if r is None:
-            LOG.info(u'Unknown rider: %s:%s@%s/%s', e.refid, e.chan,
-                     e.rawtime(2), e.source)
+            _log.info(u'Unknown rider: %s:%s@%s/%s', e.refid, e.chan,
+                      e.rawtime(2), e.source)
             return False
 
         bib = self.meet.rdb.getvalue(r, riderdb.COL_BIB)
         ser = self.meet.rdb.getvalue(r, riderdb.COL_SERIES)
         if ser != self.series:
-            LOG.info(u'Non-series rider: %s.%s', bib, ser)
+            _log.info(u'Non-series rider: %s.%s', bib, ser)
             return False
 
         # if there's a source filter set, discard any unknown sources
         # todo: channel should be the primary source identifier
         if len(self.passingsource) > 0:
             if e.source.lower() not in self.passingsource:
-                LOG.info(u'Invalid passing: %s:%s@%s/%s', bib, e.chan,
-                         e.rawtime(2), e.source)
+                _log.info(u'Invalid passing: %s:%s@%s/%s', bib, e.chan,
+                          e.rawtime(2), e.source)
                 return False
 
         # check for a spare bike in riderdb cat, before clubmode additions
@@ -2592,7 +2595,7 @@ class rms(object):
         if self.allowspares and spcat == u'SPARE' and self.timerstat in [
                 u'running', u'armfinish'
         ]:
-            LOG.warning(u'Adding spare bike: %r', bib)
+            _log.warning(u'Adding spare bike: %r', bib)
             self.addrider(bib)
 
         # fetch rider info from event
@@ -2603,20 +2606,20 @@ class rms(object):
             ]:
                 self.addrider(bib)
                 lr = self.getrider(bib)
-                LOG.info(u'Added new starter: %s:%s@%s/%s', bib, e.chan,
-                         e.rawtime(2), e.source)
+                _log.info(u'Added new starter: %s:%s@%s/%s', bib, e.chan,
+                          e.rawtime(2), e.source)
             else:
-                LOG.info(u'Non-starter: %s:%s@%s/%s', bib, e.chan,
-                         e.rawtime(2), e.source)
+                _log.info(u'Non-starter: %s:%s@%s/%s', bib, e.chan,
+                          e.rawtime(2), e.source)
                 return False
 
         # log passing of rider before further processing
         if not lr[COL_INRACE]:
-            LOG.warning(u'Withdrawn rider: %s:%s@%s/%s', bib, e.chan,
-                        e.rawtime(2), e.source)
+            _log.warning(u'Withdrawn rider: %s:%s@%s/%s', bib, e.chan,
+                         e.rawtime(2), e.source)
             # but continue as if still in race
         else:
-            LOG.info(u'Saw: %s:%s@%s/%s', bib, e.chan, e.rawtime(2), e.source)
+            _log.info(u'Saw: %s:%s@%s/%s', bib, e.chan, e.rawtime(2), e.source)
 
         # check run state
         if self.timerstat in [u'idle', u'armstart', u'finished']:
@@ -2638,8 +2641,8 @@ class rms(object):
             st = self.start + catstart + self.minlap
         # ignore all passings from before first allowed time
         if e <= st:
-            LOG.info(u'Ignored early passing: %s:%s@%s/%s < %s', bib, e.chan,
-                     e.rawtime(2), e.source, st.rawtime(2))
+            _log.info(u'Ignored early passing: %s:%s@%s/%s < %s', bib, e.chan,
+                      e.rawtime(2), e.source, st.rawtime(2))
             return False
 
         # check this passing against previous passing records
@@ -2653,16 +2656,16 @@ class rms(object):
             lastseen = lr[COL_RFSEEN][ipos - 1]
             nthresh = lastseen + self.minlap
             if e <= nthresh:
-                LOG.info(u'Ignored short lap: %s:%s@%s/%s < %s', bib, e.chan,
-                         e.rawtime(2), e.source, nthresh.rawtime(2))
+                _log.info(u'Ignored short lap: %s:%s@%s/%s < %s', bib, e.chan,
+                          e.rawtime(2), e.source, nthresh.rawtime(2))
                 return False
             # check the following passing if it exists
             if len(lr[COL_RFSEEN]) > ipos:
                 npass = lr[COL_RFSEEN][ipos]
                 delta = npass - e
                 if delta <= self.minlap:
-                    LOG.info(u'Spurious passing: %s:%s@%s/%s < %s', bib,
-                             e.chan, e.rawtime(2), e.source, npass.rawtime(2))
+                    _log.info(u'Spurious passing: %s:%s@%s/%s < %s', bib,
+                              e.chan, e.rawtime(2), e.source, npass.rawtime(2))
                     return False
 
         # insert this passing in order
@@ -2706,8 +2709,8 @@ class rms(object):
                         lr[COL_RFTIME] = e
                         self._dorecalc = True
                     else:
-                        LOG.error(u'Placed rider seen at finish: %s:%s@%s/%s',
-                                  bib, e.chan, e.rawtime(2), e.source)
+                        _log.error(u'Placed rider seen at finish: %s:%s@%s/%s',
+                                   bib, e.chan, e.rawtime(2), e.source)
                     if lr[COL_INRACE]:
                         lr[COL_LAPS] += 1
                         if rcat in self.catonlap and lr[
@@ -2720,8 +2723,8 @@ class rms(object):
                                             lr[COL_NAMESTR].decode(u'utf-8'),
                                             lr[COL_CAT].decode(u'utf-8'), e)
             else:
-                LOG.info(u'Duplicate finish rider %s:%s@%s/%s', bib, e.chan,
-                         e.rawtime(2), e.source)
+                _log.info(u'Duplicate finish rider %s:%s@%s/%s', bib, e.chan,
+                          e.rawtime(2), e.source)
         # end finishing rider path
 
         # lapping rider path
@@ -2764,7 +2767,7 @@ class rms(object):
                         if e < curlapstart:
                             # passing is for a previous event lap
                             onlap = False
-                            LOG.info(
+                            _log.info(
                                 u'Passing on previous lap: %s:%s@%s/%s < %s',
                                 bib, e.chan, e.rawtime(2), e.source,
                                 curlapstart.rawtime(2))
@@ -2787,7 +2790,7 @@ class rms(object):
                                         lr[COL_LAPS] = self.curlap
                                         onlap = True
                                     else:
-                                        LOG.warning(
+                                        _log.warning(
                                             u'Invalid laps %r: %r / %r', bib,
                                             lr[COL_LAPS], self.curlap)
                                 else:
@@ -2822,7 +2825,7 @@ class rms(object):
         try:
             newlap = int(reqlap)
         except Exception:
-            LOG.debug(u'Invalid lap count %r', reqlap)
+            _log.debug(u'Invalid lap count %r', reqlap)
 
         if newlap is not None and newlap > 0:
             if self.event[u'type'] == u'criterium':
@@ -2869,7 +2872,7 @@ class rms(object):
             else:
                 self.totlaps = None
         except Exception:
-            LOG.warning(u'Ignored invalid total lap count')
+            _log.warning(u'Ignored invalid total lap count')
         if self.totlaps is not None:
             self.totlapentry.set_text(unicode(self.totlaps))
         else:
@@ -2931,13 +2934,13 @@ class rms(object):
             if self.finish:
                 self.meet.cmd_announce(u'finish', self.finish.rawtime())
             else:
-                LOG.info(u'No valid times available')
+                _log.info(u'No valid times available')
 
     def int_report(self, acode):
         """Return report sections for the named intermed."""
         ret = []
         if acode not in self.intermeds:
-            LOG.debug(u'Attempt to read non-existent inter: %r', acode)
+            _log.debug(u'Attempt to read non-existent inter: %r', acode)
             return ret
         descr = acode
         if self.intermap[acode][u'descr']:
@@ -2980,7 +2983,7 @@ class rms(object):
                         ])
                     idx += 1
                 else:
-                    LOG.warning(u'Duplicate no. %r in places', bib)
+                    _log.warning(u'Duplicate no. %r in places', bib)
         if len(lines) > 0:
             sec = report.section(u'inter' + acode)
             sec.heading = descr
@@ -2995,7 +2998,7 @@ class rms(object):
 
         ## TODO : Fix offset time calcs - too many off by ones
         if acode not in self.intermeds:
-            LOG.debug(u'Attempt to display non-existent inter: %r', acode)
+            _log.debug(u'Attempt to display non-existent inter: %r', acode)
             return
         descr = acode
         if self.intermap[acode][u'descr']:
@@ -3025,7 +3028,7 @@ class rms(object):
                         ])
                     idx += 1
                 else:
-                    LOG.warning(u'Duplicate no. % in places', bib)
+                    _log.warning(u'Duplicate no. % in places', bib)
         glib.timeout_add_seconds(25, self.reannounce_lap)
 
     def todempty(self, val):
@@ -3208,7 +3211,7 @@ class rms(object):
         self.meet.stat_but.set_sensitive(False)
         if self.finish is None:
             self.set_finish(tod.now())
-            LOG.info(u'Finish time forced: %s', self.finish.rawtime())
+            _log.info(u'Finish time forced: %s', self.finish.rawtime())
 
     def info_time_edit_clicked_cb(self, button, data=None):
         """Run an edit times dialog to update event time."""
@@ -3230,7 +3233,7 @@ class rms(object):
                 self.resetcatonlaps()
                 if self.event[u'type'] in [u'criterium', u'circuit', u'cross']:
                     glib.idle_add(self.armlap)
-            LOG.info(u'Adjusted event times')
+            _log.info(u'Adjusted event times')
 
     def editcol_cb(self, cell, path, new_text, col):
         """Edit column callback."""
@@ -3245,7 +3248,7 @@ class rms(object):
         elif new_text.isdigit():
             self.riders[path][col] = int(new_text)
         else:
-            LOG.error(u'Invalid lap count')
+            _log.error(u'Invalid lap count')
 
     def editseed_cb(self, cell, path, new_text, col):
         """Edit the lap field if valid."""
@@ -3253,7 +3256,7 @@ class rms(object):
         if new_text.isdigit():
             self.riders[path][col] = int(new_text)
         else:
-            LOG.error(u'Invalid lap count')
+            _log.error(u'Invalid lap count')
 
     def resetplaces(self):
         """Clear places off all riders."""
@@ -3387,7 +3390,7 @@ class rms(object):
 
     def edit_event_properties(self, window, data=None):
         """Edit event specifics."""
-        LOG.warning(u'Edit event properties not implemented')
+        _log.warning(u'Edit event properties not implemented')
 
     def getbunch_iter(self, iter):
         """Return a 'bunch' string for the rider."""
@@ -3491,7 +3494,7 @@ class rms(object):
                     nmb = self.vbunch(self.riders[i][COL_CBUNCH],
                                       self.riders[i][COL_MBUNCH])
                 else:
-                    LOG.info(u'Ignored same time on first rider')
+                    _log.info(u'Ignored same time on first rider')
             else:
                 nmb = tod.mktod(new_text)
             if self.riders[path][COL_MBUNCH] != nmb:
@@ -3508,34 +3511,34 @@ class rms(object):
             if no != u'x':
                 # repetition? - already in place set?
                 if no in placeset:
-                    LOG.error(u'Duplicate no in places: %r', no)
+                    _log.error(u'Duplicate no in places: %r', no)
                     ret = False
                 placeset.add(no)
                 # rider in the model?
                 lr = self.getrider(no)
                 if lr is None:
-                    LOG.error(u'Non-starter in places: %r', no)
+                    _log.error(u'Non-starter in places: %r', no)
                     ret = False
                 else:
                     # rider still in the race?
                     if not lr[COL_INRACE]:
-                        LOG.info(u'DNF/DNS rider in places: %r', no)
+                        _log.info(u'DNF/DNS rider in places: %r', no)
                         if dnf:
                             ret = False
             else:
                 # placeholder needs to be filled in later or left off
-                LOG.info(u'Placeholder in places')
+                _log.info(u'Placeholder in places')
         return ret
 
     def recalculate(self):
         """Recalculator, acquires lock and then continues."""
         if not self.recalclock.acquire(False):
-            LOG.warning(u'Recalculate already in progress')
+            _log.warning(u'Recalculate already in progress')
             return None  # allow only one entry
         try:
             self._recalc()
         except Exception as e:
-            LOG.error(u'%s recalculating result: %s', e.__class__.__name__, e)
+            _log.error(u'%s recalculating result: %s', e.__class__.__name__, e)
         finally:
             self._dorecalc = False
             self.recalclock.release()
@@ -3564,7 +3567,7 @@ class rms(object):
                 pgroups.append(u'-'.join(cg))
 
         ret = u' '.join(pgroups)
-        LOG.debug(u'Cat %r finish: %r', cat, ret)
+        _log.debug(u'Cat %r finish: %r', cat, ret)
         return ret
 
     def assign_finish(self):
@@ -3585,16 +3588,16 @@ class rms(object):
                         idx += 1
                         r[COL_PLACE] = unicode(curplace)
                     else:
-                        LOG.warning(u'DNF Rider %r in finish places', bib)
+                        _log.warning(u'DNF Rider %r in finish places', bib)
                 else:
-                    LOG.warning(u'Duplicate no. %r in finish places', bib)
+                    _log.warning(u'Duplicate no. %r in finish places', bib)
 
     def assign_places(self, contest):
         """Transfer points and bonuses into the named contest."""
         # fetch context meta infos
         src = self.contestmap[contest][u'source']
         if src not in RESERVED_SOURCES and src not in self.intermeds:
-            LOG.info(u'Invalid inter source %r in contest %r', src, contest)
+            _log.info(u'Invalid inter source %r in contest %r', src, contest)
             return
         countbackwinner = False  # for stage finish only track winner in cb
         category = self.contestmap[contest][u'category']
@@ -3677,7 +3680,8 @@ class rms(object):
                                 else:
                                     self.pointscb[tally][bib][curplace] += 1
                 else:
-                    LOG.warning(u'Duplicate no. %r in %r places', bib, contest)
+                    _log.warning(u'Duplicate no. %r in %r places', bib,
+                                 contest)
 
     def decode_limit(self, limitstr, elap=None):
         """Decode a limit and finish time into raw bunch time."""
@@ -3713,17 +3717,17 @@ class rms(object):
                 else:
                     ret = limit.truncate(0)  # raw bunch time
             if ret is None:
-                LOG.warning(u'Unable to decode time limit: %r', limitstr)
+                _log.warning(u'Unable to decode time limit: %r', limitstr)
         return ret
 
     def _recalc(self):
         """Internal 'protected' recalculate function."""
         # if readonly and calc set - skip recalc
         if self.readonly and self.calcset:
-            LOG.debug(u'Cached Recalculate')
+            _log.debug(u'Cached Recalculate')
             return False
 
-        LOG.debug(u'Recalculate model')
+        _log.debug(u'Recalculate model')
         # pass one: clear off old places and bonuses
         self.resetplaces()
 
@@ -3843,8 +3847,8 @@ class rms(object):
             if ft is not None and self.timelimit is not None:
                 limit = self.decode_limit(self.timelimit, ft)
                 if limit is not None:
-                    LOG.debug(u'Time limit: %r = %s, +%s', self.timelimit,
-                              limit.rawtime(0), (limit - ft).rawtime(0))
+                    _log.debug(u'Time limit: %r = %s, +%s', self.timelimit,
+                               limit.rawtime(0), (limit - ft).rawtime(0))
                     # and export to announce
                     self.meet.cmd_announce(u'timelimit', limit.rawtime(0))
             tot = 0
@@ -3887,7 +3891,7 @@ class rms(object):
             self.meet.action_combo.get_active_iter(), 0).decode(u'utf-8')
         if curact == u'fin':
             self.meet.action_entry.set_text(self.places)
-        LOG.debug(u'Event status: %r', self.racestat)
+        _log.debug(u'Event status: %r', self.racestat)
         self.calcset = True
         return False  # allow idle add
 
@@ -3912,7 +3916,7 @@ class rms(object):
                         glib.idle_add(self.armlap)
                 dlg.response(1)
             else:
-                LOG.warning(u'Invalid elapsed time: Start not updated')
+                _log.warning(u'Invalid elapsed time: Start not updated')
         return False
 
     def new_start_trig(self, button, entry=None):
@@ -3924,12 +3928,12 @@ class rms(object):
         if et is not None:
             entry.set_text(et.rawtime())
         else:
-            LOG.info(u'Invalid elapsed time')
+            _log.info(u'Invalid elapsed time')
 
     def elapsed_dlg(self, addriders=u''):
         """Run a 'new start' dialog."""
         if self.timerstat == u'armstart':
-            LOG.error(u'Start is armed, unarm to add new start time')
+            _log.error(u'Start is armed, unarm to add new start time')
             return
 
         b = gtk.Builder()
@@ -3950,11 +3954,11 @@ class rms(object):
             response = dlg.run()
             self.newstartdlg = None
             if response == 1:  # id 1 set in glade for "Apply"
-                LOG.info(u'Start time updated: %r', self.start.rawtime(2))
+                _log.info(u'Start time updated: %r', self.start.rawtime(2))
             else:
-                LOG.info(u'Set elapsed time cancelled')
+                _log.info(u'Set elapsed time cancelled')
         except Exception as e:
-            LOG.debug(u'%s setting elapsed time: %s', e.__class__.__name__, e)
+            _log.debug(u'%s setting elapsed time: %s', e.__class__.__name__, e)
         finally:
             self.meet.timercb = self.timertrig
             dlg.destroy()
@@ -3970,8 +3974,8 @@ class rms(object):
         if self.timerstat not in [u'idle', u'armstart', u'finished']:
             if self.finish is not None:
                 rbib = self.riders[path][COL_BIB].decode(u'utf-8')
-                LOG.info(u'Confirmed next place by tree selection: %r/%r',
-                         rbib, path)
+                _log.info(u'Confirmed next place by tree selection: %r/%r',
+                          rbib, path)
                 self.append_selected_place()
 
     def treeview_button_press(self, treeview, event):
@@ -4002,7 +4006,7 @@ class rms(object):
 
     def placeswap(self, src, dst):
         """Swap the src and dst riders if they appear in places."""
-        LOG.debug(u'Places before swap: %r', self.places)
+        _log.debug(u'Places before swap: %r', self.places)
         newplaces = []
         for placegroup in self.places.split():
             gv = placegroup.split(u'-')
@@ -4022,13 +4026,13 @@ class rms(object):
                 gv[dind] = src
             newplaces.append(u'-'.join(gv))
         self.places = u' '.join(newplaces)
-        LOG.debug(u'Places after swap: %r', self.places)
+        _log.debug(u'Places after swap: %r', self.places)
 
     def rms_context_swap_activate_cb(self, menuitem, data=None):
         """Swap data to/from another rider."""
         sel = self.view.get_selection().get_selected()
         if sel is None:
-            LOG.info(u'Unable to swap empty rider selection')
+            _log.info(u'Unable to swap empty rider selection')
             return
         srcbib = self.riders.get_value(sel[1], COL_BIB).decode(u'utf-8')
         spcat = riderdb.primary_cat(
@@ -4066,7 +4070,7 @@ class rms(object):
                         tv = dr[col]
                         dr[col] = sr[col]
                         sr[col] = tv
-                    LOG.info(u'Swap riders %r <=> %r', srcbib, dstbib)
+                    _log.info(u'Swap riders %r <=> %r', srcbib, dstbib)
                     # If srcrider was a spare bike, remove the spare and patch
                     if spare:
                         ac = [t for t in sr[COL_RFSEEN]]
@@ -4074,15 +4078,15 @@ class rms(object):
                         dr[COL_RFSEEN] = [t for t in sorted(ac)]
                         dr[COL_LAPS] = len(dr[COL_RFSEEN])
                         self.delrider(srcbib)
-                        LOG.debug(u'Spare bike %r removed', srcbib)
+                        _log.debug(u'Spare bike %r removed', srcbib)
                     # If dstrider is a spare bike, leave it in place
                     self.recalculate()
                 else:
-                    LOG.error(u'Invalid rider swap %r <=> %r', srcbib, dstbib)
+                    _log.error(u'Invalid rider swap %r <=> %r', srcbib, dstbib)
             else:
-                LOG.info(u'Swap to same rider ignored')
+                _log.info(u'Swap to same rider ignored')
         else:
-            LOG.info(u'Swap rider cancelled')
+            _log.info(u'Swap rider cancelled')
         dlg.destroy()
 
     def rms_context_edit_activate_cb(self, menuitem, data=None):
@@ -4121,23 +4125,24 @@ class rms(object):
                 ft = self.riders.get_value(sel[1], COL_RFTIME)
                 if ft:
                     nft = ft.rawtime(2)
-                LOG.info(u'Adjust rider %r start:%s, finish:%s', bib, nst, nft)
+                _log.info(u'Adjust rider %r start:%s, finish:%s', bib, nst,
+                          nft)
                 self.recalculate()
 
     def rms_context_chg_activate_cb(self, menuitem, data=None):
         """Update selected rider from event."""
         change = menuitem.get_label().lower()
-        LOG.debug(u'menuitem: %r: %r', menuitem, change)
+        _log.debug(u'menuitem: %r: %r', menuitem, change)
         sel = self.view.get_selection().get_selected()
         bib = None
         if sel is not None:
             i = sel[1]
             selbib = self.riders.get_value(i, COL_BIB).decode(u'utf-8')
             if change == u'delete':
-                LOG.info(u'Delete rider: %r', selbib)
+                _log.info(u'Delete rider: %r', selbib)
                 self.delrider(selbib)
             elif change == u'clear':
-                LOG.info(u'Clear rider %r finish time', selbib)
+                _log.info(u'Clear rider %r finish time', selbib)
                 self.riders.set_value(i, COL_RFTIME, None)
                 self.riders.set_value(i, COL_MBUNCH, None)
                 self.recalculate()
@@ -4145,7 +4150,7 @@ class rms(object):
                 splits = self.riders.get_value(i, COL_RFSEEN)
                 if splits is not None and len(splits) > 0:
                     nf = splits[-1]
-                    LOG.info(
+                    _log.info(
                         u'Set raw finish for rider %r to last passing: %s',
                         selbib, nf.rawtime(2))
                     self.riders.set_value(i, COL_RFTIME, nf)
@@ -4157,7 +4162,7 @@ class rms(object):
             elif change == u'passing':
                 self.manpassing(selbib)
             else:
-                LOG.info(u'Unknown rider change %r ignored', change)
+                _log.info(u'Unknown rider change %r ignored', change)
 
     def __init__(self, meet, event, ui=True):
         self.meet = meet
@@ -4169,7 +4174,7 @@ class rms(object):
         rstr = u''
         if self.readonly:
             rstr = u'readonly '
-        LOG.debug(u'Init %r event %r', rstr, self.evno)
+        _log.debug(u'Init %r event %r', rstr, self.evno)
 
         self.recalclock = threading.Lock()
         self._dorecalc = False
@@ -4256,7 +4261,7 @@ class rms(object):
             gobject.TYPE_PYOBJECT)  # RFSEEN = 15
 
         uifile = os.path.join(metarace.UI_PATH, u'rms.ui')
-        LOG.debug(u'Building event interface from %r', uifile)
+        _log.debug(u'Building event interface from %r', uifile)
         b = gtk.Builder()
         b.add_from_file(uifile)
 

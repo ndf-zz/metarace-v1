@@ -22,8 +22,8 @@ from metarace import sysconf
 from metarace import tod
 from libscrc import mcrf4xx
 
-LOG = logging.getLogger(u'metarace.decoder.thbc')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.decoder.thbc')
+_log.setLevel(logging.DEBUG)
 
 THBC_BAUD = 19200
 THBC_UDP_PORT = 2008
@@ -178,13 +178,13 @@ class thbc(decoder):
     # Device-specific functions
     def _close(self):
         if self._io is not None:
-            LOG.debug(u'Close connection')
+            _log.debug(u'Close connection')
             cp = self._io
             self._io = None
             try:
                 cp.close()
             except Exception as e:
-                LOG.debug(u'%s closing io: %s', e.__class__.__name__, e)
+                _log.debug(u'%s closing io: %s', e.__class__.__name__, e)
 
     def _port(self, port):
         """Re-establish connection to supplied device port."""
@@ -192,7 +192,7 @@ class thbc(decoder):
         s = None
         self._rdbuf = b''
         if u'/' not in port and u'.' in port:
-            LOG.debug(u'Attempting UDP on %r', port)
+            _log.debug(u'Attempting UDP on %r', port)
             s = dgram(port, THBC_UDP_PORT)
         else:
             # assume device file
@@ -205,7 +205,7 @@ class thbc(decoder):
         self.sane()
 
     def _sync(self, data=None):
-        LOG.debug(u'Performing blocking sync')
+        _log.debug(u'Performing blocking sync')
         acceptval = tod.tod(u'0.001')
         nt = tod.now()
         diff = nt - nt.truncate(0)
@@ -214,7 +214,7 @@ class thbc(decoder):
             nt = tod.now()
             diff = nt - nt.truncate(0)
         self._write(self._set_time_cmd(nt))
-        LOG.debug(u'Set time: %r', nt.meridiem())
+        _log.info(u'Set decoder time: %r', nt.meridiem())
 
     def _ipcfg(self, data=None):
         """Alter the attached decoder's IP address."""
@@ -224,7 +224,7 @@ class thbc(decoder):
             if i not in ipcfg:
                 ipcfg[i] = DEFAULT_IPCFG[i]
             cmd += socket.inet_aton(socket.gethostbyname(ipcfg[i]))
-        LOG.info(u'Attempting IP config update')
+        _log.info(u'Attempting IP config update')
         self._v3_cmd(cmd)
 
     def _sane(self, data=None):
@@ -237,15 +237,15 @@ class thbc(decoder):
                     key = CONFIG_FLAGS[flag]
                     if key in oconf:
                         if oconf[key] != self._decoderconfig[flag]:
-                            LOG.info(u'Key mismatch: %r', key)
+                            _log.info(u'Key mismatch: %r', key)
                             self._decoderconfig[flag] = oconf[key]
                             doconf = True
         else:
-            LOG.info(u'Decoder not connected')
+            _log.info(u'Decoder not connected')
 
         # re-write config if required
         if doconf:
-            LOG.info(u'Re-configuring %r', self._boxname)
+            _log.info(u'Re-configuring %r', self._boxname)
             self._set_config()
 
         # force decoder levels
@@ -304,8 +304,8 @@ class thbc(decoder):
         """Set the date on the decoder."""
         if timestruct is None:
             timestruct = time.localtime()
-        LOG.debug(u'Set date on decoder: %s',
-                  time.strftime('%Y-%m-%d', timestruct))
+        _log.debug(u'Set date on decoder: %s',
+                   time.strftime('%Y-%m-%d', timestruct))
         cmd = bytearray(5)
         cmd[0] = 0x0a
         cmd[1] = 0x0a
@@ -364,15 +364,15 @@ class thbc(decoder):
         self._version = unicode(hexval2val(ibuf[47]))
         stalvl = hex(ord(msg[25]))  # ? question this
         boxlvl = hex(ord(msg[26]))
-        LOG.info(u'Info Decoder ID: %s', self._boxname)
-        LOG.debug(u'Info Firmware Version: %r', self._version)
-        LOG.debug(u'Levels: STA=%r, BOX=%r', stalvl, boxlvl)
+        _log.info(u'Info Decoder ID: %s', self._boxname)
+        _log.debug(u'Info Firmware Version: %r', self._version)
+        _log.debug(u'Levels: STA=%r, BOX=%r', stalvl, boxlvl)
         self._decoderipconfig[u'IP'] = socket.inet_ntoa(msg[27:31])
         self._decoderipconfig[u'Mask'] = socket.inet_ntoa(msg[31:35])
         self._decoderipconfig[u'Gateway'] = socket.inet_ntoa(msg[35:39])
         self._decoderipconfig[u'Host'] = socket.inet_ntoa(msg[39:43])
         for key in [u'IP', u'Mask', u'Gateway', u'Host']:
-            LOG.debug(u'%r: %r', key, self._decoderipconfig[key])
+            _log.debug(u'%r: %r', key, self._decoderipconfig[key])
 
     def _parse_message(self, msg, ack=True):
         """Return tod object from timing msg or None."""
@@ -394,50 +394,50 @@ class thbc(decoder):
                         elif pvec[0] == u'MAN':
                             cstr = u'C0'
                         if pvec[5] == u'3':  # LOW BATTERY ALERT
-                            LOG.warning(u'Low battery on %r', rstr)
+                            _log.warning(u'Low battery on %r', rstr)
                         ret = tod.tod(pvec[2],
                                       index=istr,
                                       chan=cstr,
                                       refid=rstr,
                                       source=self._boxname)
                         # Log a hardware-specific passing
-                        LOG.log(DECODER_LOG_LEVEL, msg.strip())
+                        _log.log(DECODER_LOG_LEVEL, msg.strip())
                         if ack:
                             self._write(ACKCMD)  # Acknowledge if ok
                         self._cksumerr = 0
                     else:
-                        LOG.warning(u'Invalid checksum: %r != %r: %r', tsum,
-                                    msum, msg)
+                        _log.warning(u'Invalid checksum: %r != %r: %r', tsum,
+                                     msum, msg)
                         self._cksumerr += 1
                         if self._cksumerr > 3:
                             # assume error on decoder, so acknowledge and
                             # continue with log
                             # NOTE: This path is triggered when serial comms
                             # fail and a tag read happens before a manual trig
-                            LOG.error(u'Erroneous message from decoder')
+                            _log.error(u'Erroneous message from decoder')
                             if ack:
                                 self._write(ACKCMD)
                 else:
-                    LOG.debug(u'Invalid message: %r', msg)
+                    _log.debug(u'Invalid message: %r', msg)
             elif msg[0] == STATSTART:  # Status message
                 data = msg[1:22]
                 pvec = data.decode(THBC_ENCODING).split()
                 if len(pvec) == 5:
-                    LOG.info(u'%r@%s Noise:%s/%s Levels:%s/%s', self._boxname,
-                             pvec[0], pvec[1], pvec[2], pvec[3], pvec[4])
+                    _log.info(u'%r@%s Noise:%s/%s Levels:%s/%s', self._boxname,
+                              pvec[0], pvec[1], pvec[2], pvec[3], pvec[4])
                 else:
-                    LOG.info(u'Invalid status: %r', msg)
+                    _log.info(u'Invalid status: %r', msg)
             elif b'+++' == msg[0:3] and len(msg) > 53:
                 self._parse_config(msg[3:])
             else:
                 pass
         else:
-            LOG.debug(u'Short message: %r', msg)
+            _log.debug(u'Short message: %r', msg)
         return ret
 
     def _ipcompletion(self):
         """Blocking wait for ipconfig completion - horrible."""
-        LOG.info(u'IP Config')
+        _log.info(u'IP Config')
         time.sleep(10)
         self.write(QUECMD)
 
@@ -448,14 +448,14 @@ class thbc(decoder):
             if ch == LF and len(self._rdbuf) > 0 and self._rdbuf[-1] == CR:
                 # Return ends the current 'message', if preceeded by return
                 self._rdbuf += ch  # include trailing newline
-                #LOG.debug(u'RECV: %r', self._rdbuf)
+                #_log.debug(u'RECV: %r', self._rdbuf)
                 t = self._parse_message(self._rdbuf.lstrip(b'\0'))
                 if t is not None:
                     self._trig(t)
                 self._rdbuf = b''
             elif len(self._rdbuf) > 40 and b'\x1e\x86\x98' in self._rdbuf:
                 # Assume acknowledge from IP Command
-                #LOG.debug(u'RECV: %r', self._rdbuf)
+                #_log.debug(u'RECV: %r', self._rdbuf)
                 self._rdbuf = b''
                 self._ipcompletion()
             else:
@@ -465,11 +465,11 @@ class thbc(decoder):
     def _write(self, msg):
         if self._io is not None:
             self._io.write(msg)
-            #LOG.debug(u'SEND: %r', msg)
+            #_log.debug(u'SEND: %r', msg)
 
     def run(self):
         """Decoder main loop."""
-        LOG.debug(u'Starting')
+        _log.debug(u'Starting')
         self._running = True
         while self._running:
             try:
@@ -490,13 +490,13 @@ class thbc(decoder):
             except (serial.SerialException, socket.error) as e:
                 self._close()
                 self._boxname = None
-                LOG.error(u'%s: %s', e.__class__.__name__, e)
+                _log.error(u'%s: %s', e.__class__.__name__, e)
             except Exception as e:
-                LOG.critical(u'%s: %s', e.__class__.__name__, e)
+                _log.critical(u'%s: %s', e.__class__.__name__, e)
                 self._boxname = None
                 self._running = False
         self.setcb()
-        LOG.debug(u'Exiting')
+        _log.debug(u'Exiting')
 
 
 class dgram(object):

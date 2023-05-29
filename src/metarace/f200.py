@@ -20,8 +20,8 @@ from metarace import timerpane
 from metarace import report
 from metarace import jsonconfig
 
-LOG = logging.getLogger(u'metarace.f200')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.f200')
+_log.setLevel(logging.DEBUG)
 
 # config version string
 EVENT_ID = u'f200-2.0'
@@ -201,9 +201,9 @@ class f200(object):
                 with open(self.configfile, 'rb') as f:
                     cr.read(f)
             except Exception as e:
-                LOG.error(u'Unable to read config: %s', e)
+                _log.error(u'Unable to read config: %s', e)
         else:
-            LOG.info(u'%r not found, loading defaults', self.configfile)
+            _log.info(u'%r not found, loading defaults', self.configfile)
 
         self.chan_S = strops.confopt_chan(cr.get(u'event', u'chan_S'),
                                           defchans)
@@ -282,12 +282,12 @@ class f200(object):
         # After load complete - check config and report.
         eid = cr.get(u'event', u'id')
         if eid and eid != EVENT_ID:
-            LOG.info(u'Event config mismatch: %r != %r', eid, EVENT_ID)
+            _log.info(u'Event config mismatch: %r != %r', eid, EVENT_ID)
 
     def saveconfig(self):
         """Save race to disk."""
         if self.readonly:
-            LOG.error(u'Attempt to save readonly event')
+            _log.error(u'Attempt to save readonly event')
             return
         cw = jsonconfig.config()
         cw.add_section(u'event')
@@ -334,7 +334,7 @@ class f200(object):
                     slice.append(None)
             cw.set(u'riders', r[COL_BIB].decode(u'utf-8'), slice)
         cw.set(u'event', u'id', EVENT_ID)
-        LOG.debug(u'Saving event config %r', self.configfile)
+        _log.debug(u'Saving event config %r', self.configfile)
         with metarace.savefile(self.configfile) as f:
             cw.write(f)
 
@@ -547,7 +547,7 @@ class f200(object):
         rstr = u''
         if self.readonly:
             rstr = u'readonly '
-        LOG.debug(u'Shutdown %sevent %s: %s', rstr, self.evno, msg)
+        _log.debug(u'Shutdown %sevent %s: %s', rstr, self.evno, msg)
         if not self.readonly:
             self.saveconfig()
         self.winopen = False
@@ -555,7 +555,7 @@ class f200(object):
     def do_properties(self):
         """Run event properties dialog."""
         prfile = os.path.join(metarace.UI_PATH, u'ittt_properties.ui')
-        LOG.debug(u'Building event properties from %r', prfile)
+        _log.debug(u'Building event properties from %r', prfile)
         b = gtk.Builder()
         b.add_from_file(prfile)
         dlg = b.get_object(u'properties')
@@ -647,7 +647,7 @@ class f200(object):
                     self.addrider(s)
             glib.idle_add(self.delayed_announce)
         else:
-            LOG.debug(u'Edit event properties cancelled')
+            _log.debug(u'Edit event properties cancelled')
 
         # if prefix is empty, grab input focus
         if not self.prefix_ent.get_text():
@@ -695,7 +695,7 @@ class f200(object):
             rno = r[COL_BIB].decode(u'utf-8')
             rh = self.meet.newgetrider(rno, self.series)
             if rh is None:
-                LOG.warning(u'Rider not found %r', rno)
+                _log.warning(u'Rider not found %r', rno)
                 continue
 
             rcat = None  # should check ev[u'cate']
@@ -799,8 +799,8 @@ class f200(object):
         if ri is not None:
             self.settimes(ri, self.curstart, t, split)
         else:
-            LOG.warning(u'Rider %r not in model, finish time not stored',
-                        sp.getrider())
+            _log.warning(u'Rider %r not in model, finish time not stored',
+                         sp.getrider())
         self.log_elapsed(sp.getrider(), self.curstart, t, split)
         if self.timerwin and type(self.meet.scbwin) is scbwin.scbtt:
             place = self.riders.get_value(ri, COL_PLACE)
@@ -951,7 +951,7 @@ class f200(object):
                 self.riders.swap(self.riders.get_iter(count), i)
                 count += 1
             else:
-                LOG.warning(u'Rider %r not found in model, check places', bib)
+                _log.warning(u'Rider %r not found in model, check places', bib)
 
     def getiter(self, bib):
         """Return temporary iterator to model row."""
@@ -1150,11 +1150,11 @@ class f200(object):
         r = self.getrider(bib)
         if r is None:
             if self.meet.get_clubmode():  # fill in starters
-                LOG.warning(u'Adding non-starter %r', bib)
+                _log.warning(u'Adding non-starter %r', bib)
                 self.addrider(bib)
                 r = self.getrider(bib)
             else:
-                LOG.warning(u'Rider %r not in event', bib)
+                _log.warning(u'Rider %r not in event', bib)
                 return None
         rtxt = u'[New Rider]'
         if r is not None:
@@ -1175,7 +1175,7 @@ class f200(object):
                 if self.timerstat == u'running':
                     tp.start(self.curstart)
             else:
-                LOG.warning(u'Rider %r not in event.', bib)
+                _log.warning(u'Rider %r not in event.', bib)
                 tp.toidle()
         else:
             tp.toidle()
@@ -1242,7 +1242,7 @@ class f200(object):
             bib = self.riders.get_value(sel[1], COL_BIB).decode(u'utf-8')
             if bib in self.traces:
                 # TODO: replace timy reprint with report
-                LOG.info(u'CREATE AND PRINT TRACE REPORT')
+                _log.info(u'CREATE AND PRINT TRACE REPORT')
 
     def now_button_clicked_cb(self, button, entry=None):
         """Set specified entry to the current time."""
@@ -1273,9 +1273,9 @@ class f200(object):
                 else:
                     self.settimes(i)  # clear times
                     self.log_clear(bib)
-                LOG.info(u'Race times manually adjusted for rider %r', bib)
+                _log.info(u'Race times manually adjusted for rider %r', bib)
             else:
-                LOG.debug('Edit race times cancelled')
+                _log.debug('Edit race times cancelled')
             glib.idle_add(self.delayed_announce)
 
     def tod_context_del_activate_cb(self, menuitem, data=None):
@@ -1336,7 +1336,7 @@ class f200(object):
         rstr = u''
         if self.readonly:
             rstr = u'readonly '
-        LOG.debug(u'Init %sevent %s', rstr, self.evno)
+        _log.debug(u'Init %sevent %s', rstr, self.evno)
 
         # properties
         self.distance = 200
@@ -1373,7 +1373,7 @@ class f200(object):
             gobject.TYPE_PYOBJECT)  # 9 100m
 
         uifile = os.path.join(metarace.UI_PATH, u'ittt.ui')
-        LOG.debug(u'Building event interface from %r', uifile)
+        _log.debug(u'Building event interface from %r', uifile)
         b = gtk.Builder()
         b.add_from_file(uifile)
 
@@ -1404,7 +1404,7 @@ class f200(object):
         # show window
         self.context_menu = None
         if ui:
-            LOG.debug(u'Connecting event ui handlers')
+            _log.debug(u'Connecting event ui handlers')
             # Result Pane
             t = gtk.TreeView(self.riders)
             self.view = t

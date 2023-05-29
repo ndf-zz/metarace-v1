@@ -63,8 +63,8 @@ from metarace import tod
 from metarace import strops
 
 # module logger
-LOG = logging.getLogger(u'metarace.gemini')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.gemini')
+_log.setLevel(logging.DEBUG)
 
 # dispatch thread queue commands
 TCMDS = (u'EXIT', u'PORT', u'MSG')
@@ -259,34 +259,34 @@ class gemini(threading.Thread):
     def run(self):
         """Called via threading.Thread.start()."""
         self.running = True
-        LOG.debug(u'Starting')
+        _log.debug(u'Starting')
         while self.running:
             m = self.queue.get()
             self.queue.task_done()
             try:
                 if m[0] == u'MSG' and not self.ignore and self.port:
-                    #LOG.debug(u'Send: %r', m[1])
+                    #_log.debug(u'Send: %r', m[1])
                     self.port.sendall(m[1])
                 elif m[0] == u'EXIT':
-                    LOG.debug(u'Request to close: %s', m[1])
+                    _log.debug(u'Request to close: %s', m[1])
                     self.running = False
                 elif m[0] == u'PORT':
                     if self.port is not None:
                         self.port.close()
                         self.port = None
                     if m[1] is not None and m[1] != u'' and m[1] != u'NULL':
-                        LOG.debug(u'Re-Connect port: %s', m[1])
+                        _log.debug(u'Re-Connect port: %s', m[1])
                         self.port = scbport(m[1])
                     else:
-                        LOG.debug(u'Not connected.')
+                        _log.debug(u'Not connected.')
 
             except IOError as e:
-                LOG.error(u'IO Error: %s', e)
+                _log.error(u'IO Error: %s', e)
                 if self.port is not None:
                     self.port.close()
                 self.port = None
             except Exception as e:
-                LOG.error(u'%s: %s', e.__class__.__name__, e)
+                _log.error(u'%s: %s', e.__class__.__name__, e)
         if self.port is not None:
             self.port.close()
-        LOG.debug(u'Exiting')
+        _log.debug(u'Exiting')

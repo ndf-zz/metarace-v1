@@ -16,8 +16,8 @@ from metarace import riderdb
 from metarace import strops
 from metarace import report
 
-LOG = logging.getLogger(u'metarace.classification')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.classification')
+_log.setLevel(logging.DEBUG)
 
 # config version string
 EVENT_ID = u'classification-2.0'
@@ -58,9 +58,9 @@ class classification(object):
                 with open(self.configfile, 'rb') as f:
                     cr.read(f)
             except Exception as e:
-                LOG.error(u'Unable to read config: %s', e)
+                _log.error(u'Unable to read config: %s', e)
         else:
-            LOG.info(u'%r not found, loading defaults', self.configfile)
+            _log.info(u'%r not found, loading defaults', self.configfile)
 
         self.update_expander_lbl_cb()
         self.info_expand.set_expanded(
@@ -73,7 +73,7 @@ class classification(object):
         self.recalculate()  # model is cleared and loaded in recalc
         eid = cr.get(u'event', u'id')
         if eid and eid != EVENT_ID:
-            LOG.info(u'Event config mismatch: %r != %r', eid, EVENT_ID)
+            _log.info(u'Event config mismatch: %r != %r', eid, EVENT_ID)
 
     def startlist_report(self, program=False):
         """Return a startlist report."""
@@ -113,7 +113,7 @@ class classification(object):
     def saveconfig(self):
         """Save race to disk."""
         if self.readonly:
-            LOG.error(u'Attempt to save readonly event')
+            _log.error(u'Attempt to save readonly event')
             return
         cw = jsonconfig.config()
         cw.add_section(u'event')
@@ -123,7 +123,7 @@ class classification(object):
         cw.set(u'event', u'comments', self.comments)
         cw.set(u'event', u'showinfo', self.info_expand.get_expanded())
         cw.set(u'event', u'id', EVENT_ID)
-        LOG.debug(u'Saving event config %r', self.configfile)
+        _log.debug(u'Saving event config %r', self.configfile)
         with metarace.savefile(self.configfile) as f:
             cw.write(f)
 
@@ -228,10 +228,10 @@ class classification(object):
             # then append each of the specified events
             for evno in self.showevents.split():
                 if evno:
-                    LOG.debug(u'Including results from event %r', evno)
+                    _log.debug(u'Including results from event %r', evno)
                     r = self.meet.get_event(evno, False)
                     if r is None:
-                        LOG.error(u'Invalid event %r in showplaces', evno)
+                        _log.error(u'Invalid event %r in showplaces', evno)
                         continue
                     r.loadconfig()  # now have queryable event handle
                     if r.onestart:  # go for result
@@ -253,7 +253,7 @@ class classification(object):
             nr[COL_PLACE] = place
             return self.riders.append(nr)
         else:
-            LOG.warning(u'Rider %r already in model', bib)
+            _log.warning(u'Rider %r already in model', bib)
             return None
 
     def getrider(self, bib):
@@ -292,10 +292,10 @@ class classification(object):
         for p in self.placesrc.split(u';'):
             placegroup = p.strip()
             if placegroup:
-                LOG.debug(u'Adding place group %r at rank %r', placegroup,
-                          currank)
+                _log.debug(u'Adding place group %r at rank %r', placegroup,
+                           currank)
                 if placegroup == u'X':
-                    LOG.debug(u'Added placeholder at rank %r', currank)
+                    _log.debug(u'Added placeholder at rank %r', currank)
                     currank += 1
                 else:
                     specvec = placegroup.split(u':')
@@ -309,13 +309,13 @@ class classification(object):
                                 lookup[evno][i] = currank
                                 currank += 1
                         else:
-                            LOG.warning(u'Ignored ref to self %r at rank %r',
-                                        placegroup, currank)
+                            _log.warning(u'Ignored ref to self %r at rank %r',
+                                         placegroup, currank)
                     else:
-                        LOG.warning(u'Invalid placegroup %r at rank %r',
-                                    placegroup, currank)
+                        _log.warning(u'Invalid placegroup %r at rank %r',
+                                     placegroup, currank)
             else:
-                LOG.debug(u'Empty placegroup at rank %r', currank)
+                _log.debug(u'Empty placegroup at rank %r', currank)
 
         # Pass 2: create an ordered list of rider numbers using lookup
         placemap = {}
@@ -323,8 +323,8 @@ class classification(object):
         for evno in lookup:
             r = self.meet.get_event(evno, False)
             if r is None:
-                LOG.warning(u'Event %r not found for lookup %r', evno,
-                            lookup[evno])
+                _log.warning(u'Event %r not found for lookup %r', evno,
+                             lookup[evno])
                 return
             r.loadconfig()  # now have queryable event handle
             for res in r.result_gen():
@@ -332,8 +332,8 @@ class classification(object):
                     if res[1] in lookup[evno]:
                         crank = lookup[evno][res[1]] + 1
                         maxcrank = max(maxcrank, crank)
-                        LOG.debug(u'Assigned place %r to rider %r at rank %r',
-                                  crank, res[0], res[1])
+                        _log.debug(u'Assigned place %r to rider %r at rank %r',
+                                   crank, res[0], res[1])
                         if crank not in placemap:
                             placemap[crank] = []
                         placemap[crank].append(res[0])
@@ -478,7 +478,7 @@ class classification(object):
 
     def shutdown(self, win=None, msg='Exiting'):
         """Terminate race object."""
-        LOG.debug('Shutdown event %s: %s', self.evno, msg)
+        _log.debug('Shutdown event %s: %s', self.evno, msg)
         if not self.readonly:
             self.saveconfig()
         self.winopen = False
@@ -497,7 +497,7 @@ class classification(object):
         """Run race properties dialog."""
         prfile = os.path.join(metarace.UI_PATH,
                               u'classification_properties.ui')
-        LOG.debug(u'Building event properties from %r', prfile)
+        _log.debug(u'Building event properties from %r', prfile)
         b = gtk.Builder()
         b.add_from_file(prfile)
         dlg = b.get_object(u'properties')
@@ -512,7 +512,7 @@ class classification(object):
         me.set_text(self.medals)
         response = dlg.run()
         if response == 1:  # id 1 set in glade for "Apply"
-            LOG.debug(u'Updating event properties')
+            _log.debug(u'Updating event properties')
             self.placesrc = pe.get_text().decode(u'utf-8')
             self.medals = me.get_text().decode(u'utf-8')
             self.showevents = ee.get_text().decode(u'utf-8')
@@ -526,7 +526,7 @@ class classification(object):
             self.recalculate()
             glib.idle_add(self.delayed_announce)
         else:
-            LOG.debug(u'Edit event properties cancelled')
+            _log.debug(u'Edit event properties cancelled')
 
         # if prefix is empty, grab input focus
         if not self.prefix_ent.get_text():
@@ -575,7 +575,7 @@ class classification(object):
         self.evtype = event[u'type']
         self.series = event[u'seri']
         self.configfile = meet.event_configfile(self.evno)
-        LOG.debug(u'Init event %s', self.evno)
+        _log.debug(u'Init event %s', self.evno)
 
         # race run time attributes
         self.onestart = True  # always true for autospec classification
@@ -595,7 +595,7 @@ class classification(object):
             gobject.TYPE_STRING)  # 6 medal
 
         uifile = os.path.join(metarace.UI_PATH, u'classification.ui')
-        LOG.debug(u'Building event interface from %r', uifile)
+        _log.debug(u'Building event interface from %r', uifile)
         b = gtk.Builder()
         b.add_from_file(uifile)
 

@@ -39,8 +39,8 @@ LOGFILE_LEVEL = logging.DEBUG
 CONFIGFILE = u'config.json'
 ROADMEET_ID = u'roadmeet_3.0'  # configuration versioning
 EXPORTPATH = u'export'
-LOG = logging.getLogger(u'metarace.roadmeet')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.roadmeet')
+_log.setLevel(logging.DEBUG)
 ROADRACE_TYPES = {
     u'road': u'Road Race',
     u'circuit': u'Circuit',
@@ -102,7 +102,7 @@ class registerdlg(object):
         r = self.rdb.getrider(bib, ser)
         if r is not None:
             self.rdb.editrider(r, refid=nrid)
-            LOG.info(u'Updated transponder id for rider %r to %r', bib, nrid)
+            _log.info(u'Updated transponder id for rider %r to %r', bib, nrid)
 
     def bib_entry_activate_cb(self, entry, data=None):
         """Activate on bib adds new rider, unless it exists."""
@@ -111,7 +111,7 @@ class registerdlg(object):
         r = self.rdb.getrider(bib, ser)
         if r is None:
             self.rdb.addempty(bib, ser)
-            LOG.debug(u'Added new rider %r:%r', bib, ser)
+            _log.debug(u'Added new rider %r:%r', bib, ser)
 
     def run(self):
         return self.dlg.run()
@@ -122,17 +122,17 @@ class registerdlg(object):
     def increment_rider(self):
         cbib = self.bibent.get_text().decode(u'utf-8', u'replace').strip()
         cser = self.serent.get_text().decode(u'utf-8', u'replace').strip()
-        LOG.debug(u'Increment rider from %r:%r', cbib, cser)
+        _log.debug(u'Increment rider from %r:%r', cbib, cser)
         if cbib.isdigit():
             if self.autotrack.get_active():
                 nbib = self.rdb.nextriderin(cbib, cser)
-                LOG.debug(u'Next rider from DB: %r:%r', nbib, cser)
+                _log.debug(u'Next rider from DB: %r:%r', nbib, cser)
                 if nbib is not None:
                     self.bibent.set_text(nbib)
                     self.bibent.activate()
             else:
                 nbib = int(cbib) + 1
-                LOG.debug(u'Next rider number: %r:%r', nbib, cser)
+                _log.debug(u'Next rider number: %r:%r', nbib, cser)
                 self.bibent.set_text(unicode(nbib))
                 self.bibent.activate()
         return False
@@ -160,18 +160,18 @@ class registerdlg(object):
                         if not orefid:
                             nrefid = e.refid.lower()
                             self.rdb.editrider(r, refid=nrefid)
-                            LOG.warning(u'Assigned ID %r to %r:%r', nrefid,
-                                        bib, ser)
+                            _log.warning(u'Assigned ID %r to %r:%r', nrefid,
+                                         bib, ser)
                             self.rfidval.set_text(nrefid)
                             if self.autoinc.get_active():
                                 glib.idle_add(self.increment_rider)
                             else:
                                 self.bibent.grab_focus()
                         else:
-                            LOG.warning(u'Rider %r:%r already assigned to %r',
-                                        bib, ser, orefid)
+                            _log.warning(u'Rider %r:%r already assigned to %r',
+                                         bib, ser, orefid)
                 else:
-                    LOG.warning(u'Rider number entry empty')
+                    _log.warning(u'Rider number entry empty')
                     self.rfidval.set_text(e.refid.lower())
 
 
@@ -288,7 +288,7 @@ class fakemeet(object):
             with open(CONFIGFILE, 'rb') as f:
                 cr.read(f)
         except Exception as e:
-            LOG.error(u'Error reading meet config: %s', e)
+            _log.error(u'Error reading meet config: %s', e)
         # set meet meta, and then copy into text entries
         self.shortname = cr.get(u'roadmeet', u'shortname')
         self.title_str = cr.get(u'roadmeet', u'title')
@@ -338,7 +338,7 @@ class roadmeet(object):
     def menu_race_properties_activate_cb(self, menuitem, data=None):
         """Edit race specific properties."""
         if self.curevent is not None:
-            LOG.debug(u'Editing race properties')
+            _log.debug(u'Editing race properties')
             self.curevent.edit_event_properties(self.window)
 
     def menu_meet_properties_cb(self, menuitem, data=None):
@@ -370,7 +370,7 @@ class roadmeet(object):
                 cnt += 1
             tcombo.set_sensitive(True)
         else:
-            LOG.warning(u'Unknown event type %r', self.etype)
+            _log.warning(u'Unknown event type %r', self.etype)
             tmodel.append([self.etype, tlbl])
             tcombo.set_active(0)
             tcombo.set_sensitive(False)
@@ -417,7 +417,7 @@ class roadmeet(object):
         alte.set_text(self.alttimer_port)
         response = dlg.run()
         if response == 1:  # id 1 set in glade for "Apply"
-            LOG.debug(u'Updating meet properties')
+            _log.debug(u'Updating meet properties')
             self.title_str = t_ent.get_text().decode(u'utf-8')
             self.subtitle_str = st_ent.get_text().decode(u'utf-8')
             self.document_str = doc_ent.get_text().decode(u'utf-8')
@@ -464,15 +464,15 @@ class roadmeet(object):
             if self.curevent is not None:
                 ncats = cat_ent.get_text().decode(u'utf-8').split()
                 if ncats != ocats:
-                    LOG.debug(u'Result cats changed %r -> %r', ocats, ncats)
+                    _log.debug(u'Result cats changed %r -> %r', ocats, ncats)
                     self.curevent.loadcats(ncats)
                     reload = True
             nt = tmodel.get_value(tcombo.get_active_iter(), 0).decode(u'utf-8')
             if dotype:
                 # check for type change
                 if nt != self.etype:
-                    LOG.info(u'Event type changed from %r to %r', self.etype,
-                             nt)
+                    _log.info(u'Event type changed from %r to %r', self.etype,
+                              nt)
                     if nt == u'crit':
                         self.curevent.downtimes(False)
                     else:
@@ -485,9 +485,9 @@ class roadmeet(object):
                 self.menu_race_run_activate_cb(None, None)
 
             self.set_title()
-            LOG.debug(u'Properties updated')
+            _log.debug(u'Properties updated')
         else:
-            LOG.debug(u'Edit properties cancelled')
+            _log.debug(u'Edit properties cancelled')
         dlg.destroy()
 
     def print_report(self, sections=[], provisional=False):
@@ -532,9 +532,9 @@ class roadmeet(object):
         res = print_op.run(gtk.PRINT_OPERATION_ACTION_PREVIEW, None)
         if res == gtk.PRINT_OPERATION_RESULT_APPLY:
             self.printprefs = print_op.get_print_settings()
-            LOG.debug(u'Updated print preferences')
+            _log.debug(u'Updated print preferences')
         elif res == gtk.PRINT_OPERATION_RESULT_IN_PROGRESS:
-            LOG.debug(u'Print operation in progress')
+            _log.debug(u'Print operation in progress')
         self.docindex += 1
 
         # For convenience, also save copies to pdf and xls
@@ -583,42 +583,42 @@ class roadmeet(object):
 
     def menu_race_armstart_activate_cb(self, menuitem, data=None):
         """Default armstart handler."""
-        LOG.info(u'Arm Start')
+        _log.info(u'Arm Start')
         try:
             self.curevent.armstart()
         except Exception as e:
-            LOG.error(u'Arm start %s: %s', e.__class__.__name__, e)
+            _log.error(u'Arm start %s: %s', e.__class__.__name__, e)
 
     def menu_race_armlap_activate_cb(self, menuitem, data=None):
         """Default armlap handler."""
-        LOG.debug(u'Arm Lap')
+        _log.debug(u'Arm Lap')
         try:
             self.curevent.armlap()
         except Exception as e:
-            LOG.error(u'Arm lap %s: %s', e.__class__.__name__, e)
+            _log.error(u'Arm lap %s: %s', e.__class__.__name__, e)
 
     def menu_race_armfin_activate_cb(self, menuitem, data=None):
         """Default armfin handler."""
-        LOG.info(u'Arm Finish')
+        _log.info(u'Arm Finish')
         try:
             self.curevent.armfinish()
         except Exception as e:
-            LOG.error(u'Arm finish %s: %s', e.__class__.__name__, e)
+            _log.error(u'Arm finish %s: %s', e.__class__.__name__, e)
 
     def menu_race_finished_activate_cb(self, menuitem, data=None):
         """Default finished handler."""
-        LOG.info(u'Finished')
+        _log.info(u'Finished')
         try:
             self.curevent.set_finished()
         except Exception as e:
-            LOG.error(u'Set finished %s: %s', e.__class__.__name__, e)
+            _log.error(u'Set finished %s: %s', e.__class__.__name__, e)
 
     def open_event(self, eventhdl=None):
         """Open provided event handle."""
         if eventhdl is not None:
             self.close_event()
             if self.etype not in ROADRACE_TYPES:
-                LOG.warning(u'Unknown event type %r', self.etype)
+                _log.warning(u'Unknown event type %r', self.etype)
             if self.etype == u'irtt':
                 self.curevent = irtt.irtt(self, eventhdl, True)
             elif self.etype == u'trtt':
@@ -666,7 +666,7 @@ class roadmeet(object):
             if sections:
                 self.print_report(sections)
             else:
-                LOG.info(u'Startlist - Nothing to print')
+                _log.info(u'Startlist - Nothing to print')
 
     def menu_reports_callup_activate_cb(self, menuitem, data=None):
         """Generate a start line call-up."""
@@ -675,7 +675,7 @@ class roadmeet(object):
             if sections:
                 self.print_report(sections)
             else:
-                LOG.info(u'Callup - Nothing to print')
+                _log.info(u'Callup - Nothing to print')
 
     def menu_reports_signon_activate_cb(self, menuitem, data=None):
         """Generate a sign on sheet."""
@@ -684,7 +684,7 @@ class roadmeet(object):
             if sections:
                 self.print_report(sections)
             else:
-                LOG.info(u'Sign-on - Nothing to print')
+                _log.info(u'Sign-on - Nothing to print')
 
     def menu_reports_analysis_activate_cb(self, menuitem, data=None):
         """Generate the analysis report."""
@@ -719,20 +719,20 @@ class roadmeet(object):
         """Open transponder registration dialog."""
         rdlg = registerdlg(self)
         ocb = self.timercb
-        LOG.debug(u'Save ocb %r', ocb)
+        _log.debug(u'Save ocb %r', ocb)
         try:
             self.timercb = rdlg.register_tag
             rdlg.run()
         finally:
             self.timercb = ocb
-            LOG.debug(u'Restored cb %r', ocb)
+            _log.debug(u'Restored cb %r', ocb)
         rdlg.destroy()
 
     def menu_data_uscb_activate_cb(self, menuitem, data=None):
         """Reload rider db from disk."""
         self.rdb.clear()
         self.rdb.load(u'riders.csv')
-        LOG.info(u'Reloaded riders from disk')
+        _log.info(u'Reloaded riders from disk')
         self.menu_race_run_activate_cb()
 
     def menu_import_riders_activate_cb(self, menuitem, data=None):
@@ -742,9 +742,9 @@ class roadmeet(object):
         if sfile is not None:
             with namebank.namebank() as n:
                 self.rdb.load(sfile, namedb=n, overwrite=True)
-            LOG.info(u'Import riders from %r', sfile)
+            _log.info(u'Import riders from %r', sfile)
         else:
-            LOG.debug(u'Import riders cancelled')
+            _log.debug(u'Import riders cancelled')
 
     def menu_import_chipfile_activate_cb(self, menuitem, data=None):
         """Import a transponder chipfile."""
@@ -752,14 +752,14 @@ class roadmeet(object):
                                   u'.')
         if sfile is not None:
             self.rdb.load_chipfile(sfile)
-            LOG.info(u'Import chipfile %r', sfile)
+            _log.info(u'Import chipfile %r', sfile)
         else:
-            LOG.debug(u'Import chipfile cancelled')
+            _log.debug(u'Import chipfile cancelled')
 
     def menu_import_startlist_activate_cb(self, menuitem, data=None):
         """Import a startlist."""
         if self.curevent is None:
-            LOG.info(u'No event open for starters import')
+            _log.info(u'No event open for starters import')
             return
         count = 0
         sfile = uiutil.loadcsvdlg(u'Select startlist file to import',
@@ -780,9 +780,9 @@ class roadmeet(object):
                         if start is not None:
                             self.curevent.starttime(start, bib, series)
                         count += 1
-            LOG.info(u'Import %r starters from %r', count, sfile)
+            _log.info(u'Import %r starters from %r', count, sfile)
         else:
-            LOG.debug(u'Import startlist cancelled')
+            _log.debug(u'Import startlist cancelled')
 
     def menu_export_riders_activate_cb(self, menuitem, data=None):
         """Export rider database."""
@@ -790,9 +790,9 @@ class roadmeet(object):
                                   self.window, u'riders_export.csv', u'.')
         if sfile is not None:
             self.rdb.save(sfile)
-            LOG.info(u'Export rider data to %r', sfile)
+            _log.info(u'Export rider data to %r', sfile)
         else:
-            LOG.debug(u'Export rider data cancelled')
+            _log.debug(u'Export rider data cancelled')
 
     def menu_export_chipfile_activate_cb(self, menuitem, data=None):
         """Export transponder chipfile from rider model."""
@@ -800,14 +800,14 @@ class roadmeet(object):
                                   self.window, u'chipfile.csv', u'.')
         if sfile is not None:
             self.rdb.save_chipfile(sfile)
-            LOG.info(u'Export chipfile to %r', sfile)
+            _log.info(u'Export chipfile to %r', sfile)
         else:
-            LOG.debug(u'Export chipfile cancelled')
+            _log.debug(u'Export chipfile cancelled')
 
     def menu_export_result_activate_cb(self, menuitem, data=None):
         """Export raw result to disk."""
         if self.curevent is None:
-            LOG.info(u'No event open')
+            _log.info(u'No event open')
             return
 
         rfilename = uiutil.savecsvdlg(u'Select file to save results to.',
@@ -825,12 +825,12 @@ class roadmeet(object):
                         if r[i]:
                             opr[i] = unicode(r[i].timeval)
                     cw.writerow(opr)
-            LOG.info(u'Export result to %r', rfilename)
+            _log.info(u'Export result to %r', rfilename)
 
     def menu_export_startlist_activate_cb(self, menuitem, data=None):
         """Extract startlist from current event."""
         if self.curevent is None:
-            LOG.info(u'No event open')
+            _log.info(u'No event open')
             return
 
         rfilename = uiutil.savecsvdlg(u'Select file to save startlist to.',
@@ -849,7 +849,7 @@ class roadmeet(object):
                         for r in self.curevent.startlist_gen(c):
                             cw.writerow(r)
 
-            LOG.info(u'Export startlist to %r', rfilename)
+            _log.info(u'Export startlist to %r', rfilename)
 
     def export_result_maker(self):
         if self.mirrorfile:
@@ -858,7 +858,7 @@ class roadmeet(object):
             filebase = u'.'
         if filebase in [u'', u'.']:
             filebase = u''
-            LOG.warn(u'Using default filenames for export')
+            _log.warn(u'Using default filenames for export')
         else:
             pass
 
@@ -1004,12 +1004,12 @@ class roadmeet(object):
     def menu_timing_status_cb(self, menuitem, data=None):
         if self.timer_port:
             if self.timer.connected():
-                LOG.info(u'Request timer status')
+                _log.info(u'Request timer status')
                 self.timer.status()
             else:
-                LOG.info(u'Decoder disconnected')
+                _log.info(u'Decoder disconnected')
         else:
-            LOG.info(u'No decoder configured')
+            _log.info(u'No decoder configured')
         # always call into alt timer
         self.alttimer.status()
 
@@ -1034,7 +1034,7 @@ class roadmeet(object):
     def menu_timing_start_activate_cb(self, menuitem, data=None):
         """Manually set race elapsed time via trigger."""
         if self.curevent is None:
-            LOG.info(u'No event open to set elapsed time on')
+            _log.info(u'No event open to set elapsed time on')
         else:
             self.curevent.elapsed_dlg()
 
@@ -1071,7 +1071,7 @@ class roadmeet(object):
         else:
             # assume 1 second gaps at finish
             self.alttimer.write(u'DTF01.00')
-        LOG.info(u'Re-connect/re-start attached timers')
+        _log.info(u'Re-connect/re-start attached timers')
 
     def restart_decoder(self, data=None):
         """Request re-start of decoder."""
@@ -1082,20 +1082,20 @@ class roadmeet(object):
         """Attempt to re-configure the attached decoder from saved config."""
         if self.timer.__class__.__name__ == u'thbc':
             if not self.timer.connected():
-                LOG.info(u'Timer not connected, config not possible')
+                _log.info(u'Timer not connected, config not possible')
                 return False
             if not uiutil.questiondlg(
                     self.window, u'Re-configure THBC Decoder Settings?',
                     u'Note: Passings will not be captured while decoder is updating.'
             ):
-                LOG.debug(u'Config aborted')
+                _log.debug(u'Config aborted')
                 return False
             self.timer.stop_session()
             self.timer.sane()
             glib.timeout_add_seconds(60, self.restart_decoder)
             self.timer.ipconfig()
         else:
-            LOG.info(u'Decoder config not available')
+            _log.info(u'Decoder config not available')
         return None
 
     ## Help menu callbacks
@@ -1129,7 +1129,7 @@ class roadmeet(object):
 
     def menu_clock_clicked_cb(self, button, data=None):
         """Handle click on menubar clock."""
-        LOG.info(u'PC ToD: %s', tod.now().rawtime())
+        _log.info(u'PC ToD: %s', tod.now().rawtime())
 
     ## 'Slow' Timer callback - this is the main ui event routine
     def timeout(self):
@@ -1143,7 +1143,7 @@ class roadmeet(object):
             if self.mirror is not None:
                 if not self.mirror.is_alive():
                     self.mirror = None
-                    LOG.debug(u'Removing completed export thread.')
+                    _log.debug(u'Removing completed export thread.')
 
             # update the menu status button
             nt = tod.now().meridiem()
@@ -1240,18 +1240,18 @@ class roadmeet(object):
         self.announce.exit(msg)
         self.timer.exit(msg)
         self.alttimer.exit(msg)
-        LOG.info(u'Waiting for workers')
+        _log.info(u'Waiting for workers')
         if self.mirror is not None:
-            LOG.debug(u'Result export')
+            _log.debug(u'Result export')
             self.mirror.join()
             self.mirror = None
-        LOG.debug(u'Telegraph/announce')
+        _log.debug(u'Telegraph/announce')
         self.announce.join()
 
     def start(self):
         """Start the timer and rfu threads."""
         if not self.started:
-            LOG.debug(u'Meet startup')
+            _log.debug(u'Meet startup')
             self.announce.start()
             self.timer.start()
             self.alttimer.start()
@@ -1303,7 +1303,7 @@ class roadmeet(object):
             cw.write(f)
         self.rdb.save(u'riders.csv')
         self.edb.save(u'events.csv')
-        LOG.info(u'Meet configuration saved')
+        _log.info(u'Meet configuration saved')
 
     def set_timer(self, newdevice=u'', force=False):
         """Re-set the main timer device and connect callback."""
@@ -1311,7 +1311,7 @@ class roadmeet(object):
             self.timer = decoder.mkdevice(newdevice, self.timer)
             self.timer_port = newdevice
         else:
-            LOG.debug(u'set_timer - No change required')
+            _log.debug(u'set_timer - No change required')
         self.timer.setcb(self._timercb)
 
     def loadconfig(self):
@@ -1355,10 +1355,10 @@ class roadmeet(object):
         })
         cr.add_section(u'roadmeet')
         cr.merge(metarace.sysconf, u'roadmeet')
-        LOG.debug(u'Load system meet defaults')
+        _log.debug(u'Load system meet defaults')
 
         # re-set main log file
-        LOG.debug(u'Adding meet logfile handler %r', LOGFILE)
+        _log.debug(u'Adding meet logfile handler %r', LOGFILE)
         rootlogger = logging.getLogger()
         if self.loghandler is not None:
             rootlogger.removeHandler(self.loghandler)
@@ -1374,9 +1374,9 @@ class roadmeet(object):
             try:
                 with open(CONFIGFILE, 'rb') as f:
                     cr.read(f)
-                LOG.debug(u'Read meet config from %r', CONFIGFILE)
+                _log.debug(u'Read meet config from %r', CONFIGFILE)
             except Exception as e:
-                LOG.error(u'Unable to read meet config: %s', e)
+                _log.error(u'Unable to read meet config: %s', e)
 
         # set timer port (decoder)
         self.set_timer(cr.get(u'roadmeet', u'timer'))
@@ -1439,7 +1439,7 @@ class roadmeet(object):
             event[u'type'] = self.etype
         else:
             self.etype = event[u'type']
-            LOG.debug(u'Existing event in db: %r', self.etype)
+            _log.debug(u'Existing event in db: %r', self.etype)
         self.open_event(event)  # always open on load if posible
         self.set_title()
 
@@ -1454,12 +1454,12 @@ class roadmeet(object):
         # make sure export path exists
         if not os.path.exists(self.exportpath):
             os.mkdir(self.exportpath)
-            LOG.info(u'Created export path: %r', self.exportpath)
+            _log.info(u'Created export path: %r', self.exportpath)
 
         # check and warn of config mismatch
         cid = cr.get(u'roadmeet', u'id')
         if cid != ROADMEET_ID:
-            LOG.warning(u'Meet config mismatch: %r != %r', cid, ROADMEET_ID)
+            _log.warning(u'Meet config mismatch: %r != %r', cid, ROADMEET_ID)
 
     def get_distance(self):
         """Return race distance in km."""
@@ -1507,16 +1507,17 @@ class roadmeet(object):
 
     def remote_reset(self):
         """Reset remote input of timer messages."""
-        LOG.debug(u'Remote control reset')
+        _log.debug(u'Remote control reset')
         if self.timertopic is not None:
             if self.remote_enable:
-                LOG.debug(u'Listening for remote timer at %r', self.timertopic)
+                _log.debug(u'Listening for remote timer at %r',
+                           self.timertopic)
                 self.announce.subscribe(self.timertopic)
             else:
-                LOG.debug(u'Remote timer disabled')
+                _log.debug(u'Remote timer disabled')
                 self.announce.unsubscribe(self.timertopic)
         else:
-            LOG.debug(u'Remote timer topic not cofigured')
+            _log.debug(u'Remote timer topic not cofigured')
 
     def remote_timer(self, msg):
         """Process and dispatch a remote timer message."""
@@ -1533,8 +1534,8 @@ class roadmeet(object):
                 tval.source = tv[1]
                 tval.chan = tv[2]
                 tval.refid = tv[3]
-                LOG.debug(u'Remote src:%r index:%r chan:%r refid:%r @ %r',
-                          tv[1], tv[0], tv[2], tv[3], tval.rawtime())
+                _log.debug(u'Remote src:%r index:%r chan:%r refid:%r @ %r',
+                           tv[1], tv[0], tv[2], tv[3], tval.rawtime())
                 if u'timy' in tv[1]:
                     tval.index = tv[0]
                     self._alttimercb(tval)
@@ -1542,9 +1543,9 @@ class roadmeet(object):
                     tval.index = u'REM'
                     self._timercb(tval)
             except Exception as e:
-                LOG.warning(u'Error reading timer msg %r: %s', msg, e)
+                _log.warning(u'Error reading timer msg %r: %s', msg, e)
         else:
-            LOG.debug(u'Invalid remote timer message: %r', tv)
+            _log.debug(u'Invalid remote timer message: %r', tv)
 
     def remote_command(self, topic, msg):
         """Handle a remote control message."""
@@ -1552,7 +1553,7 @@ class roadmeet(object):
             if self.remote_enable:
                 self.remote_timer(msg)
         else:
-            LOG.debug(u'Unsupported remote command %r:%r', topic, msg)
+            _log.debug(u'Unsupported remote command %r:%r', topic, msg)
         return False
 
     def _timercb(self, evt, data=None):
@@ -1633,7 +1634,7 @@ class roadmeet(object):
         self.documentversion = u''
 
         uifile = os.path.join(metarace.UI_PATH, u'roadmeet.ui')
-        LOG.debug(u'Building user interface from %r', uifile)
+        _log.debug(u'Building user interface from %r', uifile)
         b = gtk.Builder()
         b.add_from_file(uifile)
         self.window = b.get_object(u'meet')
@@ -1675,7 +1676,7 @@ class roadmeet(object):
         self.curevent = None
 
         # connect UI log handlers
-        LOG.debug(u'Connecting interface log handlers')
+        _log.debug(u'Connecting interface log handlers')
         rootlogger = logging.getLogger()
         f = logging.Formatter(metarace.LOGFORMAT)
         self.sh = loghandler.statusHandler(self.status, self.context)
@@ -1689,7 +1690,7 @@ class roadmeet(object):
         rootlogger.addHandler(self.lh)
 
         # get rider db and pack into a dialog
-        LOG.debug(u'Add riderdb and eventdb')
+        _log.debug(u'Add riderdb and eventdb')
         self.rdb = riderdb.riderdb()
         b.get_object(u'riders_box').add(
             self.rdb.mkview(cat=True,
@@ -1719,13 +1720,13 @@ def main():
     metarace.init(withgtk=True)
     configpath = metarace.DATA_PATH
     if len(sys.argv) > 2:
-        LOG.error(u'Usage: roadmeet [configdir]')
+        _log.error(u'Usage: roadmeet [configdir]')
         sys.exit(1)
     elif len(sys.argv) == 2:
         configpath = sys.argv[1]
     configpath = metarace.config_path(configpath)
     if configpath is None:
-        LOG.error(u'Unable to open meet config %r', sys.argv[1])
+        _log.error(u'Unable to open meet config %r', sys.argv[1])
         sys.exit(1)
     app = runapp(configpath)
     try:
@@ -1740,9 +1741,9 @@ def runapp(configpath, etype=None):
     """Create the roadmeet object, start in configpath and return a handle."""
     lf = metarace.lockpath(configpath)
     if lf is None:
-        LOG.error(u'Unable to lock meet config, already in use')
+        _log.error(u'Unable to lock meet config, already in use')
         sys.exit(1)
-    LOG.debug(u'Entering meet folder %r', configpath)
+    _log.debug(u'Entering meet folder %r', configpath)
     os.chdir(configpath)
     app = roadmeet(etype)
     app.loadconfig()

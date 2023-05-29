@@ -19,8 +19,8 @@ from metarace import strops
 from metarace import htlib
 from metarace import jsonconfig
 
-LOG = logging.getLogger(u'metarace.report')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.report')
+_log.setLevel(logging.DEBUG)
 
 # JSON report API versioning
 APIVERSION = u'1.2.0'
@@ -143,7 +143,7 @@ def str2angle(anglestr=None):
         try:
             fval = float(val)
         except Exception as e:
-            LOG.warning(u'Invalid angle %r ignored: %s', anglestr, e)
+            _log.warning(u'Invalid angle %r ignored: %s', anglestr, e)
     return ANGUNITSMAP[ukey](fval)
 
 
@@ -160,7 +160,7 @@ def str2align(alignstr=None):
             elif ret > 1.0:
                 ret = 1.0
         except Exception as e:
-            LOG.warning(u'Invalid alignment %r ignored: %s', alignstr, e)
+            _log.warning(u'Invalid alignment %r ignored: %s', alignstr, e)
     return ret
 
 
@@ -180,7 +180,7 @@ def str2len(lenstr=None):
         try:
             fval = float(val)
         except Exception as e:
-            LOG.warning(u'Invalid length %r ignored: %s', lenstr, e)
+            _log.warning(u'Invalid length %r ignored: %s', lenstr, e)
     return UNITSMAP[ukey](fval)
 
 
@@ -210,7 +210,7 @@ def str2colour(colstr=None):
                     elif ret[c] > 1.0:
                         ret[c] = 1.0
             except Exception as e:
-                LOG.warning(u'Invalid colour %r ignored: %s', colstr, e)
+                _log.warning(u'Invalid colour %r ignored: %s', colstr, e)
     return ret
 
 
@@ -2180,8 +2180,8 @@ class event_index(object):
         if len(self.lines) > 0:
             hdr = u''
             if self.colheader:
-                LOG.warning(u'Colheader not supported for %s',
-                            self.__class__.__name__)
+                _log.warning(u'Colheader not supported for %s',
+                             self.__class__.__name__)
                 #hdr = htlib.thead(vec2htmllinkhead(self.colheader))
             rows = []
             for r in self.lines:
@@ -3655,7 +3655,7 @@ class pagebreak(object):
             if nthresh > 0.05 and nthresh < 0.95:
                 self.threshold = nthresh
         except Exception as e:
-            LOG.warning(u'Invalid break thresh %r: %s', threshold, e)
+            _log.warning(u'Invalid break thresh %r: %s', threshold, e)
 
     def get_threshold(self):
         return self.threshold
@@ -4065,9 +4065,9 @@ class report(object):
                 with open(tfile, u'rb') as f:
                     cr.read(f)
             except Exception as e:
-                LOG.error(u'Unable to read report template %r: %s', tfile, e)
+                _log.error(u'Unable to read report template %r: %s', tfile, e)
         else:
-            LOG.warning(u'Report template %r not found.', tfile)
+            _log.warning(u'Report template %r not found.', tfile)
 
         # read in page options
         if cr.has_option(u'page', u'width'):
@@ -4127,7 +4127,7 @@ class report(object):
             if htfile:
                 self.html_template = self.load_htmlfile(htfile)
                 if u'__REPORT_CONTENT__' not in self.html_template:
-                    LOG.warning(u'Invalid report HTML template ignored')
+                    _log.warning(u'Invalid report HTML template ignored')
                     self.html_template = htlib.emptypage()
             else:
                 self.html_template = htlib.emptypage()
@@ -4149,9 +4149,9 @@ class report(object):
                 with open(fname, u'rb') as f:
                     ret = f.read().decode(u'utf8')
             except Exception as e:
-                LOG.warning(u'Error reading HTML template %r: %s', fname, e)
+                _log.warning(u'Error reading HTML template %r: %s', fname, e)
         else:
-            LOG.warning(u'Report HTML template %r not found.', fname)
+            _log.warning(u'Report HTML template %r not found.', fname)
         return ret
 
     def set_font(self, key=None, val=None):
@@ -4169,7 +4169,7 @@ class report(object):
                     try:
                         fh = rsvg.Handle(fname)
                     except Exception as e:
-                        LOG.warning(u'Error loading image %r: %s', fname, e)
+                        _log.warning(u'Error loading image %r: %s', fname, e)
                 self.images[key] = fh
             ret = self.images[key]
         return ret

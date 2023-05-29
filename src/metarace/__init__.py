@@ -29,13 +29,13 @@ LOGFILEFORMAT = u'%(asctime)s %(levelname)s:%(name)s: %(message)s'
 LOGFORMAT = u'%(levelname)s:%(name)s: %(message)s'
 LOGLEVEL = logging.DEBUG  # default console log level
 sysconf = jsonconfig.config()  # system-defaults, populated by init() method
-LOG = logging.getLogger(u'metarace')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace')
+_log.setLevel(logging.DEBUG)
 
 
 def init(withgtk=False):
     """Shared metarace program initialisation."""
-    LOG.debug(u'library init withgtk=%r', withgtk)
+    _log.debug(u'library init withgtk=%r', withgtk)
     copyconf = mk_data_path()
 
     # Set global logging options
@@ -47,13 +47,13 @@ def init(withgtk=False):
     conffile = default_file(SYSCONF_FILE)
     try:
         if os.path.exists(conffile):
-            LOG.debug(u'Loading system defaults from %r', conffile)
+            _log.debug(u'Loading system defaults from %r', conffile)
             with open(conffile, 'rb') as f:
                 sysconf.read(f)
         else:
-            LOG.info(u'System default file not found %r', conffile)
+            _log.info(u'System default file not found %r', conffile)
     except Exception as e:
-        LOG.error(u'Error reading system config from %r: %s', conffile, e)
+        _log.error(u'Error reading system config from %r: %s', conffile, e)
 
     # Do GTK init if required
     if withgtk:
@@ -61,7 +61,7 @@ def init(withgtk=False):
         try:
             glib.threads_init()
         except Exception:
-            LOG.debug(u'glib thread init failed, using gobject: %s', e)
+            _log.debug(u'glib thread init failed, using gobject: %s', e)
             gobject.threads_init()
 
         # Initialise threading in GDK
@@ -73,10 +73,10 @@ def init(withgtk=False):
             mset.set_string_property('gtk-menu-bar-accel', 'F24', 'override')
             gtk.window_set_default_icon_from_file(default_file(LOGO_FILE))
         except Exception as e:
-            LOG.debug(u'GTK init error: %s', e)
+            _log.debug(u'GTK init error: %s', e)
     # if required, create a new system default file
     if copyconf:
-        LOG.info(u'Creating default system config %s', SYSCONF_FILE)
+        _log.info(u'Creating default system config %s', SYSCONF_FILE)
         with savefile(os.path.join(DEFAULTS_PATH, SYSCONF_FILE)) as f:
             sysconf.write(f)
 
@@ -92,10 +92,10 @@ def mk_data_path():
     """Create a shared data path if it does not yet exist."""
     ret = False
     if not os.path.exists(DATA_PATH):
-        LOG.info(u'Creating data directory: %r', DATA_PATH)
+        _log.info(u'Creating data directory: %r', DATA_PATH)
         os.makedirs(DATA_PATH)
     if not os.path.exists(DEFAULTS_PATH):
-        LOG.info(u'Creating system defaults directory: %r', DEFAULTS_PATH)
+        _log.info(u'Creating system defaults directory: %r', DEFAULTS_PATH)
         os.makedirs(DEFAULTS_PATH)
         ret = True  # flag copy of config back to defaults path
     return ret
@@ -110,23 +110,23 @@ def config_path(configpath=None):
         if not os.path.isdir(ret):
             ret = os.path.dirname(ret)  # assume dangling path contains file
         ret = os.path.realpath(ret)
-        LOG.debug(u'Checking for meet %r using %r', configpath, ret)
+        _log.debug(u'Checking for meet %r using %r', configpath, ret)
         # then check if the path exists
         if not os.path.exists(ret):
             try:
-                LOG.info(u'Creating meet folder %r', ret)
+                _log.info(u'Creating meet folder %r', ret)
                 os.makedirs(ret)
             except Exception as e:
-                LOG.error(u'Unable to create folder %r: %s', ret, e)
+                _log.error(u'Unable to create folder %r: %s', ret, e)
                 ret = None
         # check the path is writable
         if ret is not None:
             try:
-                LOG.debug(u'Checking folder %r for write access', ret)
+                _log.debug(u'Checking folder %r for write access', ret)
                 with NamedTemporaryFile(dir=ret, prefix=u'.chkwrite_') as f:
                     pass
             except Exception as e:
-                LOG.error(u'Unable to access meet folder %r: %s', ret, e)
+                _log.error(u'Unable to access meet folder %r: %s', ret, e)
                 ret = None
     return ret
 
@@ -182,11 +182,11 @@ class savefile(object):
         os.chmod(self.__tfile.name, 0o644)
         try:
             os.rename(self.__tfile.name, self.__sfile)
-            LOG.debug(u'os.rename: %r,%r', self.__tfile.name, self.__sfile)
+            _log.debug(u'os.rename: %r,%r', self.__tfile.name, self.__sfile)
         except OSError as e:
-            LOG.debug(u'os.rename failed: %s', e)
+            _log.debug(u'os.rename failed: %s', e)
             copyfile(self.__tfile.name, self.__sfile)
-            LOG.warn(u'Un-safely moved file: %r', self.__sfile)
+            _log.warn(u'Un-safely moved file: %r', self.__sfile)
             os.unlink(self.__tfile.name)
         return True
 
@@ -198,12 +198,12 @@ def lockpath(configpath):
     try:
         lf = open(lfn, 'a+b')
         fcntl.flock(lf, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        LOG.debug(u'Config lock %r acquired', lfn)
+        _log.debug(u'Config lock %r acquired', lfn)
     except Exception as e:
         if lf is not None:
             lf.close()
             lf = None
-        LOG.error(u'Unable to acquire config lock %r: %s', lfn, e)
+        _log.error(u'Unable to acquire config lock %r: %s', lfn, e)
     return lf
 
 
@@ -212,7 +212,7 @@ def unlockpath(configpath, lockfile):
     lfn = os.path.join(configpath, u'.lock')
     os.unlink(lfn)
     lockfile.close()
-    LOG.debug(u'Config lock %r released', lfn)
+    _log.debug(u'Config lock %r released', lfn)
     return None
 
 

@@ -16,8 +16,8 @@ from metarace import riderdb
 from metarace import strops
 from metarace import report
 
-LOG = logging.getLogger(u'metarace.aggregate')
-LOG.setLevel(logging.DEBUG)
+_log = logging.getLogger(u'metarace.aggregate')
+_log.setLevel(logging.DEBUG)
 
 # config version string
 EVENT_ID = u'agg-2.0'
@@ -58,9 +58,9 @@ class aggregate(object):
                 with open(self.configfile, 'rb') as f:
                     cr.read(f)
             except Exception as e:
-                LOG.error(u'Unable to read config: %s', e)
+                _log.error(u'Unable to read config: %s', e)
         else:
-            LOG.info(u'%r not found, loading defaults', self.configfile)
+            _log.info(u'%r not found, loading defaults', self.configfile)
 
         self.update_expander_lbl_cb()
         self.info_expand.set_expanded(
@@ -73,7 +73,7 @@ class aggregate(object):
         self.recalculate()  # model is cleared and loaded in recalc
         eid = cr.get(u'event', u'id')
         if eid and eid != EVENT_ID:
-            LOG.info(u'Event config mismatch: %r != %r', eid, EVENT_ID)
+            _log.info(u'Event config mismatch: %r != %r', eid, EVENT_ID)
 
     def startlist_report(self, program=False):
         """Return a startlist report."""
@@ -91,7 +91,7 @@ class aggregate(object):
     def saveconfig(self):
         """Save race to disk."""
         if self.readonly:
-            LOG.error(u'Attempt to save readonly event')
+            _log.error(u'Attempt to save readonly event')
             return
         cw = jsonconfig.config()
         cw.add_section(u'event')
@@ -102,7 +102,7 @@ class aggregate(object):
         cw.set(u'event', u'comments', self.comments)
         cw.set(u'event', u'showinfo', self.info_expand.get_expanded())
         cw.set(u'event', u'id', EVENT_ID)
-        LOG.debug(u'Saving event config %r', self.configfile)
+        _log.debug(u'Saving event config %r', self.configfile)
         with metarace.savefile(self.configfile) as f:
             cw.write(f)
 
@@ -198,7 +198,7 @@ class aggregate(object):
         for evno in events:
             r = self.meet.get_event(evno, False)
             if r is None:
-                LOG.warning(u'Event %r not found', evno)
+                _log.warning(u'Event %r not found', evno)
                 return
             r.loadconfig()  # now have queryable event handle
             double = False
@@ -212,8 +212,8 @@ class aggregate(object):
                     if oft < len(points):
                         pts = points[oft]
                     else:
-                        LOG.debug(u'More places than points: %r > %r', oft,
-                                  points)
+                        _log.debug(u'More places than points: %r > %r', oft,
+                                   points)
                     if double:
                         pts += pts
 
@@ -426,7 +426,7 @@ class aggregate(object):
 
     def shutdown(self, win=None, msg='Exiting'):
         """Terminate race object."""
-        LOG.debug('Shutdown event %s: %s', self.evno, msg)
+        _log.debug('Shutdown event %s: %s', self.evno, msg)
         if not self.readonly:
             self.saveconfig()
         self.winopen = False
@@ -444,7 +444,7 @@ class aggregate(object):
     def do_properties(self):
         """Run race properties dialog."""
         prfile = os.path.join(metarace.UI_PATH, u'aggregate_properties.ui')
-        LOG.debug(u'Building event properties from %r', prfile)
+        _log.debug(u'Building event properties from %r', prfile)
         b = gtk.Builder()
         b.add_from_file(prfile)
         dlg = b.get_object(u'properties')
@@ -459,7 +459,7 @@ class aggregate(object):
         me.set_text(self.double)
         response = dlg.run()
         if response == 1:  # id 1 set in glade for "Apply"
-            LOG.debug(u'Updating event properties')
+            _log.debug(u'Updating event properties')
             self.pointspec = pe.get_text().decode(u'utf-8')
             self.double = me.get_text().decode(u'utf-8')
             self.events = ee.get_text().decode(u'utf-8')
@@ -467,7 +467,7 @@ class aggregate(object):
             self.recalculate()
             glib.idle_add(self.delayed_announce)
         else:
-            LOG.debug(u'Edit event properties cancelled')
+            _log.debug(u'Edit event properties cancelled')
 
         # if prefix is empty, grab input focus
         if not self.prefix_ent.get_text():
@@ -516,7 +516,7 @@ class aggregate(object):
         self.evtype = event[u'type']
         self.series = event[u'seri']
         self.configfile = meet.event_configfile(self.evno)
-        LOG.debug(u'Init event %s', self.evno)
+        _log.debug(u'Init event %s', self.evno)
 
         # race run time attributes
         self.onestart = True  # always true for autospec classification
@@ -543,7 +543,7 @@ class aggregate(object):
             gobject.TYPE_STRING)  # 5 points
 
         uifile = os.path.join(metarace.UI_PATH, u'classification.ui')
-        LOG.debug(u'Building event interface from %r', uifile)
+        _log.debug(u'Building event interface from %r', uifile)
         b = gtk.Builder()
         b.add_from_file(uifile)
 

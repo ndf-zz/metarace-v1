@@ -2301,66 +2301,6 @@ class trtt(object):
             self.points[c] = {}
             self.pointscb[c] = {}
 
-    def sortteams(self, x, y):
-        """Roughly sort into team groups - all teams have same start time?"""
-        #             0    1   2      3       4     5
-        # aux cols: ind, stoft, in, place, rftime, laps
-
-        if x[1] != y[1]:  # same team?
-            return cmp(x[1], y[1])
-        else:
-            if x[2] != y[2]:  # both in?
-                if x[2]:
-                    return -1
-                else:
-                    return 1
-            else:
-                if x[4] != y[4]:  # same time?
-                    return cmp(x[4], y[4])
-                else:
-                    return cmp(x[3], y[3])  # last resort is 'place'
-        return 0
-
-    # do final sort on manual places then manual bunch entries
-    def sortvbunch(self, x, y):
-        # aux cols: ind, bib, in, place, vbunch, comment
-        #             0    1   2      3       4        5
-        if x[2] != y[2]:  # in the race?
-            if x[2]:  # return bool comparison equiv
-                return -1
-            else:
-                return 1
-        else:
-            if x[2]:  # in the race...
-                if x[3] != y[3]:  # places not same?
-                    if y[3] == u'':
-                        return -1
-                    elif x[3] == u'':
-                        return 1
-                    if int(x[3]) < int(y[3]):
-                        return -1
-                    else:
-                        return 1
-                else:
-                    if x[4] == y[4]:  # same time?
-                        return 0
-                    else:
-                        if y[4] is None:
-                            return -1
-                        elif x[4] is None:
-                            return 1
-                        elif x[4] < y[4]:
-                            return -1
-                        else:
-                            return 1
-            else:  # not in the race
-                if x[5] != y[5]:
-                    return strops.cmp_dnf(x[5], y[5])  # sort by code
-                else:
-                    return cmp(strops.riderno_key(x[1]),
-                               strops.riderno_key(y[1]))  # sort on no
-        return 0
-
     def vbunch(self, cbunch=None, mbunch=None):
         """Switch to return best choice bunch time."""
         ret = None
@@ -2548,7 +2488,6 @@ class trtt(object):
                     r = self.getrider(bib)
                     if r is None:
                         self.addrider(bib)
-                        _log.warning(u'Added rider %r from finish places', bib)
                         r = self.getrider(bib)
                     if r[COL_INRACE]:
                         idx += 1
@@ -2601,8 +2540,9 @@ class trtt(object):
                     placeset.add(bib)
                     r = self.getrider(bib)
                     if r is None:
-                        self.addrider(bib)
-                        r = self.getrider(bib)
+                        _log.error(u'Invalid rider %r ignored in %r places',
+                                   bib, contest)
+                        break
                     idx += 1
                     if allsrc:  # all listed places get same pts/bonus..
                         if allbonus is not tod.ZERO:
@@ -2731,35 +2671,41 @@ class trtt(object):
             _log.debug(u'Cached Recalculate')
             return False
 
-        # protect:
         if self.start is None:
             return
 
         _log.debug('Recalculate model')
-        # pass one: clear off old places and bonuses
+        # clear off old places and bonuses
         self.resetplaces()
         self.teamtimes = {}
 
-        # pass two: assign places
+        # assign places
         self.assign_finish()
         for c in self.contests:
             self.assign_places(c)
 
-        # for teams time trial...
-
-        # pass three, order in team groups
-        auxtbl = []
+        # arrange all riders in team groups by start time and team code
+        aux = []
         idx = 0
         for r in self.riders:
-            # aux cols: ind, stoft(team), in, place, rftime, laps
-            auxtbl.append([
-                idx, r[COL_STOFT], r[COL_INRACE], r[COL_PLACE], r[COL_RFTIME],
-                r[COL_LAPS]
-            ])
+            stime = r[COL_STOFT]
+            tlabel = r[COL_TEAM].decode(u'utf-8')
+            inrace = r[COL_INRACE]
+            rbib = r[COL_BIB].decode(u'utf-8')
+            rplace = r[COL_PLACE].decode(u'utf-8')
+            rtime = tod.MAX
+            rlaps = r[COL_LAPS]
+            if r[COL_RFTIME] is not None:
+                rtime = r[COL_RFTIME]
+            if not inrace:
+                rtime = tod.MAX
+                rplace = r[COL_COMMENT].decode(u'utf-8')
+            aux.append((stime, tlabel, not inrace, strops.dnfcode_key(rplace),
+                        -rlaps, rtime, idx, rbib))
             idx += 1
-        if len(auxtbl) > 1:
-            auxtbl.sort(self.sortteams)
-            self.riders.reorder([a[0] for a in auxtbl])
+        if len(aux) > 1:
+            aux.sort()
+            self.riders.reorder([a[6] for a in aux])
 
         # re-build cached team map
         cteam = None
@@ -2827,7 +2773,6 @@ class trtt(object):
             self.meet.action_entry.set_text(self.places)
         #_log.debug(u'Event status: %r', self.racestat)
         self.calcset = True
-
         return False  # allow idle add
 
     def new_start_trigger(self, rfid):

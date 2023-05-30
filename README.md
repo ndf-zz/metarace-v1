@@ -35,6 +35,9 @@ Support libraries:
    - xlwt
    - libscrc
 
+MQTT broker (optional):
+
+   - mosquitto
 
 ## Changes
 
@@ -42,7 +45,8 @@ In preparation for version 2, this library makes the following major
 departures from older releases:
 
    - System defaults moved to ~/Documents/metarace/default
-   - "Meet" is now the toplevel type for both track and road races.
+   - "Meet" is now the toplevel type for both track and road races
+   - Riderdb columns have been altered to better align with version 2
    - Telegraph is a thin wrapper on MQTT, completely replacing
      the IRC-backed library with a simpler publish/subscribe
      approach.
@@ -77,7 +81,7 @@ please refer to [v1-changes.md](v1-changes.md).
 
 ## Installation
 
-	# pip2 install metarace<2
+	$ pip install metarace==1.12.3.dev9
 
 
 ## Applications
@@ -109,7 +113,8 @@ hour record events.
 
 ### Apploader (metarace)
 
-Convenience application to browse, create and run metarace meets.
+Convenience application to browse, create and run metarace meet
+folders.
 
 	usage: metarace [meetpath]
 

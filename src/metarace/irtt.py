@@ -197,6 +197,8 @@ class irtt(object):
             self.timerstat = u'finished'
             self.meet.stat_but.buttonchg(uiutil.bg_none, u'Finished')
             self.meet.stat_but.set_sensitive(False)
+            self.hidetimers = True
+            self.timerframe.hide()
 
     def armfinish(self):
         if self.timerstat == u'running':
@@ -516,6 +518,7 @@ class irtt(object):
                 u'interloops': {},
                 u'tallys': [],
                 u'onestartlist': True,
+                u'hidetimers': False,
                 u'startpasses': [],
                 u'finishpasses': [],
                 u'showuciids': False,
@@ -577,6 +580,10 @@ class irtt(object):
         self.finishpass = cr.get_posint(u'irtt', u'finishpass', None)
         # source ID of start trigger decoder
         self.starttrig = cr.get(u'irtt', u'starttrig')  # by source
+        # hide timer panes (for auto-timed setup)
+        self.hidetimers = cr.get_bool(u'irtt', u'hidetimers')
+        if self.hidetimers:
+            self.timerframe.hide()
 
         # transponder timing options
         self.startloop = strops.chan2id(cr.get(u'irtt', u'startloop'))
@@ -915,6 +922,7 @@ class irtt(object):
         cw.set(u'irtt', u'showuciids', self.showuciids)
         cw.set(u'irtt', u'precision', self.precision)
         cw.set(u'irtt', u'timelimit', self.timelimit)
+        cw.set(u'irtt', u'hidetimers', self.hidetimers)
 
         # save intermediate data
         opinters = []
@@ -2230,6 +2238,14 @@ class irtt(object):
         else:
             return None
 
+    def info_time_edit_clicked_cb(self, button, data=None):
+        """Toggle the visibility of timer panes"""
+        self.hidetimers = not self.hidetimers
+        if self.hidetimers:
+            self.timerframe.hide()
+        else:
+            self.timerframe.show()
+
     def editcol_cb(self, cell, path, new_text, col):
         """Update value in edited cell."""
         new_text = new_text.strip()
@@ -2856,6 +2872,7 @@ class irtt(object):
         self.starttrig = None
         self.precision = 2
         self.finishpass = None
+        self.hidetimers = False
 
         # race run time attributes
         self.onestart = False
@@ -2949,6 +2966,7 @@ class irtt(object):
         mf.pack_start(self.sl.frame)
         mf.pack_start(self.fl.frame)
         mf.set_focus_chain([self.sl.frame, self.fl.frame, self.sl.frame])
+        self.timerframe = mf
 
         # Result Pane
         t = gtk.TreeView(self.riders)

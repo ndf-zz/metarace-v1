@@ -59,7 +59,8 @@
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="receives_default">True</property>
-            <property name="tooltip_text" translatable="yes">Manually adjust start time.</property>
+            <property name="tooltip_text" translatable="yes">Show/hide manual timers.</property>
+            <signal name="clicked" handler="info_time_edit_clicked_cb"/>
             <child>
               <object class="GtkImage" id="info_time_icon">
                 <property name="visible">True</property>

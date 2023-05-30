@@ -13,6 +13,7 @@ from metarace import tod
 from metarace import eventdb
 from metarace import riderdb
 from metarace import strops
+from metarace import countback
 from metarace import uiutil
 from metarace import timerpane
 from metarace import report
@@ -68,6 +69,8 @@ COL_INTERE = 15
 COL_LASTSEEN = 16
 COL_ETA = 17
 COL_PASS = 18
+COL_BONUS = 19
+COL_PENALTY = 20
 _START_MATCH_THRESH = tod.tod('5.0')
 _FINISH_MATCH_THRESH = tod.tod('0.200')
 
@@ -336,13 +339,43 @@ class irtt(object):
 
     def ctrl_change(self, acode=u'', entry=None):
         """Notify change in action combo."""
-        pass
-        # TODO?
         if acode == u'fin':
-            pass
+            if entry is not None:
+                entry.set_text(self.places)
+        elif acode in self.intermeds:
+            if entry is not None:
+                entry.set_text(self.intermap[acode][u'places'])
         else:
             if entry is not None:
                 entry.set_text(u'')
+
+    def checkplaces(self, rlist=u'', dnf=True):
+        """Check the proposed places against current race model."""
+        ret = True
+        placeset = set()
+        for no in strops.reformat_bibserlist(rlist).split():
+            if no != u'x':
+                # repetition? - already in place set?
+                if no in placeset:
+                    _log.error(u'Duplicate no in places: %r', no)
+                    ret = False
+                placeset.add(no)
+                # rider in the model?
+                b, s = strops.bibstr2bibser(no)
+                lr = self.getrider(b, s)
+                if lr is None:
+                    _log.error(u'Non-starter in places: %r', no)
+                    ret = False
+                else:
+                    # rider still in the race?
+                    if lr[COL_COMMENT]:
+                        _log.warning(u'DNS/DNF rider in places: %r', no)
+                        if dnf:
+                            ret = False
+            else:
+                # placeholder needs to be filled in later or left off
+                _log.info(u'Placeholder in places')
+        return ret
 
     def race_ctrl(self, acode=u'', rlist=u''):
         """Apply the selected action to the provided bib list."""
@@ -590,23 +623,38 @@ class irtt(object):
         # load _result_ categories
         self.loadcats(cr.get(u'irtt', u'categories'))
 
-        # restore intermediates
+        # restore (stagerace) intermediates
         for i in cr.get(u'irtt', u'intermeds'):
             if i in RESERVED_SOURCES:
-                _log.info(u'Ignoring reserved intermediate: %r', i)
+                _log.info(u'Ignoring reserved inter: %r', i)
             else:
                 crkey = u'intermed_' + i
                 descr = u''
                 places = u''
+                km = None
+                doshow = False
+                abbr = u''
                 if cr.has_option(crkey, u'descr'):
                     descr = cr.get(crkey, u'descr')
+                if cr.has_option(crkey, u'dist'):
+                    km = cr.get_float(crkey, u'dist', None)
+                if cr.has_option(crkey, u'abbr'):
+                    abbr = cr.get(crkey, u'abbr')
+                if cr.has_option(crkey, u'show'):
+                    doshow = cr.get_bool(crkey, u'show')
                 if cr.has_option(crkey, u'places'):
-                    places = strops.reformat_placelist(cr.get(
-                        crkey, u'places'))
+                    places = strops.reformat_bibserplacelist(
+                        cr.get(crkey, u'places'))
                 if i not in self.intermeds:
                     _log.debug(u'Adding inter %r: %r %r', i, descr, places)
                     self.intermeds.append(i)
-                    self.intermap[i] = {u'descr': descr, u'places': places}
+                    self.intermap[i] = {
+                        u'descr': descr,
+                        u'places': places,
+                        u'abbr': abbr,
+                        u'dist': km,
+                        u'show': doshow
+                    }
                 else:
                     _log.info(u'Ignoring duplicate inter: %r', i)
 
@@ -668,6 +716,10 @@ class irtt(object):
                 if cr.has_option(crkey, u'all_source'):
                     allsrc = strops.confopt_bool(cr.get(crkey, u'all_source'))
                 self.contestmap[i][u'all_source'] = allsrc
+                self.contestmap[i][u'category'] = 0
+                if cr.has_option(crkey, u'category'):  # for climbs
+                    self.contestmap[i][u'category'] = cr.get_posint(
+                        crkey, u'category')
             else:
                 _log.info(u'Ignoring duplicate contest %r', i)
 
@@ -698,7 +750,7 @@ class irtt(object):
                 self.tallymap[i][u'descr'] = descr
                 keepdnf = False
                 if cr.has_option(crkey, u'keepdnf'):
-                    keepdnf = strops.confopt_bool(cr.get(crkey, u'keepdnf'))
+                    keepdnf = cr.get_bool(crkey, u'keepdnf')
                 self.tallymap[i][u'keepdnf'] = keepdnf
             else:
                 _log.info(u'Ignoring duplicate points tally %r', i)
@@ -723,9 +775,9 @@ class irtt(object):
             ime = None
             lpass = None
             pcnt = 0
+            nr = self.getrider(r, s)
             if cr.has_option(u'riders', rs):
                 # bbb.sss = comment,wall_start,timy_start,finish,penalty,place
-                nr = self.getrider(r, s)
                 ril = cr.get(u'riders', rs)  # vec
                 lr = len(ril)
                 if lr > 0:
@@ -761,6 +813,11 @@ class irtt(object):
             self.setinter(nri, imd, COL_INTERD)
             self.setinter(nri, ime, COL_INTERE)
             self.riders.set_value(nri, COL_LASTSEEN, lpass)
+            # record any extra bonus/penalty to rider model
+            if cr.has_option(u'stagebonus', rs):
+                nr[COL_BONUS] = tod.mktod(cr.get(u'stagebonus', rs))
+            if cr.has_option(u'stagepenalty', rs):
+                nr[COL_PENALTY] = tod.mktod(cr.get(u'stagepenalty', rs))
 
         self.startpasses.clear()
         fp = cr.get(u'irtt', u'startpasses')
@@ -860,12 +917,20 @@ class irtt(object):
         cw.set(u'irtt', u'timelimit', self.timelimit)
 
         # save intermediate data
-        cw.set(u'irtt', u'intermeds', self.intermeds)
+        opinters = []
         for i in self.intermeds:
             crkey = u'intermed_' + i
             cw.add_section(crkey)
             cw.set(crkey, u'descr', self.intermap[i][u'descr'])
             cw.set(crkey, u'places', self.intermap[i][u'places'])
+            cw.set(crkey, u'show', self.intermap[i][u'show'])
+            if u'dist' in self.intermap[i]:
+                cw.set(crkey, u'dist', self.intermap[i][u'dist'])
+            if u'abbr' in self.intermap[i]:
+                cw.set(crkey, u'abbr', self.intermap[i][u'abbr'])
+            opinters.append(i)
+        cw.set(u'irtt', u'intermeds', opinters)
+
         # save contest meta data
         cw.set(u'irtt', u'contests', self.contests)
         for i in self.contests:
@@ -874,6 +939,8 @@ class irtt(object):
             cw.set(crkey, u'tally', self.contestmap[i][u'tally'])
             cw.set(crkey, u'source', self.contestmap[i][u'source'])
             cw.set(crkey, u'all_source', self.contestmap[i][u'all_source'])
+            if u'category' in self.contestmap[i]:
+                cw.set(crkey, u'category', self.contestmap[i][u'category'])
             blist = []
             for b in self.contestmap[i][u'bonuses']:
                 blist.append(b.rawtime(0))
@@ -900,6 +967,8 @@ class irtt(object):
         cw.set(u'irtt', u'showinter', self.showinter)
 
         # save riders
+        cw.add_section(u'stagebonus')
+        cw.add_section(u'stagepenalty')
         cw.set(u'irtt', u'startlist', self.get_startlist())
         if self.autocats:
             cw.set(u'irtt', u'categories', [u'AUTO'])
@@ -910,6 +979,7 @@ class irtt(object):
             if r[COL_BIB] != '':
                 bib = r[COL_BIB].decode('utf-8')
                 ser = r[COL_SERIES].decode('utf-8')
+                bs = strops.bibser2bibstr(bib, ser)
                 # place is saved for info only
                 wst = u''
                 if r[COL_WALLSTART] is not None:
@@ -948,7 +1018,12 @@ class irtt(object):
                     r[COL_COMMENT].decode('utf-8'), wst, tst, tft, tpt,
                     r[COL_PLACE], tima, timb, timc, timd, tine, pcnt, lpass
                 ]
-                cw.set(u'riders', strops.bibser2bibstr(bib, ser), slice)
+                cw.set(u'riders', bs, slice)
+                if r[COL_BONUS] is not None:
+                    cw.set(u'stagebonus', bs, r[COL_BONUS].rawtime())
+                if r[COL_PENALTY] is not None:
+                    cw.set(u'stagepenalty', bs, r[COL_PENALTY].rawtime())
+
         cw.set(u'irtt', u'finished', self.timerstat == 'finished')
         cw.set(u'irtt', u'id', EVENT_ID)
         _log.debug(u'Saving event config %r', self.configfile)
@@ -1296,7 +1371,6 @@ class irtt(object):
     def points_report(self):
         """Return the points tally report."""
         ret = []
-        aux = []
         cnt = 0
         for tally in self.tallys:
             sec = report.section(u'points-' + tally)
@@ -1305,37 +1379,76 @@ class irtt(object):
             tallytot = 0
             aux = []
             for bib in self.points[tally]:
-                r = self.getrider(bib)
+                n, s = strops.bibstr2bibser(bib)
+                r = self.getrider(n, s)
                 tallytot += self.points[tally][bib]
-                aux.append((self.points[tally][bib], self.pointscb[tally][bib],
-                            -strops.riderno_key(bib), [
-                                None, r[COL_BIB], r[COL_NAMESTR],
-                                strops.truncpad(str(self.pointscb[tally][bib]),
-                                                10,
-                                                ellipsis=False), None,
-                                str(self.points[tally][bib])
-                            ]))
+                aux.append(
+                    (self.points[tally][bib], self.pointscb[tally][bib],
+                     -strops.riderno_key(bib), -cnt, [
+                         None, r[COL_BIB].decode(u'utf-8'),
+                         r[COL_NAMESTR].decode(u'utf-8'),
+                         strops.truncpad(unicode(self.pointscb[tally][bib]),
+                                         10,
+                                         ellipsis=False), None,
+                         unicode(self.points[tally][bib])
+                     ]))
+                cnt += 1
             aux.sort(reverse=True)
             for r in aux:
-                sec.lines.append(r[3])
+                sec.lines.append(r[4])
             _log.debug(u'Total points for %r: %r', tally, tallytot)
             ret.append(sec)
 
-        if len(self.bonuses) > 0:
-            sec = report.section(u'bonus')
-            sec.heading = u'Stage Bonuses'
-            sec.units = u'sec'
-            aux = []
-            for bib in self.bonuses:
-                r = self.getrider(bib)
-                aux.append((self.bonuses[bib], -strops.riderno_key(bib), [
-                    None, r[COL_BIB], r[COL_NAMESTR], None, None,
-                    str(int(self.bonuses[bib].truncate(0).timeval))
+        # collect bonus and penalty totals
+        aux = []
+        cnt = 0
+        onebonus = False
+        onepenalty = False
+        for r in self.riders:
+            bib = r[COL_BIB].decode(u'utf-8')
+            bonus = 0
+            penalty = 0
+            intbonus = 0
+            total = tod.mkagg(0)
+            if r[COL_BONUS] is not None:
+                bonus = r[COL_BONUS]
+                onebonus = True
+            if r[COL_PENALTY] is not None:
+                penalty = r[COL_PENALTY]
+                onepenalty = True
+            if bib in self.bonuses:
+                intbonus = self.bonuses[bib]
+            total = total + bonus + intbonus - penalty
+            if total != 0:
+                bonstr = u''
+                if bonus != 0:
+                    bonstr = unicode(bonus.as_seconds())
+                penstr = u''
+                if penalty != 0:
+                    penstr = unicode(-(penalty.as_seconds()))
+                totstr = unicode(total.as_seconds())
+                aux.append((total, -strops.riderno_key(bib), -cnt, [
+                    None, bib, r[COL_NAMESTR].decode(u'utf-8'), bonstr, penstr,
+                    totstr
                 ]))
+                cnt += 1
+        if len(aux) > 0:
             aux.sort(reverse=True)
+            sec = report.section(u'bonus')
+            sec.heading = u'Time Bonuses'
+            sec.units = u'sec'
             for r in aux:
-                sec.lines.append(r[2])
+                sec.lines.append(r[3])
+            if onebonus or onepenalty:
+                bhead = u''
+                if onebonus:
+                    bhead = u'Stage Bonus'
+                phead = u''
+                if onepenalty:
+                    phead = u'Penalties'
+                sec.colheader = [None, None, None, bhead, phead, u'Total']
             ret.append(sec)
+
         if len(ret) == 0:
             _log.warning(u'No data available for points report')
         return ret
@@ -1571,11 +1684,13 @@ class irtt(object):
             cs = r[COL_CAT].decode(u'utf-8')
             rcat = self.ridercat(riderdb.primary_cat(cs))
             if mcat == u'' or mcat == rcat:
-                i = self.getiter(r[COL_BIB], r[COL_SERIES])
+                bib = r[COL_BIB].decode(u'utf-8')
+                ser = r[COL_SERIES].decode(u'utf-8')
+                bs = strops.bibser2bibstr(bib, ser)
+                i = self.getiter(bib, ser)
                 ft = self.getelapsed(i)
                 if ft is not None:
-                    ft = ft.truncate(2)  # RETAIN Hundredths
-                bib = r[COL_BIB].decode(u'utf-8')
+                    ft = ft.truncate(self.precision)
                 crank = None
                 rank = None
                 if r[COL_PLACE].isdigit():
@@ -1593,10 +1708,20 @@ class irtt(object):
                 if r[COL_WALLSTART] is not None:
                     extra = r[COL_WALLSTART]
 
+                # stage bonuses and penalties
                 bonus = None
-                penalty = None  # should stay none for IRTT - ft contains
-                # any stage penalty
-                yield [crank, bib, ft, bonus, penalty]
+                if bs in self.bonuses or r[COL_BONUS] is not None:
+                    bonus = tod.mkagg(0)
+                    if bs in self.bonuses:
+                        bonus += self.bonuses[bs]
+                    if r[COL_BONUS] is not None:
+                        bonus += r[COL_BONUS]
+
+                penalty = None
+                if r[COL_PENALTY] is not None:
+                    penalty = r[COL_PENALTY]
+
+                yield [crank, bs, ft, bonus, penalty]
 
     def main_loop(self, cb):
         """Run callback once in main loop idle handler."""
@@ -2045,6 +2170,10 @@ class irtt(object):
 
     def clearplaces(self):
         """Clear rider place makers and re-order out riders"""
+        self.bonuses = {}
+        for c in self.tallys:  # points are grouped by tally
+            self.points[c] = {}
+            self.pointscb[c] = {}
         aux = []
         count = 0
         for r in self.riders:
@@ -2085,7 +2214,7 @@ class irtt(object):
             ## could be a rmap lookup here
             nr = [
                 bib, series, u'', u'', u'', None, None, None, tod.ZERO, u'',
-                u'', None, None, None, None, None, None, None, 0
+                u'', None, None, None, None, None, None, None, 0, None, None
             ]
             dbr = self.meet.rdb.getrider(bib, series)
             if dbr is not None:
@@ -2238,6 +2367,7 @@ class irtt(object):
         for c in self.tallys:  # points are grouped by tally
             self.points[c] = {}
         for c in self.contests:
+            _log.debug('Assigning places for contest %r', c)
             self.assign_places(c)
 
         self.doannounce = True
@@ -2267,17 +2397,17 @@ class irtt(object):
 
     def assign_places(self, contest):
         """Transfer points and bonuses into the named contest."""
-        ## ERROR bib.ser will fail!
         # fetch context meta infos
-        src = self.contestmap[contest]['source']
+        src = self.contestmap[contest][u'source']
         if src not in RESERVED_SOURCES and src not in self.intermeds:
-            _log.info('Invalid intermediate source: ' + repr(src) +
-                      ' in contest: ' + repr(contest))
+            _log.info(u'Invalid inter source %r in contest %r', src, contest)
             return
-        tally = self.contestmap[contest]['tally']
-        bonuses = self.contestmap[contest]['bonuses']
-        points = self.contestmap[contest]['points']
-        allsrc = self.contestmap[contest]['all_source']
+        countbackwinner = False  # for stage finish only track winner in cb
+        category = self.contestmap[contest][u'category']
+        tally = self.contestmap[contest][u'tally']
+        bonuses = self.contestmap[contest][u'bonuses']
+        points = self.contestmap[contest][u'points']
+        allsrc = self.contestmap[contest][u'all_source']
         allpts = 0
         allbonus = tod.ZERO
         if allsrc:
@@ -2285,29 +2415,34 @@ class irtt(object):
                 allpts = points[0]
             if len(bonuses) > 0:
                 allbonus = bonuses[0]
-        placestr = ''
-        if src == 'fin':
+        placestr = u''
+        if src == u'fin':
             placestr = self.get_placelist()
-            _log.info('Using placestr = ' + repr(placestr))
-        elif src == 'reg':
+            _log.info(u'Using placestr %r', placestr)
+            if tally in [u'sprint', u'crit']:  # really only for sprints/crits
+                countbackwinner = True
+        elif src == u'reg':
             placestr = self.get_startlist()
-        elif src == 'start':
+        elif src == u'start':
             placestr = self.get_starters()
+        #elif src in self.catplaces:  # ERROR -> cat climb tally needs type?
+        #placestr = self.get_cat_placesr(self.catplaces[src])
+        #countbackwinner = True
         else:
-            placestr = self.intermap[src]['places']
+            placestr = self.intermap[src][u'places']
         placeset = set()
         idx = 0
         for placegroup in placestr.split():
             curplace = idx + 1
-            for bib in placegroup.split('-'):
+            for bib in placegroup.split(u'-'):
                 if bib not in placeset:
                     placeset.add(bib)
-                    r = self.getrider(bib)
+                    b, s = strops.bibstr2bibser(bib)
+                    r = self.getrider(b, s)
                     if r is None:
-                        _log.error('Invalid rider in place string.')
+                        _log.error(u'Invalid rider %r ignored in %r places',
+                                   bib, contest)
                         break
-                        #self.addrider(bib)
-                        #r = self.getrider(bib)
                     idx += 1
                     if allsrc:  # all listed places get same pts/bonus..
                         if allbonus is not tod.ZERO:
@@ -2315,12 +2450,13 @@ class irtt(object):
                                 self.bonuses[bib] += allbonus
                             else:
                                 self.bonuses[bib] = allbonus
-                        if allpts != 0:
+                        if tally and tally in self.points and allpts != 0:
                             if bib in self.points[tally]:
                                 self.points[tally][bib] += allpts
                             else:
                                 self.points[tally][bib] = allpts
-                                self.pointscb[tally][bib] = [0, 0, 0]
+                                self.pointscb[tally][
+                                    bib] = countback.countback()
                             # No countback for all_source entries
                     else:  # points/bonus as per config
                         if len(bonuses) >= curplace:  # bonus is vector
@@ -2328,17 +2464,30 @@ class irtt(object):
                                 self.bonuses[bib] += bonuses[curplace - 1]
                             else:
                                 self.bonuses[bib] = bonuses[curplace - 1]
-                        if tally and len(points) >= curplace:  # points vector
-                            if bib in self.points[tally]:
-                                self.points[tally][bib] += points[curplace - 1]
-                            else:
-                                self.points[tally][bib] = points[curplace - 1]
-                                self.pointscb[tally][bib] = [0, 0, 0]
-                            if curplace <= 3:  # countback on 1-3
-                                self.pointscb[tally][bib][curplace - 1] += 1
+                        if tally and tally in self.points:
+                            if len(points) >= curplace:  # points vector
+                                if bib in self.points[tally]:
+                                    self.points[tally][bib] += points[curplace
+                                                                      - 1]
+                                else:
+                                    self.points[tally][bib] = points[curplace -
+                                                                     1]
+                            if bib not in self.pointscb[tally]:
+                                self.pointscb[tally][
+                                    bib] = countback.countback()
+                            if countbackwinner:  # stage finish
+                                if curplace == 1:  # winner only at finish
+                                    self.pointscb[tally][bib][0] += 1
+                            else:  # intermediate/other
+                                if tally == u'climb':  # climbs countback on category winners only
+                                    if curplace == 1:
+                                        self.pointscb[tally][bib][
+                                            category] += 1
+                                else:
+                                    self.pointscb[tally][bib][curplace] += 1
                 else:
-                    _log.warning('Duplicate no. = ' + str(bib) + ' in ' +
-                                 repr(contest) + ' places.')
+                    _log.warning(u'Duplicate no. %r in %r places', bib,
+                                 contest)
 
     def getiter(self, bib, series=''):
         """Return temporary iterator to model row."""
@@ -2610,7 +2759,7 @@ class irtt(object):
                                                           ft,
                                                           bt,
                                                           pt,
-                                                          bonus=True,
+                                                          bonus=False,
                                                           penalty=True)
             if ret == 1:
                 stod = tod.mktod(st)
@@ -2770,7 +2919,9 @@ class irtt(object):
             gobject.TYPE_PYOBJECT,  # 15 intermediate
             gobject.TYPE_PYOBJECT,  # 16 last seen
             gobject.TYPE_PYOBJECT,  # 17 eta
-            gobject.TYPE_INT)  # 18 pass count
+            gobject.TYPE_INT,  # 18 pass count
+            gobject.TYPE_PYOBJECT,  # 19 stage bonus
+            gobject.TYPE_PYOBJECT)  # 20 stage penalty (sep to time pen)
 
         uifile = os.path.join(metarace.UI_PATH, u'irtt.ui')
         _log.debug(u'Building event interface from %r', uifile)

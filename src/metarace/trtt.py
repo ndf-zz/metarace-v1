@@ -661,9 +661,7 @@ class trtt(object):
 
     def points_report(self):
         """Return the points tally report."""
-        self.recalculate()
         ret = []
-        aux = []
         cnt = 0
         for tally in self.tallys:
             sec = report.section(u'points-' + tally)
@@ -671,43 +669,76 @@ class trtt(object):
             sec.units = u'pt'
             tallytot = 0
             aux = []
-            cnt = 0
             for bib in self.points[tally]:
                 r = self.getrider(bib)
                 tallytot += self.points[tally][bib]
-                aux.append((self.points[tally][bib], self.pointscb[tally][bib],
-                            -strops.riderno_key(bib), -cnt, [
-                                None, r[COL_BIB].decode(u'utf-8'),
-                                r[COL_NAMESTR].decode(u'utf-8'),
-                                strops.truncpad(str(self.pointscb[tally][bib]),
-                                                10,
-                                                ellipsis=False), None,
-                                str(self.points[tally][bib])
-                            ], self.pointscb[tally][bib]))
+                aux.append(
+                    (self.points[tally][bib], self.pointscb[tally][bib],
+                     -strops.riderno_key(bib), -cnt, [
+                         None, r[COL_BIB].decode(u'utf-8'),
+                         r[COL_NAMESTR].decode(u'utf-8'),
+                         strops.truncpad(unicode(self.pointscb[tally][bib]),
+                                         10,
+                                         ellipsis=False), None,
+                         unicode(self.points[tally][bib])
+                     ]))
                 cnt += 1
             aux.sort(reverse=True)
             for r in aux:
                 sec.lines.append(r[4])
             _log.debug(u'Total points for %r: %r', tally, tallytot)
             ret.append(sec)
-        if len(self.bonuses) > 0:
-            sec = report.section(u'bonus')
-            sec.heading = u'Stage Bonuses'
-            sec.units = u'sec'
-            aux = []
-            cnt = 0
-            for bib in self.bonuses:
-                r = self.getrider(bib)
-                aux.append(
-                    (self.bonuses[bib], -strops.riderno_key(bib), -cnt, [
-                        None, r[COL_BIB], r[COL_NAMESTR], None, None,
-                        str(int(self.bonuses[bib].truncate(0).timeval))
-                    ]))
+
+        # collect bonus and penalty totals
+        aux = []
+        cnt = 0
+        onebonus = False
+        onepenalty = False
+        for r in self.riders:
+            bib = r[COL_BIB].decode(u'utf-8')
+            bonus = 0
+            penalty = 0
+            intbonus = 0
+            total = tod.mkagg(0)
+            if r[COL_BONUS] is not None:
+                bonus = r[COL_BONUS]
+                onebonus = True
+            if r[COL_PENALTY] is not None:
+                penalty = r[COL_PENALTY]
+                onepenalty = True
+            if bib in self.bonuses:
+                intbonus = self.bonuses[bib]
+            total = total + bonus + intbonus - penalty
+            if total != 0:
+                bonstr = u''
+                if bonus != 0:
+                    bonstr = unicode(bonus.as_seconds())
+                penstr = u''
+                if penalty != 0:
+                    penstr = unicode(-(penalty.as_seconds()))
+                totstr = unicode(total.as_seconds())
+                aux.append((total, -strops.riderno_key(bib), -cnt, [
+                    None, bib, r[COL_NAMESTR].decode(u'utf-8'), bonstr, penstr,
+                    totstr
+                ]))
                 cnt += 1
+        if len(aux) > 0:
             aux.sort(reverse=True)
+            sec = report.section(u'bonus')
+            sec.heading = u'Time Bonuses'
+            sec.units = u'sec'
             for r in aux:
                 sec.lines.append(r[3])
+            if onebonus or onepenalty:
+                bhead = u''
+                if onebonus:
+                    bhead = u'Stage Bonus'
+                phead = u''
+                if onepenalty:
+                    phead = u'Penalties'
+                sec.colheader = [None, None, None, bhead, phead, u'Total']
             ret.append(sec)
+
         if len(ret) == 0:
             _log.warning(u'No data available for points report')
         return ret

@@ -3673,9 +3673,11 @@ class rms(object):
         for r in self.riders:
             rbib = r[COL_BIB].decode(u'utf-8')
             rplace = r[COL_PLACE].decode(u'utf-8')
-            rftime = r[COL_RFTIME]
+            rftime = tod.MAX
+            if r[COL_RFTIME] is not None:
+                rftime = r[COL_RFTIME]
             rlaps = r[COL_LAPS]
-            lastpass = tod.ZERO
+            lastpass = tod.MAX
             if len(r[COL_RFSEEN]) > 0:
                 lastpass = r[COL_RFSEEN][-1]
                 # in cross scoring, rftime is same as last passing

@@ -1,43 +1,15 @@
 # metarace-v1
 
-Cyclesport results and timing toolkit for Python2/pygtk.
+Deprecated toolkit for Python 2 with static Gtk bindings.
 
-This is a transitional, and in some cases, incompatible update
-of the metarace package toward Python3 and gtk/gi. Before updating
-from version 1.11 to 1.12, please read [Changes](#Changes) below
-and check the example systems default file
-[metarace.json](src/metarace/data/metarace.json) for any required updates.
+**Do not use**
 
-Version 1.12 will be the final release of metarace version 1.
-See related package [metarace](https://github.com/ndf-zz/metarace)
-(version 2) for on-going python3/gi support.
+See related packages:
 
+   - [metarace-roadmeet](https://github.com/ndf-zz/metarace-roadmeet): Road race timing & results
+   - [metarace-tagreg](https://github.com/ndf-zz/metarace): Manage transponder ids
+   - [metarace](https://github.com/ndf-zz/metarace): Base library
 
-## Pre-Requisites
-
-Static gtk, cairo, pango and rsvg libraries:
-
-   - python2
-   - pygtk
-   - gtk
-   - glib
-   - gobject
-   - pycairo
-   - pango
-   - pangocairo
-   - python-gi-cairo
-   - rsvg
-
-Support libraries:
-
-   - paho-mqtt
-   - pyserial
-   - xlwt
-   - libscrc
-
-MQTT broker (optional):
-
-   - mosquitto
 
 ## Changes
 
@@ -77,44 +49,3 @@ departures from older releases:
 
 For a list of changes from the last published pygtk version (1.11) 
 please refer to [v1-changes.md](v1-changes.md).
-
-
-## Installation
-
-	$ pip install metarace==1.12.3.dev9
-
-
-## Applications
-
-Version 1 of the metarace package includes the following
-top-level applications: roadmeet, trackmeet and metarace.
-Version 2+ releases of the package will not include applications,
-these will be distributed separately. See related project
-[metarace](https://github.com/ndf-zz/metarace) for more information.
-
-
-### Roadmeet
-
-Timing and result application for UCI Part 2 Road Races,
-UCI Part 5 Cyclo-Cross, criterium, road handicap and ad-hoc
-time trial events.
-
-	usage: roadmeet [meetpath]
-
-
-### Trackmeet
-
-Timing and result application for track meets with support for
-UCI Part 3 Track Races as well as handicap (wheelrace) and
-hour record events.
-
-	usage: trackmeet [meetpath]
-
-
-### Apploader (metarace)
-
-Convenience application to browse, create and run metarace meet
-folders.
-
-	usage: metarace [meetpath]
-

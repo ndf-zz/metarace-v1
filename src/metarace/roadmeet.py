@@ -1569,13 +1569,14 @@ class roadmeet(object):
     def _controlcb(self, topic=None, message=None):
         glib.idle_add(self.remote_command, topic, message)
 
-    def __init__(self, etype=None):
+    def __init__(self, etype=None, lockfile=None):
         """Meet constructor."""
         self.loghandler = None  # set in loadconfig to meet dir
         self.exportpath = EXPORTPATH
         if etype not in ROADRACE_TYPES:
             etype = u'road'
         self.etype = etype
+        self.meetlock = lockfile
         self.shortname = None
         self.title_str = u''
         self.host_str = u''
@@ -1745,7 +1746,7 @@ def runapp(configpath, etype=None):
         sys.exit(1)
     _log.debug(u'Entering meet folder %r', configpath)
     os.chdir(configpath)
-    app = roadmeet(etype)
+    app = roadmeet(etype, lf)
     app.loadconfig()
     app.window.show()
     app.start()
